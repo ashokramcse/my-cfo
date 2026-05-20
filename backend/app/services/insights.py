@@ -104,18 +104,20 @@ async def generate_insights_for_user(user_id: str, db) -> List[dict]:
     )
     total_emi = emi_result.scalar() or Decimal(0)
 
+    # Use total monthly spend (sum), not average per-transaction amount
     spend_result = await db.execute(
-        select(func.avg(Transaction.amount)).where(
+        select(func.sum(Transaction.amount)).where(
             Transaction.user_id == user_id,
             Transaction.transaction_date >= prev_month,
             Transaction.transaction_date < month_start,
             Transaction.transaction_type == TransactionType.PURCHASE,
         )
     )
-    avg_monthly = spend_result.scalar() or Decimal(1)
+    prev_monthly_spend = spend_result.scalar()
 
-    if total_emi > 0 and avg_monthly > 0:
-        emi_pct = float(total_emi / avg_monthly * 100)
+    # Only generate EMI burden insight if we have real previous-month spend data
+    if total_emi > 0 and prev_monthly_spend and prev_monthly_spend > 0:
+        emi_pct = float(total_emi / prev_monthly_spend * 100)
         if emi_pct > 40:
             insights_to_create.append({
                 "insight_type": "EMI_RISK",
@@ -149,7 +151,8 @@ async def generate_insights_for_user(user_id: str, db) -> List[dict]:
     )
     food_prev_amount = food_prev.scalar() or Decimal(1)
 
-    if food_prev_amount > 0:
+    # Only compare to previous month if we actually have previous data (avoid div-by-near-zero)
+    if food_prev_amount and food_prev_amount > 100:
         food_pct = float((food_amount - food_prev_amount) / food_prev_amount * 100)
         if food_pct > 30 and food_amount > 2000:
             insights_to_create.append({

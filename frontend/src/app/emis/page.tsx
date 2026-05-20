@@ -62,7 +62,22 @@ export default function EMIsPage() {
   })
 
   const createEMI = useMutation({
-    mutationFn: (data: unknown) => emisApi.create(data),
+    mutationFn: (raw: Record<string, unknown>) => {
+      // purchase_date is required by backend — default to today if blank
+      const today = new Date().toISOString().slice(0, 10)
+      const data = {
+        ...raw,
+        purchase_date: raw.purchase_date || today,
+        // auto-fill total_amount from monthly_emi × tenure if not set
+        total_amount: Number(raw.total_amount) > 0
+          ? raw.total_amount
+          : Number(raw.monthly_emi) * Number(raw.tenure_months),
+        // strip empty strings for optional FK fields
+        card_id: raw.card_id || undefined,
+        friend_id: raw.friend_id || undefined,
+      }
+      return emisApi.create(data)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['emis'] })
       qc.invalidateQueries({ queryKey: ['emi-forecast'] })
