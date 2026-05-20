@@ -93,7 +93,7 @@ async def generate_insights_for_user(user_id: str, db) -> List[dict]:
                     "body": INSIGHT_TEMPLATES["HIGH_UTILIZATION"]["body"].format(
                         card=card.nickname, pct=round(util, 1)
                     ),
-                    "metadata": {"card_id": str(card.id), "utilization": util},
+                    "insight_data": {"card_id": str(card.id), "utilization": util},
                 })
 
     # 2. EMI burden analysis
@@ -124,7 +124,7 @@ async def generate_insights_for_user(user_id: str, db) -> List[dict]:
                 "body": INSIGHT_TEMPLATES["EMI_BURDEN"]["body"].format(
                     amount=int(total_emi), pct=round(emi_pct, 1)
                 ),
-                "metadata": {"total_emi": float(total_emi), "pct": emi_pct},
+                "insight_data": {"total_emi": float(total_emi), "pct": emi_pct},
             })
 
     # 3. Food overspend
@@ -159,7 +159,7 @@ async def generate_insights_for_user(user_id: str, db) -> List[dict]:
                 "body": INSIGHT_TEMPLATES["OVERSPEND_FOOD"]["body"].format(
                     amount=int(food_amount), pct=round(food_pct, 1)
                 ),
-                "metadata": {"food_amount": float(food_amount), "pct": food_pct},
+                "insight_data": {"food_amount": float(food_amount), "pct": food_pct},
             })
 
     # 4. Upcoming dues (3 days)
@@ -181,7 +181,7 @@ async def generate_insights_for_user(user_id: str, db) -> List[dict]:
                 "body": INSIGHT_TEMPLATES["DUE_DATE_UPCOMING"]["body"].format(
                     amount=int(card.current_outstanding), card=card.nickname, days=days_until
                 ),
-                "metadata": {"card_id": str(card.id), "days": days_until},
+                "insight_data": {"card_id": str(card.id), "days": days_until},
             })
 
     # Save insights (skip duplicates from same day)

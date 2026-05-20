@@ -55,7 +55,11 @@ export default function EMIsPage() {
   })
 
   const { register, handleSubmit, reset, watch } = useForm({
-    defaultValues: { owner_type: 'SELF', tenure_months: 12, interest_rate: 0, is_no_cost_emi: false },
+    defaultValues: {
+      product_name: '', purchase_amount: 0, total_amount: 0, monthly_emi: 0,
+      tenure_months: 12, purchase_date: '', interest_rate: 0,
+      card_id: '', friend_id: '', owner_type: 'SELF', is_no_cost_emi: false,
+    },
   })
 
   const createEMI = useMutation({

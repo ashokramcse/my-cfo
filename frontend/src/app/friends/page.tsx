@@ -36,7 +36,7 @@ export default function FriendsPage() {
   })
 
   const { register, handleSubmit, reset, watch } = useForm({
-    defaultValues: { relation: 'FRIEND', avatar_color: '#6366f1' },
+    defaultValues: { name: '', phone: '', whatsapp: '', relation: 'FRIEND', avatar_color: '#6366f1' },
   })
 
   const createFriend = useMutation({

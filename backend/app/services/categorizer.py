@@ -13,7 +13,8 @@ MERCHANT_RULES = [
     # Fuel
     (r"petrol|diesel|hp\s*(petrol|fuel)|iocl|bpcl|shell|essar|reliance\s*(petrol|fuel)|fuel\s*station|oil\s*station|cng", "FUEL"),
 
-    # Shopping
+    # Shopping (amazon prime/prime video are subscriptions — must check before generic amazon)
+    (r"amazon\s*prime|prime\s*video", "SUBSCRIPTION"),
     (r"amazon|flipkart|myntra|ajio|nykaa|purplle|meesho|snapdeal|shopclues|tatacliq|reliancedigital|croma|vijay\s*sales|reliance\s*digital", "SHOPPING"),
     (r"h&m|zara|uniqlo|westside|pantaloons|shoppers\s*stop|lifestyle|max\s*fashion|fbb|forever\s*21", "SHOPPING"),
 
@@ -26,9 +27,12 @@ MERCHANT_RULES = [
     (r"bses|tata\s*power|adani\s*electricity|bescom|msedcl|bescom|jio|airtel|vodafone|bsnl|act\s*broadband|hathway", "UTILITIES"),
     (r"gas\s*(bill|booking)|mahanagar\s*gas|indraprastha\s*gas|igl|adani\s*gas|water\s*bill|bbmp|mcgm|nmc", "UTILITIES"),
 
-    # Entertainment
-    (r"netflix|hotstar|amazon\s*prime|zee5|sonyliv|voot|alt\s*balaji|mxplayer|jiocinema|bookmyshow|pvr|inox|cinepolis", "ENTERTAINMENT"),
-    (r"spotify|gaana|jiosaavn|wynk|apple\s*music|youtube\s*premium|ps4|xbox|nintendo|steam", "ENTERTAINMENT"),
+    # Entertainment (ticketing / in-person)
+    (r"bookmyshow|pvr|inox|cinepolis|amusement|gaming\s*zone|theme\s*park", "ENTERTAINMENT"),
+
+    # Subscriptions (streaming & recurring digital)
+    (r"netflix|hotstar|amazon\s*prime|zee5|sonyliv|voot|alt\s*balaji|mxplayer|jiocinema", "SUBSCRIPTION"),
+    (r"spotify|gaana|jiosaavn|wynk|apple\s*music|youtube\s*premium|ps4|xbox|nintendo|steam", "SUBSCRIPTION"),
 
     # Healthcare
     (r"apollo|fortis|max\s*hospital|liferay|medanta|narayana|cipla|dr\s*reddys|sun\s*pharma|medplus|netmeds|1mg|pharmeasy|practo|lybrate", "HEALTHCARE"),

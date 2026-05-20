@@ -25,7 +25,7 @@ class HDFCParser(BaseParser):
         stmt.statement_date = self._extract_date(text, r"Statement\s+Date[:\s]+(\d{2}/\d{2}/\d{4})")
 
         # Card number
-        m = re.search(r"Card\s+No[.:\s]+[X*]+(\d{4})", text, re.IGNORECASE)
+        m = re.search(r"Card\s+No[.:\s]+[X*\-\s]+(\d{4})", text, re.IGNORECASE)
         if m:
             stmt.card_last_four = m.group(1)
 

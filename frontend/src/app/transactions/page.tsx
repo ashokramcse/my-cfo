@@ -168,8 +168,8 @@ export default function TransactionsPage() {
                       <td className="px-4 py-3 text-center">
                         <div className="flex gap-1 justify-center">
                           {tx.is_emi && <span title="EMI" className="text-xs">📅</span>}
-                          {tx.is_recurring && <RefreshCw className="w-3 h-3 text-muted-foreground" title="Recurring" />}
-                          {tx.is_suspicious && <AlertTriangle className="w-3 h-3 text-warning" title="Suspicious" />}
+                          {tx.is_recurring && <span title="Recurring"><RefreshCw className="w-3 h-3 text-muted-foreground" /></span>}
+                          {tx.is_suspicious && <span title="Suspicious"><AlertTriangle className="w-3 h-3 text-warning" /></span>}
                           {tx.is_duplicate && <span title="Possible duplicate" className="text-xs text-warning">⚠️</span>}
                         </div>
                       </td>

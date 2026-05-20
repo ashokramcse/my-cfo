@@ -23,7 +23,7 @@ class ICICIParser(BaseParser):
         if m:
             stmt.due_date = self._parse_date(m.group(1))
 
-        m = re.search(r"[X*]+(\d{4})", text)
+        m = re.search(r"[X*\-\s]*(\d{4})\b", text)
         if m:
             stmt.card_last_four = m.group(1)
 

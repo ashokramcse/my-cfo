@@ -31,7 +31,7 @@ export default function StatementsPage() {
     queryKey: ['statements'],
     queryFn: async () => (await statementsApi.list()).data,
     refetchInterval: (data) => {
-      const hasProcessing = (data as Statement[] | undefined)?.some((s) => s.status === 'PROCESSING' || s.status === 'PENDING')
+      const hasProcessing = (data.state.data as Statement[] | undefined)?.some((s) => s.status === 'PROCESSING' || s.status === 'PENDING')
       return hasProcessing ? 3000 : false
     },
   })

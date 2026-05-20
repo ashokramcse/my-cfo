@@ -19,7 +19,7 @@ class Insight(Base):
     action_url = Column(String(255))
     is_read = Column(Boolean, default=False)
     is_dismissed = Column(Boolean, default=False)
-    metadata = Column(JSONB, default=dict)
+    insight_data = Column(JSONB, default=dict)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="insights")

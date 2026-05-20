@@ -27,7 +27,11 @@ export default function CardsPage() {
   })
 
   const { register, handleSubmit, reset, watch } = useForm({
-    defaultValues: { card_color: '#6366f1', network: 'VISA', billing_cycle_day: 1, due_date_day: 25 },
+    defaultValues: {
+      nickname: '', bank_name: '', last_four: '', card_color: '#6366f1',
+      network: 'VISA', billing_cycle_day: 1, due_date_day: 25,
+      credit_limit: 0, interest_rate: 0,
+    },
   })
 
   const createCard = useMutation({
