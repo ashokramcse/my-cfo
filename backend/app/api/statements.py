@@ -12,6 +12,7 @@ from app.models.statement import Statement, StatementStatus
 from app.models.card import CreditCard
 from app.schemas.statement import StatementOut, StatementUploadResponse
 from app.config import settings
+from app.services.image_parser import SUPPORTED_IMAGE_EXTENSIONS, is_image_file
 
 router = APIRouter()
 
@@ -47,8 +48,12 @@ async def upload_statement(
     if not card_result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Card not found")
 
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+    fname_lower = (file.filename or "").lower()
+    if not fname_lower.endswith(".pdf") and not is_image_file(fname_lower):
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF files and images (PNG, JPG, WEBP) are supported",
+        )
 
     file_size = 0
     upload_dir = os.path.join(settings.upload_dir, str(current_user.id))

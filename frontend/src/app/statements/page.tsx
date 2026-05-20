@@ -50,7 +50,12 @@ export default function StatementsPage() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'application/pdf': ['.pdf'] },
+    accept: {
+      'application/pdf': ['.pdf'],
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/webp': ['.webp'],
+    },
     maxFiles: 1,
     multiple: false,
   })
@@ -104,11 +109,11 @@ export default function StatementsPage() {
           <motion.div animate={isDragActive ? { scale: 1.05 } : { scale: 1 }}>
             <Upload className={cn('w-10 h-10 mx-auto mb-3', isDragActive ? 'text-primary' : 'text-muted-foreground')} />
             <h3 className="text-base font-semibold text-foreground">
-              {isDragActive ? 'Drop PDF here' : 'Drop your credit card statement'}
+              {isDragActive ? 'Drop file here' : 'Drop your credit card statement or Cred screenshot'}
             </h3>
-            <p className="text-sm text-muted-foreground mt-1">PDF format · Password protected supported</p>
+            <p className="text-sm text-muted-foreground mt-1">PDF · PNG · JPG · WEBP · Password-protected PDFs supported</p>
             <p className="text-xs text-muted-foreground mt-2">
-              HDFC · ICICI · SBI · Axis · Amex · IDFC · OneCard · AU · Kotak · Standard Chartered
+              HDFC · ICICI · SBI · Axis · Amex · Cred screenshots (bill summary &amp; spending)
             </p>
           </motion.div>
         </div>
@@ -127,13 +132,19 @@ export default function StatementsPage() {
                 <motion.div key={stmt.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                   className={cn('glass-card p-5 flex items-center gap-4', meta.bg)}>
                   <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-5 h-5 text-primary" />
+                    {/\.(png|jpg|jpeg|webp)$/i.test(stmt.filename) ? (
+                      <span className="text-lg">🖼️</span>
+                    ) : (
+                      <FileText className="w-5 h-5 text-primary" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium text-foreground truncate">{stmt.filename}</span>
                       {stmt.bank_detected && (
-                        <span className="text-xs bg-white/10 text-muted-foreground px-2 py-0.5 rounded-full">{stmt.bank_detected}</span>
+                        <span className="text-xs bg-white/10 text-muted-foreground px-2 py-0.5 rounded-full">
+                          {stmt.bank_detected === 'CRED' ? '🟣 Cred Screenshot' : stmt.bank_detected}
+                        </span>
                       )}
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
@@ -204,6 +215,7 @@ export default function StatementsPage() {
                     </select>
                   </div>
 
+                  {pendingFile && !pendingFile.type.startsWith('image/') && (
                   <div>
                     <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       PDF Password <span className="text-muted-foreground/50">(if protected)</span>
@@ -213,6 +225,7 @@ export default function StatementsPage() {
                       className="mt-1 w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
                     <p className="text-xs text-muted-foreground mt-1">Password is used only for decryption and never stored.</p>
                   </div>
+                  )}
                 </div>
 
                 <div className="flex gap-3 mt-6">

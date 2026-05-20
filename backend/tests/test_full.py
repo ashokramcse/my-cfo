@@ -254,3 +254,73 @@ def test_parser_autodetect_icici():
             return
     pytest.fail("No parser matched ICICI sample")
 
+
+# ─── Cred Parser ──────────────────────────────────────────────────────────────
+CRED_BILL_SAMPLE = """
+CRED
+HDFC Regalia •••• 4242
+
+Total Outstanding
+₹18,450
+
+Min. Due
+₹1,845
+
+Pay by
+15 Feb 2024
+
+Available Credit
+₹1,81,550
+
+Credit Limit: ₹2,00,000
+CRED Coins earned: 245
+"""
+
+CRED_SPEND_SAMPLE = """
+CRED Spending Summary - January 2024
+ICICI Amazon Pay •••• 5678
+
+Food & Drinks  ₹4,500
+Shopping  ₹8,200
+Travel  ₹3,100
+Subscriptions  ₹1,299
+Utilities  ₹2,800
+
+Recent Transactions
+Swiggy  ₹450  10 Jan
+Amazon Order  ₹2,200  12 Jan
+MakeMyTrip  ₹3,100  14 Jan
+Netflix  ₹649  15 Jan
+"""
+
+def test_cred_parser_bill():
+    from app.parsers.cred import CredParser
+    p = CredParser()
+    assert p.can_parse(CRED_BILL_SAMPLE)
+    stmt = p.parse(CRED_BILL_SAMPLE)
+    assert stmt.bank_name == "HDFC", f"bank: {stmt.bank_name}"
+    assert stmt.total_due == Decimal("18450"), f"total_due: {stmt.total_due}"
+    assert stmt.minimum_due == Decimal("1845"), f"min_due: {stmt.minimum_due}"
+    assert stmt.credit_limit == Decimal("200000"), f"credit_limit: {stmt.credit_limit}"
+    assert stmt.available_credit == Decimal("181550"), f"avail: {stmt.available_credit}"
+    assert stmt.card_last_four == "4242", f"last4: {stmt.card_last_four}"
+    assert stmt.due_date is not None, "due_date not parsed"
+    assert stmt.parse_confidence >= 0.85
+
+def test_cred_parser_spending():
+    from app.parsers.cred import CredParser
+    p = CredParser()
+    assert p.can_parse(CRED_SPEND_SAMPLE)
+    stmt = p.parse(CRED_SPEND_SAMPLE)
+    assert stmt.bank_name == "ICICI", f"bank: {stmt.bank_name}"
+    assert stmt.card_last_four == "5678", f"last4: {stmt.card_last_four}"
+    # Should extract individual transactions from the list
+    assert len(stmt.transactions) >= 3, f"Only {len(stmt.transactions)} transactions found"
+
+def test_cred_image_parser_import():
+    from app.services.image_parser import is_image_file, SUPPORTED_IMAGE_EXTENSIONS
+    assert is_image_file("cred_screenshot.png")
+    assert is_image_file("bill.jpg")
+    assert is_image_file("summary.WEBP")
+    assert not is_image_file("statement.pdf")
+    assert not is_image_file("data.csv")
