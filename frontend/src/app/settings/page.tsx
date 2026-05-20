@@ -2,11 +2,7 @@
 import { AppShell } from '@/components/layout/AppShell'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Settings, User, Bell, Shield, Database, Zap } from 'lucide-react'
-import { useAuthStore } from '@/store/auth'
-
 export default function SettingsPage() {
-  const { user } = useAuthStore()
-
   return (
     <AppShell>
       <div className="p-6 max-w-[800px] mx-auto">
@@ -21,12 +17,11 @@ export default function SettingsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { label: 'Full Name', value: user?.full_name ?? '—' },
-                { label: 'Username', value: user?.username ?? '—' },
-                { label: 'Email', value: user?.email ?? '—' },
-                { label: 'Currency', value: user?.currency ?? 'INR' },
-                { label: 'Timezone', value: user?.timezone ?? 'Asia/Kolkata' },
-                { label: 'Member Since', value: user?.created_at ? new Date(user.created_at).toLocaleDateString() : '—' },
+                { label: 'Full Name', value: 'Owner' },
+                { label: 'Username', value: 'owner' },
+                { label: 'Email', value: 'owner@ccbill.local' },
+                { label: 'Currency', value: 'INR' },
+                { label: 'Timezone', value: 'Asia/Kolkata' },
               ].map((item) => (
                 <div key={item.label} className="p-3 rounded-xl bg-white/3">
                   <div className="text-xs text-muted-foreground">{item.label}</div>

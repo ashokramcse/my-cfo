@@ -1,13 +1,12 @@
 'use client'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, CreditCard, ArrowLeftRight, Calendar, Users,
-  FileText, BarChart3, Settings, LogOut, ChevronLeft, Zap, Bell
+  FileText, BarChart3, Settings, ChevronLeft, Zap
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/store/auth'
 import { useUIStore } from '@/store/ui'
 
 const navItems = [
@@ -23,14 +22,7 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const router = useRouter()
-  const { user, logout } = useAuthStore()
   const { sidebarCollapsed, toggleSidebar } = useUIStore()
-
-  const handleLogout = () => {
-    logout()
-    router.push('/login')
-  }
 
   return (
     <motion.aside
@@ -82,29 +74,21 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* User */}
-      <div className="border-t border-border p-3 space-y-1">
+      {/* Owner badge */}
+      <div className="border-t border-border p-3">
         <div className={cn('nav-item', !sidebarCollapsed && 'gap-3')}>
           <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
-            {user?.full_name?.[0] ?? user?.username?.[0] ?? 'U'}
+            O
           </div>
           <AnimatePresence>
             {!sidebarCollapsed && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="min-w-0">
-                <div className="text-sm font-medium text-foreground truncate">{user?.full_name ?? user?.username}</div>
-                <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
+                <div className="text-sm font-medium text-foreground truncate">Owner</div>
+                <div className="text-xs text-muted-foreground truncate">Personal Finance</div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
-        <button onClick={handleLogout} className="nav-item w-full text-destructive hover:text-destructive hover:bg-destructive/10">
-          <LogOut className="w-4 h-4 flex-shrink-0" />
-          <AnimatePresence>
-            {!sidebarCollapsed && (
-              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-sm">Sign Out</motion.span>
-            )}
-          </AnimatePresence>
-        </button>
       </div>
     </motion.aside>
   )
