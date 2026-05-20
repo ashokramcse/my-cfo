@@ -5,16 +5,17 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { AppShell } from '@/components/layout/AppShell'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CreditCardWidget } from '@/components/cards/CreditCardWidget'
+import { StatCard } from '@/components/ui/StatCard'
 import { cardsApi } from '@/lib/api'
 import { CreditCard as CreditCardType } from '@/types'
-import { formatCurrency, formatCurrencyCompact } from '@/lib/utils'
-import { CreditCard, Plus, X, TrendingUp, Percent, Gift, CalendarClock } from 'lucide-react'
+import { formatCurrencyCompact } from '@/lib/utils'
+import { CreditCard, Plus, X, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
 
-const CARD_COLORS = ['#6366f1', '#a855f7', '#ec4899', '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4']
 const BANKS = ['HDFC', 'ICICI', 'SBI', 'Axis', 'Amex', 'IDFC', 'OneCard', 'AU', 'Kotak', 'Federal', 'Standard Chartered', 'Other']
 const NETWORKS = ['VISA', 'MASTERCARD', 'AMEX', 'RUPAY', 'DINERS', 'OTHER']
+const CARD_COLORS = ['#7C3AED', '#6366F1', '#0EA5E9', '#10B981', '#F59E0B', '#F43F5E', '#EC4899', '#14B8A6']
 
 export default function CardsPage() {
   const [showForm, setShowForm] = useState(false)
@@ -28,7 +29,7 @@ export default function CardsPage() {
 
   const { register, handleSubmit, reset, watch } = useForm({
     defaultValues: {
-      nickname: '', bank_name: '', last_four: '', card_color: '#6366f1',
+      nickname: '', bank_name: 'HDFC', last_four: '', card_color: '#7C3AED',
       network: 'VISA', billing_cycle_day: 1, due_date_day: 25,
       credit_limit: 0, interest_rate: 0,
     },
@@ -39,7 +40,7 @@ export default function CardsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cards'] })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
-      toast.success('Card added successfully')
+      toast.success('Card added')
       setShowForm(false)
       reset()
     },
@@ -58,206 +59,194 @@ export default function CardsPage() {
   const totalLimit = cards.reduce((s, c) => s + Number(c.credit_limit), 0)
   const totalOutstanding = cards.reduce((s, c) => s + Number(c.current_outstanding), 0)
   const totalAvailable = cards.reduce((s, c) => s + Number(c.available_limit), 0)
+  const avgUtil = totalLimit > 0 ? Math.round((totalOutstanding / totalLimit) * 100) : 0
+  const watchColor = watch('card_color')
 
   return (
     <AppShell>
-      <div className="p-6 max-w-[1200px] mx-auto">
+      <div className="p-6 xl:p-8 max-w-[1200px] mx-auto">
         <PageHeader
           icon={CreditCard}
           title="Credit Cards"
-          subtitle={`${cards.length} card${cards.length !== 1 ? 's' : ''} · ${formatCurrencyCompact(totalOutstanding)} outstanding`}
+          subtitle={`${cards.length} card${cards.length !== 1 ? 's' : ''}`}
           actions={
-            <button onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors">
+            <button onClick={() => setShowForm(true)} className="btn-primary">
               <Plus className="w-4 h-4" /> Add Card
             </button>
           }
         />
 
-        {/* Summary */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          {[
-            { label: 'Total Limit', value: formatCurrencyCompact(totalLimit), icon: CreditCard },
-            { label: 'Outstanding', value: formatCurrencyCompact(totalOutstanding), icon: TrendingUp },
-            { label: 'Available', value: formatCurrencyCompact(totalAvailable), icon: Percent },
-          ].map((item) => (
-            <div key={item.label} className="glass-card p-4 flex items-center gap-3">
-              <item.icon className="w-5 h-5 text-primary" />
-              <div>
-                <div className="text-xs text-muted-foreground">{item.label}</div>
-                <div className="text-lg font-bold font-mono text-foreground">{item.value}</div>
-              </div>
-            </div>
-          ))}
+        {/* Summary KPIs */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <StatCard title="Total Limit"    value={formatCurrencyCompact(totalLimit)}       variant="violet"  delay={0}    />
+          <StatCard title="Outstanding"    value={formatCurrencyCompact(totalOutstanding)}  variant={avgUtil > 70 ? 'danger' : avgUtil > 40 ? 'warning' : 'default'} delay={0.05} />
+          <StatCard title="Available"      value={formatCurrencyCompact(totalAvailable)}    variant="success" delay={0.1}  />
+          <StatCard title="Avg Utilization" value={`${avgUtil}%`}                          variant={avgUtil > 70 ? 'danger' : avgUtil > 40 ? 'warning' : 'success'} delay={0.15} />
         </div>
 
         {/* Cards grid */}
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-52 rounded-2xl bg-white/5 shimmer-bg" />
+              <div key={i} className="rounded-2xl bg-white/5 shimmer" style={{ aspectRatio: '16/9', backgroundSize: '200% 100%' }} />
             ))}
           </div>
-        ) : cards.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        ) : cards.length ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {cards.map((card, i) => (
-              <CreditCardWidget key={card.id} card={card} delay={i * 0.05} onClick={() => setSelected(card)} />
+              <CreditCardWidget key={card.id} card={card} onClick={() => setSelected(card)} delay={i * 0.06} />
             ))}
           </div>
         ) : (
-          <div className="glass-card p-16 text-center">
-            <CreditCard className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground">No cards yet</h3>
-            <p className="text-muted-foreground text-sm mt-2 mb-6">Add your first credit card to start tracking</p>
-            <button onClick={() => setShowForm(true)}
-              className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-xl font-medium text-sm transition-colors">
-              Add Your First Card
+          <div className="flex flex-col items-center py-20 gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center">
+              <CreditCard className="w-7 h-7 text-muted-foreground/40" />
+            </div>
+            <p className="text-muted-foreground text-sm">No cards yet. Add your first credit card.</p>
+            <button onClick={() => setShowForm(true)} className="btn-primary mt-1">
+              <Plus className="w-4 h-4" /> Add Card
             </button>
           </div>
         )}
 
-        {/* Card Detail Drawer */}
+        {/* Card detail panel */}
         <AnimatePresence>
           {selected && (
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-4"
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
               onClick={() => setSelected(null)}
             >
               <motion.div
-                initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+                initial={{ scale: 0.92, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, y: 20 }}
+                className="card p-6 w-full max-w-md"
+                style={{ boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}
                 onClick={(e) => e.stopPropagation()}
-                className="glass-card w-full max-w-lg p-6 space-y-5"
               >
-                <div className="flex justify-between items-start">
-                  <h3 className="text-lg font-bold text-foreground">{selected.nickname}</h3>
-                  <button onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground">
-                    <X className="w-5 h-5" />
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-base font-bold text-foreground">{selected.nickname}</h2>
+                  <button onClick={() => setSelected(null)} className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                    <X className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </div>
 
-                <CreditCardWidget card={selected} />
+                <div className="mb-5">
+                  <CreditCardWidget card={selected} />
+                </div>
 
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-2 gap-3 mb-5 text-sm">
                   {[
-                    ['Bank', selected.bank_name],
                     ['Network', selected.network],
-                    ['Last 4', selected.last_four],
-                    ['Interest Rate', `${selected.interest_rate}% p.a.`],
-                    ['Billing Cycle', `Day ${selected.billing_cycle_day}`],
-                    ['Due Date', `Day ${selected.due_date_day}`],
-                    ['Annual Fee', formatCurrency(selected.annual_fee)],
-                    ['Reward Rate', `${selected.reward_rate} pts/₹100`],
+                    ['Billing Day', `${selected.billing_cycle_day}th`],
+                    ['Due Day', `${selected.due_date_day}th`],
+                    ['Interest', `${selected.interest_rate}% p.a.`],
+                    ['Reward Rate', `${selected.reward_rate}%`],
+                    ['Points', selected.total_reward_points.toLocaleString()],
                   ].map(([label, value]) => (
-                    <div key={label} className="p-3 rounded-xl bg-white/3">
-                      <div className="text-xs text-muted-foreground">{label}</div>
-                      <div className="text-sm font-medium text-foreground mt-0.5">{value}</div>
+                    <div key={label} className="p-3 rounded-xl bg-white/[0.03] border border-border/50">
+                      <div className="text-xs text-muted-foreground mb-0.5">{label}</div>
+                      <div className="font-semibold text-foreground">{value}</div>
                     </div>
                   ))}
                 </div>
 
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => deleteCard.mutate(selected.id)}
-                    className="flex-1 py-2.5 rounded-xl border border-danger/30 text-danger text-sm font-medium hover:bg-danger/10 transition-colors"
-                  >
-                    Remove Card
-                  </button>
-                </div>
+                <button
+                  onClick={() => deleteCard.mutate(selected.id)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-rose-400 border border-rose-500/20 bg-rose-500/8 hover:bg-rose-500/15 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" /> Remove Card
+                </button>
               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Add Card Modal */}
+        {/* Add card modal */}
         <AnimatePresence>
           {showForm && (
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
               onClick={() => setShowForm(false)}
             >
               <motion.div
-                initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                initial={{ scale: 0.92, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, y: 20 }}
+                className="card p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
+                style={{ boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}
                 onClick={(e) => e.stopPropagation()}
-                className="glass-card w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"
               >
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-lg font-bold text-foreground">Add Credit Card</h3>
-                  <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-muted-foreground" /></button>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-base font-bold text-foreground">Add Credit Card</h2>
+                  <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
                 </div>
 
                 <form onSubmit={handleSubmit((d) => createCard.mutate(d))} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="col-span-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Card Nickname *</label>
-                      <input {...register('nickname', { required: true })} placeholder="e.g. HDFC Millennia"
-                        className="mt-1 w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="field-label">Card Nickname *</label>
+                      <input {...register('nickname', { required: true })} placeholder="HDFC Regalia" />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Bank *</label>
-                      <select {...register('bank_name', { required: true })}
-                        className="mt-1 w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
+                      <label className="field-label">Bank *</label>
+                      <select {...register('bank_name')}>
                         {BANKS.map((b) => <option key={b}>{b}</option>)}
                       </select>
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Network</label>
-                      <select {...register('network')}
-                        className="mt-1 w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
+                      <label className="field-label">Last 4 Digits *</label>
+                      <input {...register('last_four')} maxLength={4} placeholder="4242" />
+                    </div>
+                    <div>
+                      <label className="field-label">Network</label>
+                      <select {...register('network')}>
                         {NETWORKS.map((n) => <option key={n}>{n}</option>)}
                       </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Last 4 Digits *</label>
-                      <input {...register('last_four', { required: true, maxLength: 4 })} maxLength={4} placeholder="1234"
-                        className="mt-1 w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary font-mono" />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Credit Limit</label>
-                      <input {...register('credit_limit')} type="number" placeholder="100000"
-                        className="mt-1 w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Interest Rate %</label>
-                      <input {...register('interest_rate')} type="number" step="0.01" placeholder="42"
-                        className="mt-1 w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Billing Cycle Day</label>
-                      <input {...register('billing_cycle_day')} type="number" min={1} max={31} placeholder="1"
-                        className="mt-1 w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Due Date Day</label>
-                      <input {...register('due_date_day')} type="number" min={1} max={31} placeholder="25"
-                        className="mt-1 w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Card Color</label>
-                    <div className="flex gap-2 mt-2">
-                      {CARD_COLORS.map((color) => (
-                        <label key={color} className="cursor-pointer">
-                          <input {...register('card_color')} type="radio" value={color} className="sr-only" />
-                          <div className={`w-6 h-6 rounded-full transition-all ${watch('card_color') === color ? 'ring-2 ring-white ring-offset-2 ring-offset-background scale-110' : ''}`}
-                            style={{ background: color }} />
-                        </label>
+                    <label className="field-label">Credit Limit (₹)</label>
+                    <input type="number" {...register('credit_limit', { valueAsNumber: true })} placeholder="100000" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="field-label">Billing Cycle Day</label>
+                      <input type="number" {...register('billing_cycle_day', { valueAsNumber: true })} min={1} max={31} />
+                    </div>
+                    <div>
+                      <label className="field-label">Due Date Day</label>
+                      <input type="number" {...register('due_date_day', { valueAsNumber: true })} min={1} max={31} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="field-label">Interest Rate (% p.a.)</label>
+                    <input type="number" step="0.01" {...register('interest_rate', { valueAsNumber: true })} placeholder="42" />
+                  </div>
+
+                  <div>
+                    <label className="field-label">Card Color</label>
+                    <div className="flex gap-2 flex-wrap mt-1">
+                      {CARD_COLORS.map((c) => (
+                        <button key={c} type="button"
+                          onClick={() => reset({ ...watch(), card_color: c })}
+                          className="w-8 h-8 rounded-xl transition-transform hover:scale-110"
+                          style={{ background: c, outline: watchColor === c ? `2px solid ${c}` : 'none', outlineOffset: '2px' }} />
                       ))}
                     </div>
                   </div>
 
-                  <div className="flex gap-3 pt-2">
-                    <button type="button" onClick={() => setShowForm(false)}
-                      className="flex-1 py-2.5 rounded-xl border border-border text-muted-foreground text-sm hover:bg-white/5 transition-colors">
-                      Cancel
-                    </button>
-                    <button type="submit" disabled={createCard.isPending}
-                      className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors disabled:opacity-50">
-                      {createCard.isPending ? 'Adding…' : 'Add Card'}
-                    </button>
-                  </div>
+                  <button type="submit" disabled={createCard.isPending} className="btn-primary w-full justify-center py-2.5 mt-2">
+                    {createCard.isPending ? 'Adding…' : 'Add Card'}
+                  </button>
                 </form>
               </motion.div>
             </motion.div>

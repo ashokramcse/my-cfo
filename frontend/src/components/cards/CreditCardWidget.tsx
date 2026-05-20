@@ -1,10 +1,8 @@
 'use client'
 import { motion } from 'framer-motion'
 import { CreditCard } from '@/types'
-import { formatCurrency, utilizationColor, BANK_COLORS } from '@/lib/utils'
-import { formatDate } from '@/lib/utils'
+import { formatCurrency, BANK_COLORS } from '@/lib/utils'
 import { Wifi } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 interface CreditCardWidgetProps {
   card: CreditCard
@@ -14,77 +12,82 @@ interface CreditCardWidgetProps {
 
 export function CreditCardWidget({ card, onClick, delay = 0 }: CreditCardWidgetProps) {
   const colors = BANK_COLORS[card.bank_name.toUpperCase()] ?? BANK_COLORS.DEFAULT
-  const utilization = card.credit_limit > 0 ? (card.current_outstanding / card.credit_limit) * 100 : 0
+  const utilization = card.credit_limit > 0
+    ? (card.current_outstanding / card.credit_limit) * 100
+    : 0
+  const utilColor = utilization >= 80 ? '#EF4444' : utilization >= 50 ? '#F59E0B' : '#10B981'
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay }}
-      whileHover={{ y: -4, scale: 1.02 }}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.35, ease: [0.21, 0.47, 0.32, 0.98] }}
+      whileHover={{ y: -6, scale: 1.01 }}
       onClick={onClick}
-      className="credit-card cursor-pointer"
+      className="cc-card"
       style={{
-        '--card-from': colors.from,
-        '--card-to': colors.to,
-        background: `linear-gradient(135deg, ${colors.from} 0%, ${colors.to} 100%), linear-gradient(135deg, ${card.card_color}22, transparent)`,
-      } as React.CSSProperties}
+        background: `linear-gradient(145deg, ${colors.from} 0%, ${colors.to} 60%, ${card.card_color}18 100%)`,
+      }}
     >
-      {/* Decorative circles */}
-      <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10"
-        style={{ background: card.card_color, transform: 'translate(30%, -30%)' }} />
-      <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full opacity-10"
-        style={{ background: card.card_color, transform: 'translate(-30%, 30%)' }} />
+      {/* Decorative glow blobs */}
+      <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full pointer-events-none"
+        style={{ background: `radial-gradient(circle, ${card.card_color}30, transparent 70%)` }} />
+      <div className="absolute -bottom-4 -left-4 w-24 h-24 rounded-full pointer-events-none"
+        style={{ background: `radial-gradient(circle, ${colors.from}60, transparent 70%)` }} />
 
-      <div className="relative z-10">
-        <div className="flex justify-between items-start mb-6">
+      <div className="relative z-10 h-full flex flex-col justify-between">
+        {/* Top row */}
+        <div className="flex justify-between items-start">
           <div>
-            <div className="text-white/60 text-xs uppercase tracking-widest">{card.bank_name}</div>
+            <div className="text-white/50 text-[10px] uppercase tracking-[0.15em] font-medium">{card.bank_name}</div>
             <div className="text-white font-semibold text-sm mt-0.5">{card.nickname}</div>
           </div>
-          <Wifi className="w-5 h-5 text-white/50 rotate-90" />
+          <Wifi className="w-4 h-4 text-white/30 rotate-90" />
         </div>
 
-        <div className="flex items-center gap-2 mb-6">
-          <div className="w-7 h-5 rounded bg-yellow-400/80 flex items-center justify-center">
-            <div className="w-4 h-3 rounded border border-yellow-600/50 bg-gradient-to-b from-yellow-300/50 to-transparent" />
-          </div>
-          <span className="text-white/80 font-mono text-sm tracking-[0.2em]">•••• •••• •••• {card.last_four}</span>
+        {/* Chip + number */}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-6 rounded-md"
+            style={{ background: 'linear-gradient(135deg, #d4a843, #f5d778, #b8841a)', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }} />
+          <span className="text-white/70 font-mono text-sm tracking-[0.2em]">•••• •••• •••• {card.last_four}</span>
         </div>
 
-        <div className="flex justify-between items-end">
-          <div>
-            <div className="text-white/50 text-xs mb-1">Outstanding</div>
-            <div className="text-white font-bold text-lg font-mono">{formatCurrency(card.current_outstanding)}</div>
+        {/* Bottom */}
+        <div>
+          <div className="flex justify-between items-end mb-3">
+            <div>
+              <div className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Outstanding</div>
+              <div className="text-white font-bold text-lg font-mono leading-none">
+                {formatCurrency(card.current_outstanding)}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Limit</div>
+              <div className="text-white/70 text-sm font-mono">{formatCurrency(card.credit_limit)}</div>
+            </div>
           </div>
-          <div className="text-right">
-            <div className="text-white/50 text-xs mb-1">Limit</div>
-            <div className="text-white/80 text-sm font-mono">{formatCurrency(card.credit_limit)}</div>
-          </div>
-        </div>
 
-        {/* Utilization bar */}
-        <div className="mt-4">
-          <div className="flex justify-between text-xs text-white/50 mb-1">
+          <div className="flex justify-between text-[10px] text-white/40 mb-1.5">
             <span>Utilization</span>
-            <span className={cn(utilizationColor(utilization))}>{utilization.toFixed(0)}%</span>
+            <span style={{ color: utilColor }}>{utilization.toFixed(0)}%</span>
           </div>
           <div className="h-1 bg-white/10 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(utilization, 100)}%` }}
-              transition={{ delay: delay + 0.3, duration: 0.6, ease: 'easeOut' }}
-              className={cn('h-full rounded-full', utilization >= 80 ? 'bg-danger' : utilization >= 50 ? 'bg-warning' : 'bg-success')}
+              transition={{ delay: delay + 0.4, duration: 0.7, ease: 'easeOut' }}
+              className="h-full rounded-full"
+              style={{ background: utilColor }}
             />
           </div>
-        </div>
 
-        {card.expiry_month && card.expiry_year && (
-          <div className="mt-3 flex justify-between text-xs text-white/40">
-            <span>VALID THRU</span>
-            <span className="font-mono">{String(card.expiry_month).padStart(2, '0')}/{card.expiry_year}</span>
-          </div>
-        )}
+          {card.expiry_month && card.expiry_year && (
+            <div className="mt-2 flex justify-between text-[10px] text-white/30">
+              <span>VALID THRU</span>
+              <span className="font-mono">{String(card.expiry_month).padStart(2, '0')}/{card.expiry_year}</span>
+            </div>
+          )}
+        </div>
       </div>
     </motion.div>
   )

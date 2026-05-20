@@ -1,23 +1,23 @@
 'use client'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
 import { AppShell } from '@/components/layout/AppShell'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { TableRowSkeleton } from '@/components/ui/Skeleton'
 import { transactionsApi, cardsApi } from '@/lib/api'
-import { Transaction, CreditCard, CategoryType } from '@/types'
+import { Transaction, CreditCard } from '@/types'
 import { formatCurrency, formatDate, CATEGORY_META } from '@/lib/utils'
 import { cn } from '@/lib/utils'
-import { ArrowLeftRight, Search, Filter, Download, ChevronLeft, ChevronRight, AlertTriangle, RefreshCw } from 'lucide-react'
+import { ArrowLeftRight, Search, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
 
-const TX_TYPE_COLORS: Record<string, string> = {
+const TX_COLOR: Record<string, string> = {
   PURCHASE: 'text-foreground',
-  PAYMENT: 'text-success',
-  EMI: 'text-primary',
-  CASH_ADVANCE: 'text-warning',
-  REFUND: 'text-success',
-  FEE: 'text-danger',
-  INTEREST: 'text-danger',
+  PAYMENT: 'text-emerald-400',
+  EMI: 'text-violet-400',
+  CASH_ADVANCE: 'text-amber-400',
+  REFUND: 'text-emerald-400',
+  FEE: 'text-rose-400',
+  INTEREST: 'text-rose-400',
   OTHER: 'text-muted-foreground',
 }
 
@@ -28,7 +28,6 @@ export default function TransactionsPage() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('ALL')
   const [cardId, setCardId] = useState('')
-  const [txType, setTxType] = useState('')
   const pageSize = 50
 
   const { data: cards = [] } = useQuery<CreditCard[]>({
@@ -37,13 +36,12 @@ export default function TransactionsPage() {
   })
 
   const { data, isLoading } = useQuery({
-    queryKey: ['transactions', page, search, category, cardId, txType],
+    queryKey: ['transactions', page, search, category, cardId],
     queryFn: async () => (await transactionsApi.list({
       page, page_size: pageSize,
       search: search || undefined,
       category: category !== 'ALL' ? category : undefined,
       card_id: cardId || undefined,
-      transaction_type: txType || undefined,
     })).data,
     placeholderData: (prev) => prev,
   })
@@ -55,156 +53,138 @@ export default function TransactionsPage() {
 
   return (
     <AppShell>
-      <div className="p-6 max-w-[1400px] mx-auto">
+      <div className="p-6 xl:p-8 max-w-[1400px] mx-auto">
         <PageHeader
           icon={ArrowLeftRight}
           title="Transactions"
-          subtitle={`${total.toLocaleString()} transactions · ${formatCurrency(Number(totalAmount))} total`}
-          actions={
-            <button className="flex items-center gap-2 border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 text-sm px-3 py-2 rounded-xl transition-colors">
-              <Download className="w-4 h-4" /> Export
-            </button>
-          }
+          subtitle={`${total.toLocaleString('en-IN')} transactions · ${formatCurrency(Number(totalAmount))} total`}
         />
 
         {/* Filters */}
-        <div className="glass-card p-4 mb-6 flex flex-wrap gap-3">
+        <div className="card p-4 mb-5 flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+            <input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search merchant, description…"
-              className="w-full pl-9 pr-4 py-2 bg-surface-2 border border-border rounded-xl text-sm text-foreground outline-none focus:border-primary" />
+              className="w-full pl-9"
+            />
           </div>
-          <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1) }}
-            className="bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c === 'ALL' ? 'All Categories' : CATEGORY_META[c]?.label ?? c}</option>)}
+          <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1) }} className="min-w-[160px]">
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c === 'ALL' ? 'All Categories' : (CATEGORY_META[c]?.icon ?? '') + ' ' + (CATEGORY_META[c]?.label ?? c)}</option>
+            ))}
           </select>
-          <select value={cardId} onChange={(e) => { setCardId(e.target.value); setPage(1) }}
-            className="bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
+          <select value={cardId} onChange={(e) => { setCardId(e.target.value); setPage(1) }} className="min-w-[160px]">
             <option value="">All Cards</option>
             {cards.map((c) => <option key={c.id} value={c.id}>{c.nickname} ···{c.last_four}</option>)}
           </select>
-          <select value={txType} onChange={(e) => { setTxType(e.target.value); setPage(1) }}
-            className="bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
-            <option value="">All Types</option>
-            {['PURCHASE', 'PAYMENT', 'EMI', 'REFUND', 'FEE', 'INTEREST'].map((t) => <option key={t}>{t}</option>)}
-          </select>
-        </div>
-
-        {/* Category tabs */}
-        <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1">
-          {CATEGORIES.slice(0, 10).map((c) => {
-            const meta = c !== 'ALL' ? CATEGORY_META[c] : null
-            return (
-              <button key={c} onClick={() => { setCategory(c); setPage(1) }}
-                className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all',
-                  category === c ? 'bg-primary text-white' : 'bg-white/5 text-muted-foreground hover:text-foreground hover:bg-white/10')}>
-                {meta?.icon && <span>{meta.icon}</span>}
-                {meta?.label ?? 'All'}
-              </button>
-            )
-          })}
         </div>
 
         {/* Table */}
-        <div className="glass-card overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/50">
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Merchant</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Card</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Flags</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                Array.from({ length: 8 }).map((_, i) => (
-                  <tr key={i} className="border-b border-border/30">
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <td key={j} className="px-4 py-3"><div className="h-4 bg-white/5 rounded shimmer-bg" /></td>
-                    ))}
-                  </tr>
-                ))
-              ) : transactions.length > 0 ? (
-                transactions.map((tx) => {
-                  const meta = CATEGORY_META[tx.category] ?? CATEGORY_META.OTHER
-                  const card = cards.find((c) => c.id === tx.card_id)
-                  return (
-                    <motion.tr key={tx.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                      className="border-b border-border/30 hover:bg-white/3 transition-colors">
-                      <td className="px-4 py-3 text-xs text-muted-foreground font-mono whitespace-nowrap">
-                        {formatDate(tx.transaction_date, 'dd MMM')}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-foreground truncate max-w-[200px]">
-                          {tx.merchant_name || tx.description}
-                        </div>
-                        {tx.merchant_name && (
-                          <div className="text-xs text-muted-foreground truncate max-w-[200px]">{tx.description}</div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 flex items-center gap-1 w-fit">
-                          {meta.icon} {meta.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={cn('text-xs font-medium', TX_TYPE_COLORS[tx.transaction_type] ?? 'text-muted-foreground')}>
-                          {tx.transaction_type}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">
-                        {card ? `${card.bank_name} ···${card.last_four}` : '—'}
-                      </td>
-                      <td className={cn('px-4 py-3 text-right text-sm font-mono font-semibold',
-                        tx.transaction_type === 'PAYMENT' || tx.transaction_type === 'REFUND' ? 'text-success' : 'text-foreground')}>
-                        {tx.transaction_type === 'PAYMENT' || tx.transaction_type === 'REFUND' ? '+' : ''}
-                        {formatCurrency(Number(tx.amount))}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex gap-1 justify-center">
-                          {tx.is_emi && <span title="EMI" className="text-xs">📅</span>}
-                          {tx.is_recurring && <span title="Recurring"><RefreshCw className="w-3 h-3 text-muted-foreground" /></span>}
-                          {tx.is_suspicious && <span title="Suspicious"><AlertTriangle className="w-3 h-3 text-warning" /></span>}
-                          {tx.is_duplicate && <span title="Possible duplicate" className="text-xs text-warning">⚠️</span>}
-                        </div>
-                      </td>
-                    </motion.tr>
-                  )
-                })
-              ) : (
+        <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <td colSpan={7} className="px-4 py-16 text-center text-muted-foreground text-sm">
-                    No transactions found
-                  </td>
+                  <th>Date</th>
+                  <th>Merchant</th>
+                  <th>Category</th>
+                  <th>Card</th>
+                  <th className="text-right">Amount</th>
+                  <th>Type</th>
+                  <th>Flags</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-between items-center mt-4">
-            <span className="text-sm text-muted-foreground">
-              Page {page} of {totalPages} · {total.toLocaleString()} total
-            </span>
-            <div className="flex gap-2">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="p-2 rounded-xl border border-border disabled:opacity-40 hover:bg-white/5 transition-colors">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="p-2 rounded-xl border border-border disabled:opacity-40 hover:bg-white/5 transition-colors">
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+              </thead>
+              <tbody>
+                {isLoading
+                  ? Array.from({ length: 10 }).map((_, i) => <TableRowSkeleton key={i} cols={7} />)
+                  : transactions.map((tx) => {
+                    const meta = CATEGORY_META[tx.category] ?? CATEGORY_META.OTHER
+                    const card = cards.find((c) => c.id === tx.card_id)
+                    return (
+                      <tr key={tx.id}>
+                        <td className="text-muted-foreground text-xs whitespace-nowrap font-mono">
+                          {formatDate(tx.transaction_date, 'dd MMM')}
+                        </td>
+                        <td>
+                          <div className="text-sm font-medium text-foreground truncate max-w-[200px]">
+                            {tx.merchant_name || tx.description}
+                          </div>
+                          {tx.merchant_name && (
+                            <div className="text-xs text-muted-foreground truncate max-w-[200px]">{tx.description}</div>
+                          )}
+                        </td>
+                        <td>
+                          <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-white/5">
+                            <span>{meta.icon}</span>
+                            <span className="text-muted-foreground">{meta.label}</span>
+                          </span>
+                        </td>
+                        <td className="text-xs text-muted-foreground">
+                          {card ? `${card.bank_name} ···${card.last_four}` : '—'}
+                        </td>
+                        <td className="text-right">
+                          <span className={cn('font-mono text-sm font-semibold', TX_COLOR[tx.transaction_type] ?? 'text-foreground')}>
+                            {tx.transaction_type === 'PAYMENT' || tx.transaction_type === 'REFUND' ? '+' : ''}
+                            {formatCurrency(Number(tx.amount))}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="text-xs text-muted-foreground bg-white/5 px-2 py-0.5 rounded-md">
+                            {tx.transaction_type}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="flex gap-1">
+                            {tx.is_suspicious && (
+                              <span title="Suspicious" className="text-amber-400">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                              </span>
+                            )}
+                            {tx.is_recurring && (
+                              <span title="Recurring" className="text-xs text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">R</span>
+                            )}
+                            {tx.is_emi && (
+                              <span title="EMI" className="text-xs text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded">EMI</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                }
+                {!isLoading && !transactions.length && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-16 text-muted-foreground text-sm">
+                      No transactions found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border/60">
+              <span className="text-xs text-muted-foreground">
+                Page {page} of {totalPages} · {total.toLocaleString('en-IN')} rows
+              </span>
+              <div className="flex gap-2">
+                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+                  className="btn-ghost px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                  className="btn-ghost px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </AppShell>
   )

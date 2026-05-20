@@ -1,5 +1,6 @@
+'use client'
 import { motion } from 'framer-motion'
-import { LucideIcon } from 'lucide-react'
+import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface StatCardProps {
@@ -7,55 +8,77 @@ interface StatCardProps {
   value: string
   subtitle?: string
   icon?: LucideIcon
-  iconColor?: string
-  trend?: { value: number; label: string }
-  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info'
+  trend?: { value: number; label?: string }
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'violet'
   className?: string
   delay?: number
+  accent?: string
 }
 
-const variantStyles = {
-  default: 'border-white/10',
-  success: 'border-success/20 bg-success/5',
-  warning: 'border-warning/20 bg-warning/5',
-  danger: 'border-danger/20 bg-danger/5',
-  info: 'border-info/20 bg-info/5',
+const VARIANT_CONFIG = {
+  default:  { accent: 'rgba(255,255,255,0.06)', icon: 'bg-white/8 text-muted-foreground',     glow: '' },
+  success:  { accent: '#10B981',               icon: 'bg-emerald-500/15 text-emerald-400',    glow: 'shadow-glow-green' },
+  warning:  { accent: '#F59E0B',               icon: 'bg-amber-500/15 text-amber-400',        glow: '' },
+  danger:   { accent: '#EF4444',               icon: 'bg-rose-500/15 text-rose-400',          glow: '' },
+  info:     { accent: '#3B82F6',               icon: 'bg-sky-500/15 text-sky-400',            glow: '' },
+  violet:   { accent: '#7C3AED',               icon: 'bg-violet-500/15 text-violet-400',      glow: 'shadow-glow-violet' },
 }
 
-const variantIcon = {
-  default: 'bg-white/5 text-muted-foreground',
-  success: 'bg-success/20 text-success',
-  warning: 'bg-warning/20 text-warning',
-  danger: 'bg-danger/20 text-danger',
-  info: 'bg-info/20 text-info',
-}
+export function StatCard({
+  title, value, subtitle, icon: Icon, trend,
+  variant = 'default', className, delay = 0, accent,
+}: StatCardProps) {
+  const cfg = VARIANT_CONFIG[variant]
+  const accentColor = accent ?? (variant !== 'default' ? cfg.accent : undefined)
 
-export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 'default', className, delay = 0 }: StatCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.3 }}
-      className={cn('stat-card', variantStyles[variant], className)}
+      transition={{ delay, duration: 0.3, ease: [0.21, 0.47, 0.32, 0.98] }}
+      className={cn('kpi-card', cfg.glow, className)}
     >
-      <div className="flex items-start justify-between">
-        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</div>
+      {/* Left accent bar */}
+      {accentColor && (
+        <div
+          className="absolute left-0 top-4 bottom-4 w-[3px] rounded-full"
+          style={{ background: accentColor, opacity: 0.8 }}
+        />
+      )}
+
+      <div className="flex items-start justify-between mb-4">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider leading-none">
+          {title}
+        </p>
         {Icon && (
-          <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', variantIcon[variant])}>
+          <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0', cfg.icon)}>
             <Icon className="w-4 h-4" />
           </div>
         )}
       </div>
-      <div>
-        <div className="text-2xl font-bold text-foreground font-mono">{value}</div>
-        {subtitle && <div className="text-xs text-muted-foreground mt-1">{subtitle}</div>}
+
+      <div className="text-2xl font-bold text-foreground font-mono tracking-tight leading-none mb-1">
+        {value}
       </div>
-      {trend && (
-        <div className={cn('flex items-center gap-1 text-xs font-medium', trend.value >= 0 ? 'text-success' : 'text-danger')}>
-          <span>{trend.value >= 0 ? '↑' : '↓'} {Math.abs(trend.value)}%</span>
-          <span className="text-muted-foreground font-normal">{trend.label}</span>
-        </div>
-      )}
+
+      <div className="flex items-center justify-between mt-2">
+        {subtitle && (
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
+        )}
+        {trend && (
+          <div className={cn(
+            'flex items-center gap-1 text-xs font-semibold ml-auto',
+            trend.value >= 0 ? 'text-emerald-400' : 'text-rose-400',
+          )}>
+            {trend.value >= 0
+              ? <TrendingUp className="w-3 h-3" />
+              : <TrendingDown className="w-3 h-3" />
+            }
+            <span>{Math.abs(trend.value)}%</span>
+            {trend.label && <span className="text-muted-foreground font-normal">{trend.label}</span>}
+          </div>
+        )}
+      </div>
     </motion.div>
   )
 }
