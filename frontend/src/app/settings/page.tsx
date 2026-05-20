@@ -22,7 +22,7 @@ export default function SettingsPage() {
   return (
     <AppShell>
       <PageHeader icon={Settings} title="Settings" subtitle="Platform configuration and profile" />
-      <div className="p-6 xl:p-8 max-w-[800px] mx-auto">
+      <div className="p-3 sm:p-6 xl:p-8 max-w-[800px] mx-auto">
 
         <div className="space-y-5">
           {/* Profile */}

@@ -75,7 +75,7 @@ export default function FriendsPage() {
             </button>
           }
         />
-      <div className="p-5 xl:p-6 max-w-[1200px] mx-auto">
+      <div className="p-3 sm:p-5 xl:p-6 max-w-[1200px] mx-auto">
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

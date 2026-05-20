@@ -58,11 +58,11 @@ export default function TransactionsPage() {
           title="Transactions"
           subtitle={`${total.toLocaleString('en-IN')} transactions · ${formatCurrency(Number(totalAmount))} total`}
         />
-      <div className="p-5 xl:p-6 max-w-[1400px] mx-auto">
+      <div className="p-3 sm:p-5 xl:p-6 max-w-[1400px] mx-auto">
 
         {/* Filters */}
-        <div className="card p-4 mb-5 flex flex-wrap gap-3">
-          <div className="relative flex-1 min-w-[200px]">
+        <div className="card p-3 sm:p-4 mb-5 flex flex-col sm:flex-row flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[180px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               value={search}

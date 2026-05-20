@@ -56,7 +56,7 @@ export default function DashboardPage() {
         }
       />
 
-      <div className="p-5 xl:p-6 max-w-[1440px] mx-auto">
+      <div className="p-3 sm:p-5 xl:p-6 max-w-[1440px] mx-auto">
 
         {/* KPI row */}
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-5">
@@ -117,9 +117,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Charts row */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
           {/* Spending Trend */}
-          <div className="xl:col-span-2 card p-5">
+          <div className="lg:col-span-2 card p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="section-title">Spending Trend</h2>

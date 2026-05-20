@@ -29,7 +29,7 @@ export default function ReportsPage() {
           title="Reports & Analytics"
           subtitle="Deep financial insights across all cards and EMIs"
         />
-      <div className="p-5 xl:p-6 max-w-[1200px] mx-auto">
+      <div className="p-3 sm:p-5 xl:p-6 max-w-[1200px] mx-auto">
 
         {/* Top KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -48,7 +48,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Charts grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
           <div className="xl:col-span-2 card p-5">
             <div className="mb-5">
               <h2 className="section-title">6-Month Spending Trend</h2>
@@ -84,6 +84,7 @@ export default function ReportsPage() {
             <div className="px-5 py-4 border-b border-border/60">
               <h2 className="section-title">Monthly Summary</h2>
             </div>
+            <div className="table-responsive">
             <table className="data-table">
               <thead>
                 <tr>
@@ -107,6 +108,7 @@ export default function ReportsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

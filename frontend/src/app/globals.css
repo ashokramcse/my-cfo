@@ -25,8 +25,8 @@
     --orange-pale:  #FFF7ED;
 
     /* ── Border ── */
-    --border:        #DDD8D2;
-    --border-strong: #CCC7C0;
+    --border:        #C8C2BB;
+    --border-strong: #B8B2AB;
 
     /* ── Semantic ── */
     --success: #16A34A;
@@ -51,8 +51,8 @@
     --accent-foreground: 24 18 14;
     --destructive:      220 38 38;
     --destructive-foreground: 255 255 255;
-    --border:           221 216 210;
-    --input:            221 216 210;
+    --border:           200 194 187;
+    --input:            200 194 187;
     --ring:             249 115 22;
     --radius:           0.875rem;
   }
@@ -78,7 +78,7 @@
     display: block;
     width: 100%;
     background: #FFFFFF;
-    border: 1.5px solid var(--border);
+    border: 1.5px solid #C8C2BB;
     border-radius: 0.75rem;
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
@@ -100,13 +100,13 @@
   /* ── Surface cards ───────────────────────────────── */
   .card {
     background: #FFFFFF;
-    border: 1px solid #D8D2CB;
+    border: 1px solid #C8C2BB;
     border-radius: 1rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.07);
   }
   .card-raised {
     background: #FFFFFF;
-    border: 1px solid #D8D2CB;
+    border: 1px solid #C8C2BB;
     border-radius: 1rem;
     box-shadow: 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
   }
@@ -114,7 +114,7 @@
   /* ── KPI / Stat card ─────────────────────────────── */
   .kpi-card {
     background: #FFFFFF;
-    border: 1.5px solid #DDD8D2;
+    border: 1.5px solid #C8C2BB;
     border-radius: 1rem;
     padding: 1.25rem 1.25rem 1.25rem 1.5rem;
     position: relative;
@@ -254,8 +254,9 @@
   }
 
   /* ── Data table ──────────────────────────────────── */
-  .data-table { width: 100%; font-size: 0.875rem; }
-  .data-table thead tr { border-bottom: 1.5px solid #DDD8D2; }
+  .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .data-table { width: 100%; font-size: 0.875rem; min-width: 480px; }
+  .data-table thead tr { border-bottom: 1.5px solid #C8C2BB; }
   .data-table thead th {
     padding: 0.75rem 1rem;
     text-align: left;

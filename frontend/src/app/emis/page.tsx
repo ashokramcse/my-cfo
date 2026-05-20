@@ -89,7 +89,7 @@ export default function EMIsPage() {
             </button>
           }
         />
-      <div className="p-5 xl:p-6 max-w-[1200px] mx-auto">
+      <div className="p-3 sm:p-5 xl:p-6 max-w-[1200px] mx-auto">
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -111,7 +111,7 @@ export default function EMIsPage() {
         </div>
 
         {/* Filter tabs */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1">
           {['ACTIVE', 'COMPLETED', 'PRECLOSED', 'DEFAULTED'].map((s) => (
             <button key={s} onClick={() => setFilterStatus(s)}
               className={cn('text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors',
@@ -148,7 +148,7 @@ export default function EMIsPage() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
-                      style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                      style={{ background: 'linear-gradient(135deg, #FFF0E0, #FFD9B0)', border: '1.5px solid #FDC888' }}>
                       {ownerCfg.icon}
                     </div>
                     <div className="flex-1 min-w-0">

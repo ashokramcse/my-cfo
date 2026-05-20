@@ -87,7 +87,7 @@ export default function StatementsPage() {
             </button>
           }
         />
-      <div className="p-5 xl:p-6 max-w-[1000px] mx-auto">
+      <div className="p-3 sm:p-5 xl:p-6 max-w-[1000px] mx-auto">
 
         {/* Drop zone */}
         <div
@@ -120,6 +120,7 @@ export default function StatementsPage() {
           </div>
         ) : statements.length ? (
           <div className="card overflow-hidden">
+            <div className="table-responsive">
             <table className="data-table">
               <thead>
                 <tr>
@@ -180,6 +181,7 @@ export default function StatementsPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center py-16 gap-3">
