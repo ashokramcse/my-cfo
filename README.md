@@ -1,152 +1,466 @@
-# CC-Bill — Personal Credit Card & EMI Financial Intelligence Platform
+<div align="center">
 
-A self-hosted, enterprise-grade financial operating system for managing credit cards, EMIs, shared expenses, and financial analytics.
+<h1>
+  <img src="https://raw.githubusercontent.com/twitter/twemoji/master/assets/svg/1f4b3.svg" width="40" height="40" alt="card" />
+  &nbsp;CC-Bill
+</h1>
 
-## ✨ Features
+<p><strong>Personal Credit Card &amp; EMI Financial Intelligence Platform</strong></p>
 
-| Module | Description |
-|--------|-------------|
-| **Multi-Card Dashboard** | Track all credit cards with utilization, due dates, rewards |
-| **PDF Statement Parser** | Auto-parse HDFC/ICICI/SBI/Axis/Amex + 6 more banks, OCR fallback |
-| **EMI Tracker** | Personal & friend EMIs, no-cost detection, pre-closure simulation |
-| **Friend EMI Intelligence** | Who owes what, WhatsApp reminders, risk scoring, collection calendar |
-| **AI Insights** | Rule-based + optional Ollama LLM for smart financial alerts |
-| **Spending Analytics** | Category breakdown, monthly trends, subscription detection |
-| **Cash Flow Forecast** | 12-month EMI liability forecast, utilization projections |
-| **Security** | AES-256-GCM encryption, JWT auth, audit logs, no password storage |
+<p>
+  A self-hosted, full-stack financial operating system for managing credit cards,<br/>
+  EMIs, shared expenses, and multi-bank statement analytics — all on your own infrastructure.
+</p>
+
+<br/>
+
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://postgresql.org)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+
+</div>
 
 ---
 
-## 🚀 Quick Start
+## Table of Contents
+
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Supported Banks](#supported-banks)
+- [Database Schema](#database-schema)
+- [Security](#security)
+- [AI Features](#ai-features)
+- [Friend EMI Workflow](#friend-emi-workflow)
+- [Tech Stack](#tech-stack)
+- [Configuration](#configuration)
+- [Commands Reference](#commands-reference)
+- [Local Development](#local-development)
+
+---
+
+## Overview
+
+CC-Bill is a **self-hosted** alternative to apps like CRED, Walnut, and MoneyView — built for users who want complete data ownership. Upload PDF statements or Cred screenshots, track every rupee across multiple cards, manage EMIs including those purchased for friends, and get intelligent financial alerts — all running on your own server.
+
+> **Why self-hosted?** Your financial data stays on your machine. No telemetry, no third-party access, no cloud lock-in.
+
+---
+
+## Quick Start
 
 ```bash
-# 1. Clone
+# 1. Clone the repository
 git clone git@github.com:ashokramcse/cc-bill.git
 cd cc-bill
 
-# 2. Configure
+# 2. Create your environment file
 cp .env.example .env
-# Edit .env — change SECRET_KEY and ENCRYPTION_KEY
-
-# 3. Launch
-docker compose up -d
-
-# 4. Open
-open http://localhost:80
 ```
 
-That's it. Register at `/login` and start adding cards.
+Open `.env` and set at minimum:
+
+```dotenv
+SECRET_KEY=<random-64-char-hex>      # openssl rand -hex 64
+ENCRYPTION_KEY=<random-32-char-hex>  # openssl rand -hex 32
+POSTGRES_PASSWORD=<strong-password>
+```
+
+```bash
+# 3. Start the full stack
+docker compose up -d
+
+# 4. Run database migrations
+docker compose exec backend alembic upgrade head
+
+# 5. Open in browser
+open http://localhost
+```
+
+Register at `/login`, add your first card, and start uploading statements.
 
 ---
 
-## 🏗 Architecture
+## Features
+
+### 💳 Card Management
+- Track unlimited credit cards across all major Indian banks
+- Live utilization gauge, available credit, and reward points balance
+- Per-card spending breakdown and monthly trend charts
+- Custom card colours and nicknames
+
+### 📄 Statement Intelligence
+- **PDF parsing** — pdfplumber → PyMuPDF → Tesseract OCR fallback chain
+- **Cred screenshot parsing** — bill summaries (total due, min due, due date) and spending summaries (category totals + transaction list)
+- Password-protected PDF support via pikepdf decryption
+- Auto-detect bank from file content — no manual selection needed
+- 18-category merchant classification with 60+ compiled regex rules
+- Transaction deduplication across re-uploads
+
+### 📅 EMI Tracker
+- Track personal and friend EMIs with tenure, interest rate, and no-cost flag
+- Monthly EMI liability calendar and pre-closure simulation
+- Outstanding balance and total interest paid at a glance
+
+### 👥 Friend EMI Intelligence
+- Map EMIs purchased for friends — who owns what, how much is pending
+- Risk scoring (LOW / MEDIUM / HIGH) based on outstanding amounts
+- One-click WhatsApp reminder generation
+- Collection calendar with overdue flagging
+
+### 📊 Analytics & Reports
+- Monthly spending by category (area chart + pie chart)
+- 12-month EMI liability forecast
+- Subscription detection and recurring charge alerts
+- Comparative month-over-month analysis
+
+### 🤖 AI Insights
+- Rule-based engine: utilization risk, EMI burden, food overspend, upcoming dues
+- Optional Ollama LLM integration for natural-language financial commentary
+
+### 🔐 Security First
+- AES-256-GCM encryption on all sensitive fields
+- JWT access + refresh token auth with secure rotation
+- PDF passwords used only at decryption time — never persisted
+- Per-user row-level data isolation
+- Full audit trail on all write operations
+
+---
+
+## Architecture
 
 ```
 cc-bill/
-├── backend/                    # FastAPI (Python 3.12)
+│
+├── backend/                         FastAPI application (Python 3.12)
 │   ├── app/
-│   │   ├── api/               # REST endpoints
-│   │   ├── models/            # SQLAlchemy ORM models
-│   │   ├── schemas/           # Pydantic request/response schemas
-│   │   ├── parsers/           # Bank-specific PDF parsers
-│   │   ├── services/          # PDF parser, categorizer, AI insights
-│   │   └── workers/           # Celery background tasks
-│   └── alembic/               # Database migrations
+│   │   ├── api/                     REST endpoints
+│   │   │   ├── auth.py              Register, login, token refresh
+│   │   │   ├── cards.py             Card CRUD + stats
+│   │   │   ├── transactions.py      Transaction list + filters
+│   │   │   ├── emis.py              EMI CRUD + payment tracking
+│   │   │   ├── friends.py           Friend contacts + risk scores
+│   │   │   ├── statements.py        File upload (PDF + images)
+│   │   │   ├── reports.py           Dashboard + spending reports
+│   │   │   └── insights.py          Financial alerts
+│   │   ├── models/                  SQLAlchemy ORM models
+│   │   ├── schemas/                 Pydantic v2 request/response schemas
+│   │   ├── parsers/                 Bank-specific statement parsers
+│   │   │   ├── hdfc.py
+│   │   │   ├── icici.py
+│   │   │   ├── sbi.py
+│   │   │   ├── axis.py
+│   │   │   ├── cred.py              Cred screenshot parser
+│   │   │   └── generic.py           Fallback for unknown banks
+│   │   ├── services/
+│   │   │   ├── pdf_parser.py        Text extraction pipeline
+│   │   │   ├── image_parser.py      PIL preprocessing + OCR pipeline
+│   │   │   ├── categorizer.py       18-category merchant classifier
+│   │   │   └── insights.py          Financial insight generation
+│   │   └── workers/
+│   │       ├── celery_app.py
+│   │       └── tasks.py             Background parsing + insight tasks
+│   └── alembic/                     Database migrations
 │
-├── frontend/                   # Next.js 15 + TypeScript
+├── frontend/                        Next.js 15 + TypeScript
 │   └── src/
-│       ├── app/               # Next.js App Router pages
-│       ├── components/        # Reusable UI components
-│       ├── store/             # Zustand state management
-│       └── lib/               # API client, utilities
+│       ├── app/                     App Router pages
+│       │   ├── dashboard/           Overview + stats
+│       │   ├── cards/               Card management
+│       │   ├── transactions/        Transaction list + filters
+│       │   ├── emis/                EMI tracker
+│       │   ├── friends/             Friend EMI management
+│       │   ├── statements/          File upload + parse history
+│       │   ├── reports/             Charts + analytics
+│       │   └── settings/            Account + preferences
+│       ├── components/              Shared UI components
+│       ├── store/                   Zustand state management
+│       └── lib/                     API client, utilities, types
 │
-├── nginx/                      # Reverse proxy config
-├── scripts/                    # DB init SQL
-└── docker-compose.yml          # Full stack orchestration
+├── nginx/                           Reverse proxy config
+├── scripts/                         Database init SQL
+├── docker-compose.yml               Full-stack orchestration
+└── .env.example                     Environment template
 ```
 
-### Services
+### Service Topology
+
+```
+Browser
+  │
+  ▼
+┌──────────────────────────────────────┐
+│  nginx :80                           │  Reverse proxy
+│  /api/* → backend:8000               │
+│  /*     → frontend:3000              │
+└───────────┬──────────────────────────┘
+            │
+      ┌─────┴──────┐
+      ▼            ▼
+  backend:8000  frontend:3000
+  (FastAPI)     (Next.js)
+      │
+      ├──► postgres:5432   Primary database
+      ├──► redis:6379       Cache + task broker
+      └──► worker           Celery (PDF/image parsing, insights)
+```
 
 | Service | Port | Description |
-|---------|------|-------------|
-| `nginx` | 80 | Reverse proxy |
-| `frontend` | 3000 | Next.js app |
-| `backend` | 8000 | FastAPI API |
+|---------|:----:|-------------|
+| `nginx` | **80** | Reverse proxy — single entry point |
+| `frontend` | 3000 | Next.js SSR application |
+| `backend` | 8000 | FastAPI REST API |
 | `worker` | — | Celery task queue |
-| `postgres` | 5432 | Primary database |
-| `redis` | 6379 | Cache + task broker |
+| `postgres` | 5432 | PostgreSQL 16 — primary data store |
+| `redis` | 6379 | Cache + Celery broker |
 
 ---
 
-## 🗄 Database Schema
+## Supported Banks
 
-**Core tables:** `users`, `credit_cards`, `statements`, `transactions`, `emis`, `emi_payments`, `friends`
+| Bank | PDF Parsing | Cred Screenshot | Notes |
+|------|:-----------:|:---------------:|-------|
+| HDFC | ✅ | ✅ | Reward points, statement date |
+| ICICI | ✅ | ✅ | |
+| SBI | ✅ | ✅ | |
+| Axis | ✅ | ✅ | |
+| Amex | ✅ | — | |
+| IDFC First | ✅ | — | |
+| Kotak | ✅ | — | |
+| Standard Chartered | ✅ | — | |
+| OneCard | ✅ | — | |
+| AU Small Finance | ✅ | — | |
+| Federal Bank | ✅ | — | |
+| **Generic fallback** | ✅ | — | Auto-applied for any other bank |
 
-**Support tables:** `categories`, `merchant_rules`, `insights`, `audit_logs`
-
-**Key relationships:**
-- Transactions belong to cards and statements
-- EMIs link to cards and optionally friends
-- EMI payments track each installment
-- Insights are generated per user by workers
-
----
-
-## 📊 Tech Stack
-
-**Backend:** FastAPI · SQLAlchemy (async) · PostgreSQL · Redis · Celery · pdfplumber · PyMuPDF · Tesseract OCR · pikepdf
-
-**Frontend:** Next.js 15 · TypeScript · Tailwind CSS · Framer Motion · Recharts · Zustand · TanStack Query
-
----
-
-## 🔐 Security
-
-- AES-256-GCM encryption for sensitive fields
-- JWT access + refresh token auth
-- PDF passwords used only during decryption, never stored
-- Per-user data isolation at DB level
-- Rate limiting on API endpoints
-- Full audit trail for all write operations
+**Cred screenshot types supported:**
+- **Bill summary** — total outstanding, min due, due date, credit limit, available limit
+- **Spending summary** — category totals + individual transaction list with merchant, amount, and date
 
 ---
 
-## 🏦 Supported Banks
+## Database Schema
 
-HDFC · ICICI · SBI · Axis · Amex · IDFC · OneCard · AU · Kotak · Federal · Standard Chartered · Generic fallback
+### Core Tables
 
----
+| Table | Purpose |
+|-------|---------|
+| `users` | Account credentials and profile |
+| `credit_cards` | Card metadata, limits, statement and due dates |
+| `statements` | Uploaded files, parse status, extracted financials |
+| `transactions` | Individual line items with category and merchant |
+| `emis` | Active and closed EMI records |
+| `emi_payments` | Per-installment payment tracking |
+| `friends` | Contacts for shared EMI tracking |
 
-## 📋 Available Commands
+### Supporting Tables
 
-```bash
-make up           # Start all services
-make down         # Stop all services
-make logs         # Follow logs
-make migrate      # Run DB migrations
-make backup       # Backup PostgreSQL
-make shell-backend  # Shell into backend
-make shell-db       # PostgreSQL shell
+| Table | Purpose |
+|-------|---------|
+| `insights` | Generated financial alerts per user |
+| `categories` | Merchant category master |
+| `merchant_rules` | User-defined categorization overrides |
+| `audit_logs` | Immutable write operation history |
+
+**Entity relationships:**
+
+```
+users ──< credit_cards ──< statements ──< transactions
+                      └──< emis ──< emi_payments
+users ──< friends ──< emis
+users ──< insights
 ```
 
 ---
 
-## 🤖 AI Features (Optional)
+## Security
 
-Enable Ollama for LLM-powered insights:
-1. Add Ollama service to `docker-compose.yml`
-2. Set `OLLAMA_BASE_URL=http://ollama:11434` in `.env`
-3. Pull a model: `docker exec ollama ollama pull llama3.2`
-
----
-
-## 📱 Friend EMI Workflow
-
-1. Add a contact under **Friend EMIs** → enter name, phone, WhatsApp
-2. Create an EMI → set Owner Type = "FRIEND" and select the contact
-3. Track collection progress, overdue amounts, and risk levels
-4. Send WhatsApp reminders with one click
+| Concern | Implementation |
+|---------|----------------|
+| Field encryption | AES-256-GCM per-field via Python `cryptography` library |
+| Authentication | JWT access tokens (15 min) + refresh tokens (7 days) |
+| Password storage | bcrypt cost-12 — plaintext never stored |
+| PDF passwords | Held in memory during decryption only, never written to DB |
+| Data isolation | Every query is scoped to `user_id` at the ORM layer |
+| Audit trail | Create / update / delete operations logged with timestamp and IP |
+| Rate limiting | Nginx-level rate limiting on `/api/auth` endpoints |
 
 ---
 
-*Self-hosted · Zero data leaks · Built for power users*
+## AI Features
+
+### Rule-Based Insights (always on)
+
+| Trigger | Insight Type | Severity |
+|---------|-------------|----------|
+| Card utilization > 80% | `UTILIZATION_RISK` | Critical / Warning |
+| EMI burden > 40% of avg monthly spend | `EMI_RISK` | Warning |
+| Food spend up > 30% month-over-month | `OVERSPEND` | Warning |
+| Due date within 5 days | `DUE_DATE` | Info |
+
+### Ollama LLM Integration (optional)
+
+Enable free, local LLM commentary on your spending patterns:
+
+```bash
+# 1. Uncomment the ollama service in docker-compose.yml
+
+# 2. Add to .env
+OLLAMA_BASE_URL=http://ollama:11434
+
+# 3. Pull a model
+docker compose exec ollama ollama pull llama3.2
+```
+
+Ollama runs entirely on your machine — no data leaves your server.
+
+---
+
+## Friend EMI Workflow
+
+```
+1. Add Friend Contact
+   └── Name, phone number, WhatsApp number
+
+2. Create EMI
+   └── Set Owner Type = "FRIEND" → select the contact
+
+3. Track collection
+   ├── Total pending amount
+   ├── Overdue installments
+   └── Risk level (see below)
+
+4. Send reminder
+   └── One-click WhatsApp message pre-filled with outstanding details
+```
+
+**Risk levels:**
+
+| Pending Amount | Risk Level |
+|---------------|:----------:|
+| > ₹50,000 | 🔴 HIGH |
+| ₹10,000 – ₹50,000 | 🟡 MEDIUM |
+| < ₹10,000 | 🟢 LOW |
+
+---
+
+## Tech Stack
+
+### Backend
+
+| Package | Version | Role |
+|---------|:-------:|------|
+| FastAPI | 0.115 | HTTP framework |
+| SQLAlchemy | 2.0 | Async ORM |
+| asyncpg | 0.30 | PostgreSQL async driver |
+| Alembic | 1.14 | Schema migrations |
+| Celery | 5.4 | Background task queue |
+| pdfplumber | 0.11 | PDF text extraction (primary) |
+| PyMuPDF | 1.24 | PDF text extraction (secondary) |
+| pytesseract | 0.3 | OCR fallback + image parsing |
+| pikepdf | 9.4 | Password-protected PDF decryption |
+| Pillow | 11.0 | Image preprocessing for OCR |
+| python-jose | 3.3 | JWT signing and verification |
+| cryptography | 43 | AES-256-GCM field encryption |
+| passlib + bcrypt | 1.7 / 4.0 | Password hashing |
+| pydantic | 2.10 | Request/response validation |
+
+### Frontend
+
+| Package | Version | Role |
+|---------|:-------:|------|
+| Next.js | 15.1 | React framework (App Router) |
+| TypeScript | 5.7 | Static typing |
+| Tailwind CSS | 3.4 | Utility-first styling |
+| Framer Motion | 11 | Page and component animations |
+| Recharts | 2.14 | Area, pie, and bar charts |
+| TanStack Query | 5 | Server state + cache management |
+| Zustand | 5 | Client-side state |
+| react-hook-form | 7 | Form state and validation |
+| Zod | 3 | Schema-based form validation |
+| react-dropzone | 14 | Drag-and-drop file upload |
+| Radix UI | — | Accessible UI primitives |
+| Lucide React | — | Icon set |
+
+---
+
+## Configuration
+
+All configuration is via `.env`. Copy `.env.example` to get started.
+
+| Variable | Required | Default | Description |
+|----------|:--------:|---------|-------------|
+| `SECRET_KEY` | ✅ | — | JWT signing key (`openssl rand -hex 64`) |
+| `ENCRYPTION_KEY` | ✅ | — | AES-256 key (`openssl rand -hex 32`) |
+| `POSTGRES_PASSWORD` | ✅ | — | Database password |
+| `POSTGRES_DB` | — | `ccbill` | Database name |
+| `REDIS_URL` | — | `redis://redis:6379/0` | Redis connection URL |
+| `UPLOAD_DIR` | — | `/uploads` | File storage path |
+| `MAX_UPLOAD_SIZE_MB` | — | `20` | Maximum upload size |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | — | `15` | JWT access token TTL |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | — | `7` | JWT refresh token TTL |
+| `OLLAMA_BASE_URL` | — | — | Enable LLM insights (optional) |
+
+---
+
+## Commands Reference
+
+```bash
+# Stack management
+make up                # Start all services in detached mode
+make down              # Stop all services
+make restart           # Restart all services
+make logs              # Tail logs from all services
+make logs-backend      # Tail backend logs only
+
+# Database
+make migrate           # Apply pending Alembic migrations
+make migrate-create    # Create a new migration (prompts for name)
+make backup            # Dump PostgreSQL to ./backups/
+
+# Development shells
+make shell-backend     # Bash into the backend container
+make shell-db          # psql session inside PostgreSQL
+make shell-worker      # Bash into the Celery worker container
+
+# Maintenance
+make clean             # Remove stopped containers and dangling images
+make reset-db          # ⚠️  Drop and recreate the database (destructive)
+```
+
+---
+
+## Local Development
+
+Run without Docker for faster iteration:
+
+```bash
+# Backend
+cd backend
+pip install -r requirements.txt
+cp ../.env.example ../.env          # edit to point at localhost services
+uvicorn app.main:app --reload --port 8000
+
+# Celery worker (separate terminal)
+celery -A app.workers.celery_app worker --loglevel=info
+
+# Frontend
+cd frontend
+npm install --legacy-peer-deps
+npm run dev
+```
+
+You will need PostgreSQL and Redis running locally. Update `DATABASE_URL` and `REDIS_URL` in `.env` to use `localhost` instead of the Docker service names.
+
+---
+
+<div align="center">
+
+**Self-hosted · Zero data leaks · Built for power users**
+
+<sub>Made with ♥ for those who want their financial data to stay private</sub>
+
+</div>
