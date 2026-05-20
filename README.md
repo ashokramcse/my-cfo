@@ -16,7 +16,9 @@
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://postgresql.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://postgresql.org)
+[![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![Node.js](https://img.shields.io/badge/Node.js-22-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
@@ -28,13 +30,10 @@
 
 - [Overview](#overview)
 - [Quick Start](#quick-start)
+- [Port Reference](#port-reference)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Supported Banks](#supported-banks)
-- [Database Schema](#database-schema)
-- [Security](#security)
-- [AI Features](#ai-features)
-- [Friend EMI Workflow](#friend-emi-workflow)
 - [Tech Stack](#tech-stack)
 - [Configuration](#configuration)
 - [Commands Reference](#commands-reference)
@@ -70,17 +69,30 @@ POSTGRES_PASSWORD=<strong-password>
 ```
 
 ```bash
-# 3. Start the full stack
-docker compose up -d
+# 3. Start the full stack (builds all images + starts all 6 services)
+docker compose down && docker compose up --build
 
-# 4. Run database migrations
+# 4. Run database migrations (first time only)
 docker compose exec backend alembic upgrade head
 
 # 5. Open in browser
-open http://localhost
+open http://localhost:4000
 ```
 
-Register at `/login`, add your first card, and start uploading statements.
+---
+
+## Port Reference
+
+| Service | Host Port | Container Port | Description |
+|---------|:---------:|:--------------:|-------------|
+| **nginx** | **4000** | 80 | ← **Single entry point. Open http://localhost:4000** |
+| `frontend` | — | 3030 | Next.js 15 / Node.js 22 (internal, proxied by nginx) |
+| `backend` | — | 8090 | FastAPI / Python 3.13 (internal, proxied by nginx) |
+| `postgres` | 5555 | 5432 | PostgreSQL 17 (exposed for local DB tools) |
+| `redis` | 6666 | 6379 | Redis 7 (exposed for local cache tools) |
+| `worker` | — | — | Celery background queue (no port needed) |
+
+> **Only `http://localhost:4000` is needed to use the app.** The other exposed ports (5555, 6666) are for connecting local tools like TablePlus or RedisInsight directly to the database/cache.
 
 ---
 
@@ -90,269 +102,109 @@ Register at `/login`, add your first card, and start uploading statements.
 - Track unlimited credit cards across all major Indian banks
 - Live utilization gauge, available credit, and reward points balance
 - Per-card spending breakdown and monthly trend charts
-- Custom card colours and nicknames
 
 ### 📄 Statement Intelligence
 - **PDF parsing** — pdfplumber → PyMuPDF → Tesseract OCR fallback chain
-- **Cred screenshot parsing** — bill summaries (total due, min due, due date) and spending summaries (category totals + transaction list)
-- Password-protected PDF support via pikepdf decryption
-- Auto-detect bank from file content — no manual selection needed
-- 18-category merchant classification with 60+ compiled regex rules
-- Transaction deduplication across re-uploads
+- **Cred screenshot parsing** — bill summaries and spending breakdowns
+- Password-protected PDF support
+- Auto-detect bank from file content — 18-category merchant classification
 
 ### 📅 EMI Tracker
 - Track personal and friend EMIs with tenure, interest rate, and no-cost flag
-- Monthly EMI liability calendar and pre-closure simulation
-- Outstanding balance and total interest paid at a glance
+- 12-month EMI liability forecast chart
 
 ### 👥 Friend EMI Intelligence
-- Map EMIs purchased for friends — who owns what, how much is pending
-- Risk scoring (LOW / MEDIUM / HIGH) based on outstanding amounts
-- One-click WhatsApp reminder generation
-- Collection calendar with overdue flagging
+- Map EMIs purchased for friends — risk scoring, overdue flagging, collection tracking
 
 ### 📊 Analytics & Reports
-- Monthly spending by category (area chart + pie chart)
-- 12-month EMI liability forecast
-- Subscription detection and recurring charge alerts
-- Comparative month-over-month analysis
+- Monthly spending by category, 12-month EMI forecast, month-over-month analysis
 
 ### 🤖 AI Insights
-- Rule-based engine: utilization risk, EMI burden, food overspend, upcoming dues
-- Optional Ollama LLM integration for natural-language financial commentary
+- Rule-based financial alerts (utilization risk, EMI burden, due dates)
+- Optional Ollama LLM integration for local natural-language commentary
 
-### 🔐 Security First
+### 📱 Mobile Responsive
+- Fully responsive — phones, tablets, desktops
+- Slide-out sidebar drawer on mobile with hamburger toggle
+- Scrollable tables and adaptive grid layouts
+
+### 🔐 Security
 - AES-256-GCM encryption on all sensitive fields
-- JWT access + refresh token auth with secure rotation
-- PDF passwords used only at decryption time — never persisted
+- JWT access + refresh token auth
 - Per-user row-level data isolation
-- Full audit trail on all write operations
 
 ---
 
 ## Architecture
 
 ```
-cc-bill/
-│
-├── backend/                         FastAPI application (Python 3.12)
-│   ├── app/
-│   │   ├── api/                     REST endpoints
-│   │   │   ├── auth.py              Register, login, token refresh
-│   │   │   ├── cards.py             Card CRUD + stats
-│   │   │   ├── transactions.py      Transaction list + filters
-│   │   │   ├── emis.py              EMI CRUD + payment tracking
-│   │   │   ├── friends.py           Friend contacts + risk scores
-│   │   │   ├── statements.py        File upload (PDF + images)
-│   │   │   ├── reports.py           Dashboard + spending reports
-│   │   │   └── insights.py          Financial alerts
-│   │   ├── models/                  SQLAlchemy ORM models
-│   │   ├── schemas/                 Pydantic v2 request/response schemas
-│   │   ├── parsers/                 Bank-specific statement parsers
-│   │   │   ├── hdfc.py
-│   │   │   ├── icici.py
-│   │   │   ├── sbi.py
-│   │   │   ├── axis.py
-│   │   │   ├── cred.py              Cred screenshot parser
-│   │   │   └── generic.py           Fallback for unknown banks
-│   │   ├── services/
-│   │   │   ├── pdf_parser.py        Text extraction pipeline
-│   │   │   ├── image_parser.py      PIL preprocessing + OCR pipeline
-│   │   │   ├── categorizer.py       18-category merchant classifier
-│   │   │   └── insights.py          Financial insight generation
-│   │   └── workers/
-│   │       ├── celery_app.py
-│   │       └── tasks.py             Background parsing + insight tasks
-│   └── alembic/                     Database migrations
-│
-├── frontend/                        Next.js 15 + TypeScript
-│   └── src/
-│       ├── app/                     App Router pages
-│       │   ├── dashboard/           Overview + stats
-│       │   ├── cards/               Card management
-│       │   ├── transactions/        Transaction list + filters
-│       │   ├── emis/                EMI tracker
-│       │   ├── friends/             Friend EMI management
-│       │   ├── statements/          File upload + parse history
-│       │   ├── reports/             Charts + analytics
-│       │   └── settings/            Account + preferences
-│       ├── components/              Shared UI components
-│       ├── store/                   Zustand state management
-│       └── lib/                     API client, utilities, types
-│
-├── nginx/                           Reverse proxy config
-├── scripts/                         Database init SQL
-├── docker-compose.yml               Full-stack orchestration
-└── .env.example                     Environment template
+Browser → http://localhost:4000
+              │
+              ▼
+     ┌──────────────────┐
+     │  nginx :4000     │   Reverse proxy (single entry point)
+     │  /api/* → :8090  │
+     │  /*     → :3030  │
+     └────────┬─────────┘
+              │
+       ┌──────┴───────┐
+       ▼              ▼
+  backend:8090    frontend:3030
+  (FastAPI +      (Next.js 15 +
+  Python 3.13)     Node.js 22)
+       │
+       ├──► postgres:5432  (host: 5555)  PostgreSQL 17
+       ├──► redis:6379     (host: 6666)  Redis 7
+       └──► worker                       Celery queue
 ```
 
-### Service Topology
+### Health-checked startup chain
 
 ```
-Browser
-  │
-  ▼
-┌──────────────────────────────────────┐
-│  nginx :80                           │  Reverse proxy
-│  /api/* → backend:8000               │
-│  /*     → frontend:3000              │
-└───────────┬──────────────────────────┘
-            │
-      ┌─────┴──────┐
-      ▼            ▼
-  backend:8000  frontend:3000
-  (FastAPI)     (Next.js)
-      │
-      ├──► postgres:5432   Primary database
-      ├──► redis:6379       Cache + task broker
-      └──► worker           Celery (PDF/image parsing, insights)
+postgres ──(healthy)──┐
+                      ├──► backend ──(healthy)──► frontend ──(healthy)──► nginx ✅
+redis    ──(healthy)──┘         └──► worker
 ```
 
-| Service | Port | Description |
-|---------|:----:|-------------|
-| `nginx` | **80** | Reverse proxy — single entry point |
-| `frontend` | 3000 | Next.js SSR application |
-| `backend` | 8000 | FastAPI REST API |
-| `worker` | — | Celery task queue |
-| `postgres` | 5432 | PostgreSQL 16 — primary data store |
-| `redis` | 6379 | Cache + Celery broker |
+Every service waits for its dependencies to pass health checks before starting. Running `docker compose up --build` always brings everything up in the correct order.
 
 ---
 
 ## Supported Banks
 
-| Bank | PDF Parsing | Cred Screenshot | Notes |
-|------|:-----------:|:---------------:|-------|
-| HDFC | ✅ | ✅ | Reward points, statement date |
-| ICICI | ✅ | ✅ | |
-| SBI | ✅ | ✅ | |
-| Axis | ✅ | ✅ | |
-| Amex | ✅ | — | |
-| IDFC First | ✅ | — | |
-| Kotak | ✅ | — | |
-| Standard Chartered | ✅ | — | |
-| OneCard | ✅ | — | |
-| AU Small Finance | ✅ | — | |
-| Federal Bank | ✅ | — | |
-| **Generic fallback** | ✅ | — | Auto-applied for any other bank |
-
-**Cred screenshot types supported:**
-- **Bill summary** — total outstanding, min due, due date, credit limit, available limit
-- **Spending summary** — category totals + individual transaction list with merchant, amount, and date
-
----
-
-## Database Schema
-
-### Core Tables
-
-| Table | Purpose |
-|-------|---------|
-| `users` | Account credentials and profile |
-| `credit_cards` | Card metadata, limits, statement and due dates |
-| `statements` | Uploaded files, parse status, extracted financials |
-| `transactions` | Individual line items with category and merchant |
-| `emis` | Active and closed EMI records |
-| `emi_payments` | Per-installment payment tracking |
-| `friends` | Contacts for shared EMI tracking |
-
-### Supporting Tables
-
-| Table | Purpose |
-|-------|---------|
-| `insights` | Generated financial alerts per user |
-| `categories` | Merchant category master |
-| `merchant_rules` | User-defined categorization overrides |
-| `audit_logs` | Immutable write operation history |
-
-**Entity relationships:**
-
-```
-users ──< credit_cards ──< statements ──< transactions
-                      └──< emis ──< emi_payments
-users ──< friends ──< emis
-users ──< insights
-```
-
----
-
-## Security
-
-| Concern | Implementation |
-|---------|----------------|
-| Field encryption | AES-256-GCM per-field via Python `cryptography` library |
-| Authentication | JWT access tokens (15 min) + refresh tokens (7 days) |
-| Password storage | bcrypt cost-12 — plaintext never stored |
-| PDF passwords | Held in memory during decryption only, never written to DB |
-| Data isolation | Every query is scoped to `user_id` at the ORM layer |
-| Audit trail | Create / update / delete operations logged with timestamp and IP |
-| Rate limiting | Nginx-level rate limiting on `/api/auth` endpoints |
-
----
-
-## AI Features
-
-### Rule-Based Insights (always on)
-
-| Trigger | Insight Type | Severity |
-|---------|-------------|----------|
-| Card utilization > 80% | `UTILIZATION_RISK` | Critical / Warning |
-| EMI burden > 40% of avg monthly spend | `EMI_RISK` | Warning |
-| Food spend up > 30% month-over-month | `OVERSPEND` | Warning |
-| Due date within 5 days | `DUE_DATE` | Info |
-
-### Ollama LLM Integration (optional)
-
-Enable free, local LLM commentary on your spending patterns:
-
-```bash
-# 1. Uncomment the ollama service in docker-compose.yml
-
-# 2. Add to .env
-OLLAMA_BASE_URL=http://ollama:11434
-
-# 3. Pull a model
-docker compose exec ollama ollama pull llama3.2
-```
-
-Ollama runs entirely on your machine — no data leaves your server.
-
----
-
-## Friend EMI Workflow
-
-```
-1. Add Friend Contact
-   └── Name, phone number, WhatsApp number
-
-2. Create EMI
-   └── Set Owner Type = "FRIEND" → select the contact
-
-3. Track collection
-   ├── Total pending amount
-   ├── Overdue installments
-   └── Risk level (see below)
-
-4. Send reminder
-   └── One-click WhatsApp message pre-filled with outstanding details
-```
-
-**Risk levels:**
-
-| Pending Amount | Risk Level |
-|---------------|:----------:|
-| > ₹50,000 | 🔴 HIGH |
-| ₹10,000 – ₹50,000 | 🟡 MEDIUM |
-| < ₹10,000 | 🟢 LOW |
+| Bank | PDF Parsing | Cred Screenshot |
+|------|:-----------:|:---------------:|
+| HDFC | ✅ | ✅ |
+| ICICI | ✅ | ✅ |
+| SBI | ✅ | ✅ |
+| Axis | ✅ | ✅ |
+| Amex | ✅ | — |
+| IDFC First | ✅ | — |
+| Kotak | ✅ | — |
+| Standard Chartered | ✅ | — |
+| OneCard | ✅ | — |
+| AU Small Finance | ✅ | — |
+| Federal Bank | ✅ | — |
+| **Generic fallback** | ✅ | — |
 
 ---
 
 ## Tech Stack
 
+### Infrastructure
+
+| Tool | Version | Role |
+|------|:-------:|------|
+| Docker Compose | v2 | Container orchestration |
+| nginx | **1.27** | Reverse proxy |
+| PostgreSQL | **17** | Primary database |
+| Redis | **7** | Cache + Celery broker |
+
 ### Backend
 
 | Package | Version | Role |
 |---------|:-------:|------|
+| Python | **3.13** | Runtime |
 | FastAPI | 0.115 | HTTP framework |
 | SQLAlchemy | 2.0 | Async ORM |
 | asyncpg | 0.30 | PostgreSQL async driver |
@@ -360,30 +212,26 @@ Ollama runs entirely on your machine — no data leaves your server.
 | Celery | 5.4 | Background task queue |
 | pdfplumber | 0.11 | PDF text extraction (primary) |
 | PyMuPDF | 1.24 | PDF text extraction (secondary) |
-| pytesseract | 0.3 | OCR fallback + image parsing |
+| pytesseract | 0.3 | OCR (final fallback) |
 | pikepdf | 9.4 | Password-protected PDF decryption |
-| Pillow | 11.0 | Image preprocessing for OCR |
-| python-jose | 3.3 | JWT signing and verification |
-| cryptography | 43 | AES-256-GCM field encryption |
-| passlib + bcrypt | 1.7 / 4.0 | Password hashing |
+| Pillow | 11.0 | Image preprocessing |
 | pydantic | 2.10 | Request/response validation |
+| cryptography | 43 | AES-256-GCM field encryption |
 
 ### Frontend
 
 | Package | Version | Role |
 |---------|:-------:|------|
+| Node.js | **22** | Runtime (LTS) |
 | Next.js | 15.1 | React framework (App Router) |
+| React | 19 | UI library |
 | TypeScript | 5.7 | Static typing |
 | Tailwind CSS | 3.4 | Utility-first styling |
-| Framer Motion | 11 | Page and component animations |
-| Recharts | 2.14 | Area, pie, and bar charts |
-| TanStack Query | 5 | Server state + cache management |
-| Zustand | 5 | Client-side state |
-| react-hook-form | 7 | Form state and validation |
-| Zod | 3 | Schema-based form validation |
-| react-dropzone | 14 | Drag-and-drop file upload |
-| Radix UI | — | Accessible UI primitives |
-| Lucide React | — | Icon set |
+| Framer Motion | 11 | Animations |
+| Recharts | 2.14 | Charts |
+| TanStack Query | 5 | Server state management |
+| Zustand | 5 | Client state |
+| react-hook-form | 7 | Form handling |
 
 ---
 
@@ -397,38 +245,40 @@ All configuration is via `.env`. Copy `.env.example` to get started.
 | `ENCRYPTION_KEY` | ✅ | — | AES-256 key (`openssl rand -hex 32`) |
 | `POSTGRES_PASSWORD` | ✅ | — | Database password |
 | `POSTGRES_DB` | — | `ccbill` | Database name |
-| `REDIS_URL` | — | `redis://redis:6379/0` | Redis connection URL |
-| `UPLOAD_DIR` | — | `/uploads` | File storage path |
-| `MAX_UPLOAD_SIZE_MB` | — | `20` | Maximum upload size |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | — | `15` | JWT access token TTL |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | — | `7` | JWT refresh token TTL |
-| `OLLAMA_BASE_URL` | — | — | Enable LLM insights (optional) |
+| `REDIS_PASSWORD` | — | `CHANGE_ME_redis_password` | Redis auth password |
+| `UPLOAD_DIR` | — | `/app/uploads` | File storage path inside container |
+| `OLLAMA_BASE_URL` | — | — | Enable local LLM insights (optional) |
 
 ---
 
 ## Commands Reference
 
 ```bash
-# Stack management
-make up                # Start all services in detached mode
-make down              # Stop all services
-make restart           # Restart all services
-make logs              # Tail logs from all services
-make logs-backend      # Tail backend logs only
+# ── Full stack ──────────────────────────────────────────────────
+docker compose down && docker compose up --build   # Clean rebuild + start all 6 services
+docker compose up -d                               # Start detached (no rebuild)
+docker compose down                                # Stop and remove containers
+docker compose logs -f                             # Tail all logs
+docker compose logs -f backend                     # Backend logs only
+docker compose ps                                  # Show all service status
 
-# Database
-make migrate           # Apply pending Alembic migrations
-make migrate-create    # Create a new migration (prompts for name)
-make backup            # Dump PostgreSQL to ./backups/
+# ── Database ────────────────────────────────────────────────────
+docker compose exec backend alembic upgrade head               # Apply migrations
+docker compose exec backend alembic revision --autogenerate -m "name"  # New migration
+docker compose exec postgres psql -U ccbill                    # PostgreSQL shell
+# Or connect with any DB tool: localhost:5555 / user: ccbill
 
-# Development shells
-make shell-backend     # Bash into the backend container
-make shell-db          # psql session inside PostgreSQL
-make shell-worker      # Bash into the Celery worker container
+# ── Redis ───────────────────────────────────────────────────────
+# Connect with RedisInsight or redis-cli: localhost:6666
 
-# Maintenance
-make clean             # Remove stopped containers and dangling images
-make reset-db          # ⚠️  Drop and recreate the database (destructive)
+# ── Debug shells ────────────────────────────────────────────────
+docker compose exec backend bash      # Backend shell (Python 3.13)
+docker compose exec frontend sh       # Frontend shell (Node.js 22)
+docker compose exec worker bash       # Celery worker shell
+
+# ── Nuclear reset (⚠️  destroys ALL data) ───────────────────────
+docker compose down -v && docker compose up --build
+docker compose exec backend alembic upgrade head
 ```
 
 ---
@@ -438,11 +288,10 @@ make reset-db          # ⚠️  Drop and recreate the database (destructive)
 Run without Docker for faster iteration:
 
 ```bash
-# Backend
+# Backend (requires PostgreSQL on :5432 and Redis on :6379 locally)
 cd backend
 pip install -r requirements.txt
-cp ../.env.example ../.env          # edit to point at localhost services
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8090
 
 # Celery worker (separate terminal)
 celery -A app.workers.celery_app worker --loglevel=info
@@ -450,10 +299,10 @@ celery -A app.workers.celery_app worker --loglevel=info
 # Frontend
 cd frontend
 npm install --legacy-peer-deps
-npm run dev
+npm run dev   # runs on http://localhost:3000 by default
 ```
 
-You will need PostgreSQL and Redis running locally. Update `DATABASE_URL` and `REDIS_URL` in `.env` to use `localhost` instead of the Docker service names.
+Update `DATABASE_URL` and `REDIS_URL` in `.env` to use `localhost` instead of Docker service names.
 
 ---
 
