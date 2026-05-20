@@ -6,20 +6,24 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatCurrency(amount: number, currency = 'INR'): string {
+export function formatCurrency(amount: number | string | null | undefined, currency = 'INR'): string {
+  const n = Number(amount ?? 0)
+  if (!isFinite(n)) return '₹0'
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount)
+  }).format(n)
 }
 
-export function formatCurrencyCompact(amount: number): string {
-  if (amount >= 1_00_00_000) return `₹${(amount / 1_00_00_000).toFixed(1)}Cr`
-  if (amount >= 1_00_000) return `₹${(amount / 1_00_000).toFixed(1)}L`
-  if (amount >= 1_000) return `₹${(amount / 1_000).toFixed(1)}K`
-  return `₹${amount.toFixed(0)}`
+export function formatCurrencyCompact(amount: number | string | null | undefined): string {
+  const n = Number(amount ?? 0)
+  if (!isFinite(n)) return '₹0'
+  if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(1)}Cr`
+  if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(1)}L`
+  if (n >= 1_000) return `₹${(n / 1_000).toFixed(1)}K`
+  return `₹${n.toFixed(0)}`
 }
 
 export function formatDate(dateStr: string | null, fmt = 'dd MMM yyyy'): string {
