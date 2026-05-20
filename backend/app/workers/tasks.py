@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ def get_sync_db():
 
 
 @celery_app.task(bind=True, name="app.workers.tasks.parse_statement_task", max_retries=3)
-def parse_statement_task(self, statement_id: str, file_path: str, password: str | None, user_id: str):
+def parse_statement_task(self, statement_id: str, file_path: str, password: Optional[str], user_id: str):
     """Parse a credit card statement PDF and persist transactions."""
     from app.models.statement import Statement, StatementStatus
     from app.models.transaction import Transaction

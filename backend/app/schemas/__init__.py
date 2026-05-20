@@ -5,6 +5,7 @@ from app.schemas.emi import EMICreate, EMIUpdate, EMIOut, EMIPaymentOut
 from app.schemas.friend import FriendCreate, FriendUpdate, FriendOut
 from app.schemas.statement import StatementOut, StatementUploadResponse
 from app.schemas.report import DashboardStats, SpendingReport, EMIReport
+from app.schemas.insight import InsightOut
 
 __all__ = [
     "TokenResponse", "LoginRequest", "RegisterRequest", "UserOut",
@@ -14,4 +15,5 @@ __all__ = [
     "FriendCreate", "FriendUpdate", "FriendOut",
     "StatementOut", "StatementUploadResponse",
     "DashboardStats", "SpendingReport", "EMIReport",
+    "InsightOut",
 ]

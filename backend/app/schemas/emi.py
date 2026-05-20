@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from decimal import Decimal
 from datetime import datetime
@@ -62,8 +62,7 @@ class EMIPaymentOut(BaseModel):
     late_fee: Decimal
     notes: Optional[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EMIOut(BaseModel):
@@ -98,5 +97,4 @@ class EMIOut(BaseModel):
     created_at: datetime
     payments: list[EMIPaymentOut] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

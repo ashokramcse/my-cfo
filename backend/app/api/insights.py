@@ -1,16 +1,18 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
+from typing import List
 from app.database import get_db
 from app.utils.deps import get_current_user
 from app.models.user import User
 from app.models.insight import Insight
+from app.schemas.insight import InsightOut
 import uuid
 
 router = APIRouter()
 
 
-@router.get("")
+@router.get("", response_model=List[InsightOut])
 async def list_insights(
     unread_only: bool = Query(False),
     limit: int = Query(20, le=100),
@@ -38,8 +40,10 @@ async def mark_read(
         select(Insight).where(Insight.id == insight_id, Insight.user_id == current_user.id)
     )
     insight = result.scalar_one_or_none()
-    if insight:
-        insight.is_read = True
+    if not insight:
+        raise HTTPException(status_code=404, detail="Insight not found")
+    insight.is_read = True
+    await db.commit()
     return {"status": "ok"}
 
 
@@ -53,14 +57,15 @@ async def dismiss(
         select(Insight).where(Insight.id == insight_id, Insight.user_id == current_user.id)
     )
     insight = result.scalar_one_or_none()
-    if insight:
-        insight.is_dismissed = True
+    if not insight:
+        raise HTTPException(status_code=404, detail="Insight not found")
+    insight.is_dismissed = True
+    await db.commit()
     return {"status": "ok"}
 
 
 @router.post("/generate")
 async def generate_insights(
-    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     from app.workers.tasks import generate_insights_task

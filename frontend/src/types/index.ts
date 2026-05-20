@@ -164,7 +164,7 @@ export interface Insight {
   action_url: string | null
   is_read: boolean
   is_dismissed: boolean
-  metadata: Record<string, unknown>
+  insight_data: Record<string, unknown> | null
   created_at: string
 }
 
