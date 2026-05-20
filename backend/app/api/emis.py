@@ -69,10 +69,17 @@ async def create_emi(
     current_user: User = Depends(get_current_user),
 ):
     data = payload.model_dump()
-    start = data.get("start_date") or data["purchase_date"]
+    start = data.pop("start_date", None) or data["purchase_date"]
+    data.pop("end_date", None)
+    data.pop("next_due_date", None)
+    data.pop("total_interest", None)
+    data.pop("remaining_months", None)
+    data.pop("amount_remaining", None)
+    data.pop("amount_paid", None)
+    data.pop("paid_months", None)
 
     total_interest = float(data["total_amount"]) - float(data["purchase_amount"])
-    remaining_months = data["tenure_months"] - 0
+    remaining_months = data["tenure_months"]
     amount_remaining = data["total_amount"]
 
     from dateutil.relativedelta import relativedelta
@@ -96,9 +103,11 @@ async def create_emi(
     for p in payments:
         db.add(p)
 
-    await db.flush()
-    await db.refresh(emi)
-    return emi
+    await db.commit()
+    result = await db.execute(
+        select(EMI).options(selectinload(EMI.payments)).where(EMI.id == emi.id)
+    )
+    return result.scalar_one()
 
 
 @router.get("/{emi_id}", response_model=EMIOut)

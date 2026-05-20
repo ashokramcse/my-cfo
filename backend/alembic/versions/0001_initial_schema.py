@@ -14,9 +14,17 @@ branch_labels = None
 depends_on = None
 
 
+def _table_exists(table_name: str) -> bool:
+    from sqlalchemy import inspect as sa_inspect
+    bind = op.get_bind()
+    return sa_inspect(bind).has_table(table_name)
+
+
 def upgrade() -> None:
+    if _table_exists("users"):
+        return  # DB was pre-populated by init.sql — nothing to do
     # ── users ─────────────────────────────────────────────────────────────────
-    op.create_table(
+    op.create_table( # type: ignore
         "users",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("email", sa.String(255), nullable=False, unique=True),
@@ -37,7 +45,7 @@ def upgrade() -> None:
     op.create_index("ix_users_username", "users", ["username"])
 
     # ── credit_cards ──────────────────────────────────────────────────────────
-    op.create_table(
+    op.create_table( # type: ignore
         "credit_cards",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
@@ -74,7 +82,7 @@ def upgrade() -> None:
     )
 
     # ── statements ────────────────────────────────────────────────────────────
-    op.create_table(
+    op.create_table( # type: ignore
         "statements",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
@@ -111,7 +119,7 @@ def upgrade() -> None:
     )
 
     # ── transactions ──────────────────────────────────────────────────────────
-    op.create_table(
+    op.create_table( # type: ignore
         "transactions",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
@@ -147,7 +155,7 @@ def upgrade() -> None:
     )
 
     # ── friends ───────────────────────────────────────────────────────────────
-    op.create_table(
+    op.create_table( # type: ignore
         "friends",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
@@ -170,7 +178,7 @@ def upgrade() -> None:
     )
 
     # ── emis ──────────────────────────────────────────────────────────────────
-    op.create_table(
+    op.create_table( # type: ignore
         "emis",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
@@ -210,7 +218,7 @@ def upgrade() -> None:
     )
 
     # ── emi_payments ──────────────────────────────────────────────────────────
-    op.create_table(
+    op.create_table( # type: ignore
         "emi_payments",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("emi_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("emis.id", ondelete="CASCADE"), nullable=False, index=True),
@@ -228,7 +236,7 @@ def upgrade() -> None:
     )
 
     # ── categories ────────────────────────────────────────────────────────────
-    op.create_table(
+    op.create_table( # type: ignore
         "categories",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE")),
@@ -241,7 +249,7 @@ def upgrade() -> None:
     )
 
     # ── merchant_rules ────────────────────────────────────────────────────────
-    op.create_table(
+    op.create_table( # type: ignore
         "merchant_rules",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE")),
@@ -255,7 +263,7 @@ def upgrade() -> None:
     )
 
     # ── insights ──────────────────────────────────────────────────────────────
-    op.create_table(
+    op.create_table( # type: ignore
         "insights",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
@@ -272,7 +280,7 @@ def upgrade() -> None:
     )
 
     # ── audit_logs ────────────────────────────────────────────────────────────
-    op.create_table(
+    op.create_table( # type: ignore
         "audit_logs",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL")),
