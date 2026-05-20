@@ -8,7 +8,7 @@ import { transactionsApi, cardsApi } from '@/lib/api'
 import { Transaction, CreditCard } from '@/types'
 import { formatCurrency, formatDate, CATEGORY_META } from '@/lib/utils'
 import { cn } from '@/lib/utils'
-import { ArrowLeftRight, Search, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
+import { ArrowLeftRight, Search, ChevronLeft, ChevronRight, AlertTriangle, Receipt } from 'lucide-react'
 
 const TX_COLOR: Record<string, string> = {
   PURCHASE: '#1C1410',
@@ -157,8 +157,15 @@ export default function TransactionsPage() {
                 }
                 {!isLoading && !transactions.length && (
                   <tr>
-                    <td colSpan={7} className="text-center py-16 text-muted-foreground text-sm">
-                      No transactions found
+                    <td colSpan={7} className="text-center py-16">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto"
+                          style={{ background: 'linear-gradient(135deg, #FFF0E0, #FFD9B0)', border: '2px solid #FDC888' }}>
+                          <Receipt className="w-5 h-5" style={{ color: '#EA580C' }} strokeWidth={1.8} />
+                        </div>
+                        <p className="text-sm font-medium" style={{ color: '#18120E' }}>No transactions found</p>
+                        <p className="text-xs" style={{ color: '#A09890' }}>Upload a statement or add transactions manually</p>
+                      </div>
                     </td>
                   </tr>
                 )}

@@ -204,10 +204,14 @@ export default function EMIsPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center py-16 gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-[#FFF1E6] flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-muted-foreground/40" />
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #FFF0E0, #FFD9B0)', border: '2px solid #FDC888' }}>
+              <Calendar className="w-6 h-6" style={{ color: '#EA580C' }} strokeWidth={1.8} />
             </div>
-            <p className="text-sm text-muted-foreground">No {filterStatus.toLowerCase()} EMIs</p>
+            <div className="text-center">
+              <p className="text-sm font-semibold" style={{ color: '#18120E' }}>No {filterStatus.toLowerCase()} EMIs</p>
+              <p className="text-xs mt-1" style={{ color: '#A09890' }}>Add your first EMI to start tracking</p>
+            </div>
           </div>
         )}
 

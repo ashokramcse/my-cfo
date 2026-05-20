@@ -99,10 +99,14 @@ export default function CardsPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center py-20 gap-4">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: '#FFF1E6' }}>
-              <CreditCard className="w-7 h-7" style={{ color: '#FED7AA' }} />
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #FFF0E0, #FFD9B0)', border: '2px solid #FDC888' }}>
+              <CreditCard className="w-7 h-7" style={{ color: '#EA580C' }} strokeWidth={1.8} />
             </div>
-            <p className="text-sm" style={{ color: '#78716C' }}>No cards yet. Add your first credit card.</p>
+            <div className="text-center">
+              <p className="text-sm font-semibold" style={{ color: '#18120E' }}>No cards added yet</p>
+              <p className="text-xs mt-1" style={{ color: '#A09890' }}>Add your first credit card to start tracking</p>
+            </div>
             <button onClick={() => setShowForm(true)} className="btn-primary mt-1">
               <Plus className="w-4 h-4" /> Add Card
             </button>

@@ -4,8 +4,14 @@ import { Providers } from '@/components/layout/Providers'
 
 export const metadata: Metadata = {
   title: 'CC-Bill | Personal Finance Intelligence',
-  description: 'Enterprise-grade Credit Card & EMI Financial Intelligence Platform',
-  icons: { icon: '/favicon.ico' },
+  description: 'Personal Credit Card & EMI Financial Intelligence Platform',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
+  themeColor: '#F97316',
+  applicationName: 'CC-Bill',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

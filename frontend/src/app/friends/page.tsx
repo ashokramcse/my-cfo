@@ -9,7 +9,7 @@ import { friendsApi } from '@/lib/api'
 import { Friend } from '@/types'
 import { formatCurrencyCompact, formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
-import { Users, Plus, X, Phone, Trash2 } from 'lucide-react'
+import { Users, Plus, X, Phone, Trash2, TrendingDown, CheckCircle2, Activity } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
 
@@ -79,10 +79,10 @@ export default function FriendsPage() {
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <StatCard title="Total Pending"   value={formatCurrencyCompact(totalPending)}   variant={totalPending > 0 ? 'warning' : 'default'} delay={0}    />
-          <StatCard title="Total Collected" value={formatCurrencyCompact(totalCollected)} variant="success" delay={0.05} />
-          <StatCard title="Active Friends"  value={String(activeCount)}                   variant="violet"  delay={0.1}  />
-          <StatCard title="Total Friends"   value={String(friends.length)}                delay={0.15} />
+          <StatCard title="Total Pending"   value={formatCurrencyCompact(totalPending)}   icon={TrendingDown}   variant={totalPending > 0 ? 'warning' : 'default'} delay={0}    />
+          <StatCard title="Total Collected" value={formatCurrencyCompact(totalCollected)} icon={CheckCircle2}   variant="success" delay={0.05} />
+          <StatCard title="Active Friends"  value={String(activeCount)}                   icon={Activity}       variant="info"    delay={0.1}  />
+          <StatCard title="Total Friends"   value={String(friends.length)}                icon={Users}          delay={0.15} />
         </div>
 
         {/* Friends grid */}
@@ -146,10 +146,14 @@ export default function FriendsPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center py-20 gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-[#FFF1E6] flex items-center justify-center">
-              <Users className="w-7 h-7 text-muted-foreground/40" />
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #FFF0E0, #FFD9B0)', border: '2px solid #FDC888' }}>
+              <Users className="w-7 h-7" style={{ color: '#EA580C' }} strokeWidth={1.8} />
             </div>
-            <p className="text-sm text-muted-foreground">No friends added yet</p>
+            <div className="text-center">
+              <p className="text-sm font-semibold" style={{ color: '#18120E' }}>No friends added yet</p>
+              <p className="text-xs mt-1" style={{ color: '#A09890' }}>Track EMIs you've paid for others</p>
+            </div>
             <button onClick={() => setShowForm(true)} className="btn-primary">
               <Plus className="w-4 h-4" /> Add Friend
             </button>
