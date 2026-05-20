@@ -21,16 +21,16 @@ const FEATURES = [
 export default function SettingsPage() {
   return (
     <AppShell>
+      <PageHeader icon={Settings} title="Settings" subtitle="Platform configuration and profile" />
       <div className="p-6 xl:p-8 max-w-[800px] mx-auto">
-        <PageHeader icon={Settings} title="Settings" subtitle="Platform configuration and profile" />
 
         <div className="space-y-5">
           {/* Profile */}
           <div className="card p-5">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.2)' }}>
-                <User className="w-4 h-4 text-violet-400" />
+                style={{ background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.2)' }}>
+                <User className="w-4 h-4" style={{ color: '#F97316' }} />
               </div>
               <div>
                 <h2 className="section-title">Profile</h2>
@@ -39,7 +39,7 @@ export default function SettingsPage() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {ITEMS.map((item) => (
-                <div key={item.label} className="p-3 rounded-xl bg-white/[0.03] border border-border/50">
+                <div key={item.label} className="p-3 rounded-xl" style={{ background: '#FAF7F4', border: '1.5px solid #EDE8E2' }}>
                   <div className="text-xs text-muted-foreground mb-0.5">{item.label}</div>
                   <div className="text-sm font-semibold text-foreground">{item.value}</div>
                 </div>
@@ -61,15 +61,15 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-3">
               {FEATURES.map((f) => (
-                <div key={f.title} className="flex items-center gap-4 p-3 rounded-xl bg-white/[0.02] border border-border/40">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/5 flex-shrink-0">
+                <div key={f.title} className="flex items-center gap-4 p-3 rounded-xl" style={{ background: '#FAF7F4', border: '1.5px solid #EDE8E2' }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#FFF0E0' }}>
                     <f.icon className="w-4 h-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold text-foreground">{f.title}</div>
                     <div className="text-xs text-muted-foreground">{f.desc}</div>
                   </div>
-                  <span className="badge-success flex-shrink-0">{f.badge}</span>
+                  <span className="badge badge-success flex-shrink-0">{f.badge}</span>
                 </div>
               ))}
             </div>
@@ -89,7 +89,7 @@ export default function SettingsPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {['HDFC', 'ICICI', 'SBI', 'Axis', 'Cred Screenshots', 'All banks via OCR'].map((b) => (
-                <span key={b} className="badge-neutral">{b}</span>
+                <span key={b} className="badge badge-neutral">{b}</span>
               ))}
             </div>
           </div>

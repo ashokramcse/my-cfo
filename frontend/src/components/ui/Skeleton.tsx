@@ -2,30 +2,29 @@ import { cn } from '@/lib/utils'
 
 export function Skeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('rounded-lg bg-white/5 shimmer', className)}
-      style={{ backgroundSize: '200% 100%' }} />
+    <div className={cn('shimmer', className)} />
   )
 }
 
 export function StatCardSkeleton() {
   return (
-    <div className="kpi-card space-y-4">
-      <div className="flex justify-between">
-        <Skeleton className="h-3 w-24" />
-        <Skeleton className="h-8 w-8 rounded-xl" />
+    <div className="kpi-card">
+      <div className="flex justify-between items-start mb-3">
+        <Skeleton className="h-2.5 w-20 rounded-full" />
+        <Skeleton className="h-8 w-8 rounded-lg" />
       </div>
-      <Skeleton className="h-7 w-28" />
-      <Skeleton className="h-3 w-20" />
+      <Skeleton className="h-6 w-28 rounded-lg mb-2" />
+      <Skeleton className="h-2.5 w-16 rounded-full" />
     </div>
   )
 }
 
 export function TableRowSkeleton({ cols = 5 }: { cols?: number }) {
   return (
-    <tr className="border-b border-border/40">
+    <tr style={{ borderBottom: '1px solid #EDE8E2' }}>
       {Array.from({ length: cols }).map((_, i) => (
         <td key={i} className="px-4 py-3">
-          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full rounded-md" />
         </td>
       ))}
     </tr>

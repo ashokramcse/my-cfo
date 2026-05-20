@@ -24,12 +24,12 @@ export default function ReportsPage() {
 
   return (
     <AppShell>
-      <div className="p-6 xl:p-8 max-w-[1200px] mx-auto">
-        <PageHeader
+      <PageHeader
           icon={BarChart3}
           title="Reports & Analytics"
           subtitle="Deep financial insights across all cards and EMIs"
         />
+      <div className="p-5 xl:p-6 max-w-[1200px] mx-auto">
 
         {/* Top KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -100,7 +100,7 @@ export default function ReportsPage() {
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
                     <td className="font-medium">{m.month}</td>
                     <td className="text-right font-mono text-sm">{formatCurrencyCompact(m.spend)}</td>
-                    <td className="text-right font-mono text-sm text-violet-400">{formatCurrencyCompact(m.emi)}</td>
+                    <td className="text-right font-mono text-sm text-orange-500">{formatCurrencyCompact(m.emi)}</td>
                     <td className="text-right font-mono text-sm text-emerald-400">{formatCurrencyCompact(m.payments)}</td>
                     <td className="text-right font-mono text-sm text-rose-400">{formatCurrencyCompact(m.fees)}</td>
                   </motion.tr>

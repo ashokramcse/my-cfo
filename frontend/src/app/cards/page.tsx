@@ -15,7 +15,7 @@ import { useForm } from 'react-hook-form'
 
 const BANKS = ['HDFC', 'ICICI', 'SBI', 'Axis', 'Amex', 'IDFC', 'OneCard', 'AU', 'Kotak', 'Federal', 'Standard Chartered', 'Other']
 const NETWORKS = ['VISA', 'MASTERCARD', 'AMEX', 'RUPAY', 'DINERS', 'OTHER']
-const CARD_COLORS = ['#7C3AED', '#6366F1', '#0EA5E9', '#10B981', '#F59E0B', '#F43F5E', '#EC4899', '#14B8A6']
+const CARD_COLORS = ['#F97316', '#EA580C', '#0EA5E9', '#10B981', '#F59E0B', '#F43F5E', '#7C3AED', '#14B8A6']
 
 export default function CardsPage() {
   const [showForm, setShowForm] = useState(false)
@@ -29,7 +29,7 @@ export default function CardsPage() {
 
   const { register, handleSubmit, reset, watch } = useForm({
     defaultValues: {
-      nickname: '', bank_name: 'HDFC', last_four: '', card_color: '#7C3AED',
+      nickname: '', bank_name: 'HDFC', last_four: '', card_color: '#F97316',
       network: 'VISA', billing_cycle_day: 1, due_date_day: 25,
       credit_limit: 0, interest_rate: 0,
     },
@@ -64,8 +64,7 @@ export default function CardsPage() {
 
   return (
     <AppShell>
-      <div className="p-6 xl:p-8 max-w-[1200px] mx-auto">
-        <PageHeader
+      <PageHeader
           icon={CreditCard}
           title="Credit Cards"
           subtitle={`${cards.length} card${cards.length !== 1 ? 's' : ''}`}
@@ -75,6 +74,7 @@ export default function CardsPage() {
             </button>
           }
         />
+      <div className="p-5 xl:p-6 max-w-[1200px] mx-auto">
 
         {/* Summary KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -88,7 +88,7 @@ export default function CardsPage() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="rounded-2xl bg-white/5 shimmer" style={{ aspectRatio: '16/9', backgroundSize: '200% 100%' }} />
+              <div key={i} className="rounded-2xl shimmer" style={{ aspectRatio: '16/9', backgroundSize: '200% 100%' }} />
             ))}
           </div>
         ) : cards.length ? (
@@ -99,10 +99,10 @@ export default function CardsPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center py-20 gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center">
-              <CreditCard className="w-7 h-7 text-muted-foreground/40" />
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: '#FFF1E6' }}>
+              <CreditCard className="w-7 h-7" style={{ color: '#FED7AA' }} />
             </div>
-            <p className="text-muted-foreground text-sm">No cards yet. Add your first credit card.</p>
+            <p className="text-sm" style={{ color: '#78716C' }}>No cards yet. Add your first credit card.</p>
             <button onClick={() => setShowForm(true)} className="btn-primary mt-1">
               <Plus className="w-4 h-4" /> Add Card
             </button>
@@ -126,7 +126,7 @@ export default function CardsPage() {
               >
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-base font-bold text-foreground">{selected.nickname}</h2>
-                  <button onClick={() => setSelected(null)} className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                  <button onClick={() => setSelected(null)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors" style={{ background: '#FFF1E6' }}>
                     <X className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </div>
@@ -144,7 +144,7 @@ export default function CardsPage() {
                     ['Reward Rate', `${selected.reward_rate}%`],
                     ['Points', selected.total_reward_points.toLocaleString()],
                   ].map(([label, value]) => (
-                    <div key={label} className="p-3 rounded-xl bg-white/[0.03] border border-border/50">
+                    <div key={label} className="p-3 rounded-xl" style={{ background: '#FFF8F2', border: '1px solid #E7E2DC' }}>
                       <div className="text-xs text-muted-foreground mb-0.5">{label}</div>
                       <div className="font-semibold text-foreground">{value}</div>
                     </div>
@@ -153,7 +153,8 @@ export default function CardsPage() {
 
                 <button
                   onClick={() => deleteCard.mutate(selected.id)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-rose-400 border border-rose-500/20 bg-rose-500/8 hover:bg-rose-500/15 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                  style={{ color: '#DC2626', border: '1px solid #FECACA', background: '#FEF2F2' }}
                 >
                   <Trash2 className="w-4 h-4" /> Remove Card
                 </button>
@@ -179,7 +180,7 @@ export default function CardsPage() {
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-base font-bold text-foreground">Add Credit Card</h2>
-                  <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                  <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors" style={{ background: '#FFF1E6' }}>
                     <X className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </div>

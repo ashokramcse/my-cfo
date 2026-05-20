@@ -65,8 +65,7 @@ export default function FriendsPage() {
 
   return (
     <AppShell>
-      <div className="p-6 xl:p-8 max-w-[1200px] mx-auto">
-        <PageHeader
+      <PageHeader
           icon={Users}
           title="Friend EMIs"
           subtitle={`${friends.length} contacts`}
@@ -76,6 +75,7 @@ export default function FriendsPage() {
             </button>
           }
         />
+      <div className="p-5 xl:p-6 max-w-[1200px] mx-auto">
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -89,7 +89,7 @@ export default function FriendsPage() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-40 rounded-2xl bg-white/5 shimmer" style={{ backgroundSize: '200% 100%' }} />
+              <div key={i} className="h-40 rounded-2xl bg-[#FFF1E6] shimmer" style={{ backgroundSize: '200% 100%' }} />
             ))}
           </div>
         ) : friends.length ? (
@@ -106,7 +106,7 @@ export default function FriendsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
                   onClick={() => setSelected(friend)}
-                  className="card p-5 cursor-pointer hover:border-white/10 transition-all"
+                  className="card p-5 cursor-pointer hover:border-orange-200 transition-all"
                 >
                   <div className="flex items-start gap-3 mb-4">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold text-white flex-shrink-0"
@@ -121,11 +121,11 @@ export default function FriendsPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mb-4">
-                    <div className="p-2.5 rounded-xl bg-white/[0.03]">
+                    <div className="p-2.5 rounded-xl bg-[#FFF8F2]">
                       <div className="text-xs text-muted-foreground mb-0.5">Pending</div>
                       <div className="text-sm font-bold font-mono text-amber-400">{formatCurrencyCompact(Number(friend.total_pending))}</div>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-white/[0.03]">
+                    <div className="p-2.5 rounded-xl bg-[#FFF8F2]">
                       <div className="text-xs text-muted-foreground mb-0.5">Collected</div>
                       <div className="text-sm font-bold font-mono text-emerald-400">{formatCurrencyCompact(Number(friend.total_collected))}</div>
                     </div>
@@ -146,7 +146,7 @@ export default function FriendsPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center py-20 gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-[#FFF1E6] flex items-center justify-center">
               <Users className="w-7 h-7 text-muted-foreground/40" />
             </div>
             <p className="text-sm text-muted-foreground">No friends added yet</p>
@@ -182,7 +182,7 @@ export default function FriendsPage() {
                       <div className="text-xs text-muted-foreground">{selected.relation}</div>
                     </div>
                   </div>
-                  <button onClick={() => setSelected(null)} className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                  <button onClick={() => setSelected(null)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors" style={{ background: '#FFF1E6' }}>
                     <X className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </div>
@@ -194,7 +194,7 @@ export default function FriendsPage() {
                     ['Pending', formatCurrency(Number(selected.total_pending))],
                     ['Active EMIs', String(selected.active_emi_count)],
                   ].map(([label, value]) => (
-                    <div key={label} className="p-3 rounded-xl bg-white/[0.03] border border-border/50">
+                    <div key={label} className="p-3 rounded-xl bg-[#FFF8F2] border border-border/50">
                       <div className="text-xs text-muted-foreground mb-0.5">{label}</div>
                       <div className="text-sm font-semibold text-foreground font-mono">{value}</div>
                     </div>
@@ -210,7 +210,7 @@ export default function FriendsPage() {
 
                 <button
                   onClick={() => deleteFriend.mutate(selected.id)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-rose-400 border border-rose-500/20 bg-rose-500/8 hover:bg-rose-500/15 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-rose-400 border border-[#FECACA] bg-[#FEF2F2] hover:bg-[#FEE2E2] transition-colors"
                 >
                   <Trash2 className="w-4 h-4" /> Remove Friend
                 </button>
@@ -236,7 +236,7 @@ export default function FriendsPage() {
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-base font-bold text-foreground">Add Friend</h2>
-                  <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                  <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors" style={{ background: '#FFF1E6' }}>
                     <X className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </div>

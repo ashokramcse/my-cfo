@@ -9,18 +9,34 @@ interface PageHeaderProps {
 
 export function PageHeader({ icon: Icon, title, subtitle, actions }: PageHeaderProps) {
   return (
-    <div className="flex items-start justify-between mb-6">
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.2), rgba(99,102,241,0.15))', border: '1px solid rgba(124,58,237,0.2)' }}>
-          <Icon className="w-5 h-5 text-violet-400" />
+    <div className="flex items-center justify-between px-6 py-4 mb-1"
+      style={{
+        background: '#FFFFFF',
+        borderBottom: '1.5px solid #DDD8D2',
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+      }}>
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{
+            background: 'linear-gradient(135deg, #F97316, #EA580C)',
+            boxShadow: '0 2px 8px rgba(249,115,22,0.32)',
+          }}>
+          <Icon className="w-4 h-4 text-white" strokeWidth={2.2} />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">{title}</h1>
-          {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
+          <h1 className="text-[15px] font-bold leading-tight tracking-tight" style={{ color: '#18120E' }}>
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-xs leading-none mt-0.5" style={{ color: '#A09890' }}>{subtitle}</p>
+          )}
         </div>
       </div>
-      {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
+      {actions && (
+        <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>
+      )}
     </div>
   )
 }

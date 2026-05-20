@@ -79,8 +79,7 @@ export default function EMIsPage() {
 
   return (
     <AppShell>
-      <div className="p-6 xl:p-8 max-w-[1200px] mx-auto">
-        <PageHeader
+      <PageHeader
           icon={Calendar}
           title="EMI Tracker"
           subtitle={`${activeEMIs.length} active EMIs`}
@@ -90,6 +89,7 @@ export default function EMIsPage() {
             </button>
           }
         />
+      <div className="p-5 xl:p-6 max-w-[1200px] mx-auto">
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -116,8 +116,8 @@ export default function EMIsPage() {
             <button key={s} onClick={() => setFilterStatus(s)}
               className={cn('text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors',
                 filterStatus === s
-                  ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
-                  : 'text-muted-foreground hover:text-foreground bg-white/5 border border-transparent')}>
+                  ? 'bg-orange-100 text-orange-500 border border-orange-300'
+                  : 'text-muted-foreground hover:text-foreground bg-[#FFF1E6] border border-transparent')}>
               {s}
             </button>
           ))}
@@ -127,7 +127,7 @@ export default function EMIsPage() {
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-24 rounded-2xl bg-white/5 shimmer" style={{ backgroundSize: '200% 100%' }} />
+              <div key={i} className="h-24 rounded-2xl bg-[#FFF1E6] shimmer" style={{ backgroundSize: '200% 100%' }} />
             ))}
           </div>
         ) : emis.length ? (
@@ -144,7 +144,7 @@ export default function EMIsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
                   onClick={() => setSelected(emi)}
-                  className="card p-5 cursor-pointer hover:border-white/10 transition-all"
+                  className="card p-5 cursor-pointer hover:border-orange-200 transition-all"
                 >
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
@@ -189,7 +189,7 @@ export default function EMIsPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center py-16 gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-[#FFF1E6] flex items-center justify-center">
               <Calendar className="w-6 h-6 text-muted-foreground/40" />
             </div>
             <p className="text-sm text-muted-foreground">No {filterStatus.toLowerCase()} EMIs</p>
@@ -213,7 +213,7 @@ export default function EMIsPage() {
               >
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-base font-bold text-foreground">{selected.product_name}</h2>
-                  <button onClick={() => setSelected(null)} className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                  <button onClick={() => setSelected(null)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors" style={{ background: '#FFF1E6' }}>
                     <X className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </div>
@@ -229,7 +229,7 @@ export default function EMIsPage() {
                     ['Interest', formatCurrency(Number(selected.total_interest))],
                     ['Amount Paid', formatCurrency(Number(selected.amount_paid))],
                   ].map(([label, value]) => (
-                    <div key={label} className="p-3 rounded-xl bg-white/[0.03] border border-border/50">
+                    <div key={label} className="p-3 rounded-xl bg-[#FFF8F2] border border-border/50">
                       <div className="text-xs text-muted-foreground mb-0.5">{label}</div>
                       <div className="text-sm font-semibold text-foreground font-mono">{value}</div>
                     </div>
@@ -242,7 +242,7 @@ export default function EMIsPage() {
                   {selected.payments?.map((p) => (
                     <div key={p.id} className={cn(
                       'flex items-center justify-between px-3 py-2 rounded-lg text-xs',
-                      p.is_paid ? 'bg-emerald-500/8' : p.is_overdue ? 'bg-rose-500/8' : 'bg-white/[0.025]',
+                      p.is_paid ? 'bg-[#F0FDF4]' : p.is_overdue ? 'bg-[#FEF2F2]' : 'bg-[#FFF8F2]',
                     )}>
                       <div className="flex items-center gap-2">
                         {p.is_paid
@@ -282,7 +282,7 @@ export default function EMIsPage() {
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-base font-bold text-foreground">Add EMI</h2>
-                  <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                  <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors" style={{ background: '#FFF1E6' }}>
                     <X className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </div>
@@ -347,7 +347,7 @@ export default function EMIsPage() {
                     </div>
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" {...register('is_no_cost_emi')} className="w-4 h-4 rounded accent-violet-500" />
+                    <input type="checkbox" {...register('is_no_cost_emi')} className="w-4 h-4 rounded accent-orange-500" />
                     <span className="text-sm text-foreground">No-cost EMI</span>
                   </label>
 

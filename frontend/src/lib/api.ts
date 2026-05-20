@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+// Empty string = relative URLs (/api/v1/...) → nginx proxies to backend in Docker
+// Set NEXT_PUBLIC_API_URL=http://localhost:8000 for local dev without Docker
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
 
 export const api = axios.create({
   baseURL: `${BASE_URL}/api/v1`,

@@ -77,8 +77,7 @@ export default function StatementsPage() {
 
   return (
     <AppShell>
-      <div className="p-6 xl:p-8 max-w-[1000px] mx-auto">
-        <PageHeader
+      <PageHeader
           icon={FileText}
           title="Statements"
           subtitle={`${statements.length} uploaded`}
@@ -88,6 +87,7 @@ export default function StatementsPage() {
             </button>
           }
         />
+      <div className="p-5 xl:p-6 max-w-[1000px] mx-auto">
 
         {/* Drop zone */}
         <div
@@ -95,14 +95,14 @@ export default function StatementsPage() {
           className={cn(
             'border-2 border-dashed rounded-2xl p-10 text-center transition-all cursor-pointer mb-6',
             isDragActive
-              ? 'border-violet-500/60 bg-violet-500/8'
-              : 'border-border hover:border-violet-500/40 hover:bg-white/[0.02]',
+              ? 'border-orange-400 bg-orange-50'
+              : 'border-border hover:border-orange-300 hover:bg-[#FFF8F2]',
           )}
         >
           <input {...getInputProps()} />
           <div className="w-12 h-12 rounded-2xl mx-auto mb-4 flex items-center justify-center"
             style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.2)' }}>
-            <Upload className="w-5 h-5 text-violet-400" />
+            <Upload className="w-5 h-5 text-orange-500" />
           </div>
           <p className="text-sm font-semibold text-foreground mb-1">
             {isDragActive ? 'Drop it here!' : 'Drag & drop your statement'}
@@ -116,7 +116,7 @@ export default function StatementsPage() {
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-20 rounded-2xl bg-white/5 shimmer" style={{ backgroundSize: '200% 100%' }} />
+              <div key={i} className="h-20 rounded-2xl bg-[#FFF1E6] shimmer" style={{ backgroundSize: '200% 100%' }} />
             ))}
           </div>
         ) : statements.length ? (
@@ -142,10 +142,10 @@ export default function StatementsPage() {
                     <tr key={s.id}>
                       <td>
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/5">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#FFF1E6]">
                             {isImg
                               ? <Image className="w-4 h-4 text-sky-400" />
-                              : <FileText className="w-4 h-4 text-violet-400" />
+                              : <FileText className="w-4 h-4 text-orange-500" />
                             }
                           </div>
                           <div>
@@ -184,7 +184,7 @@ export default function StatementsPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center py-16 gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-[#FFF1E6] flex items-center justify-center">
               <FileText className="w-6 h-6 text-muted-foreground/40" />
             </div>
             <p className="text-sm text-muted-foreground">No statements uploaded yet</p>
@@ -209,16 +209,16 @@ export default function StatementsPage() {
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-base font-bold text-foreground">Upload Statement</h2>
                   <button onClick={() => { setShowUpload(false); setPendingFile(null) }}
-                    className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                    className="w-8 h-8 rounded-xl bg-[#FFF1E6] hover:bg-[#FFE8D6] flex items-center justify-center transition-colors">
                     <X className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </div>
 
                 {pendingFile ? (
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-border mb-5">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-[#FFF1E6] border border-border mb-5">
                     {isImage
                       ? <Image className="w-5 h-5 text-sky-400 flex-shrink-0" />
-                      : <FileText className="w-5 h-5 text-violet-400 flex-shrink-0" />
+                      : <FileText className="w-5 h-5 text-orange-500 flex-shrink-0" />
                     }
                     <span className="text-sm text-foreground truncate flex-1">{pendingFile.name}</span>
                     <button onClick={() => setPendingFile(null)} className="text-muted-foreground hover:text-foreground">
@@ -226,7 +226,7 @@ export default function StatementsPage() {
                     </button>
                   </div>
                 ) : (
-                  <div {...getRootProps()} className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-violet-500/40 transition-colors mb-5">
+                  <div {...getRootProps()} className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-orange-300 transition-colors mb-5">
                     <input {...getInputProps()} />
                     <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">Click or drag file here</p>

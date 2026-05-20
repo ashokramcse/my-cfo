@@ -12,70 +12,105 @@ interface StatCardProps {
   variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'violet'
   className?: string
   delay?: number
-  accent?: string
 }
 
-const VARIANT_CONFIG = {
-  default:  { accent: 'rgba(255,255,255,0.06)', icon: 'bg-white/8 text-muted-foreground',     glow: '' },
-  success:  { accent: '#10B981',               icon: 'bg-emerald-500/15 text-emerald-400',    glow: 'shadow-glow-green' },
-  warning:  { accent: '#F59E0B',               icon: 'bg-amber-500/15 text-amber-400',        glow: '' },
-  danger:   { accent: '#EF4444',               icon: 'bg-rose-500/15 text-rose-400',          glow: '' },
-  info:     { accent: '#3B82F6',               icon: 'bg-sky-500/15 text-sky-400',            glow: '' },
-  violet:   { accent: '#7C3AED',               icon: 'bg-violet-500/15 text-violet-400',      glow: 'shadow-glow-violet' },
+const VARIANT_CONFIG: Record<string, {
+  cardClass: string
+  iconBg: string
+  iconColor: string
+  iconBorder: string
+  valueColor: string
+}> = {
+  default:  {
+    cardClass: 'kpi-card kpi-orange',
+    iconBg: 'linear-gradient(135deg, #FFF0E0, #FFD9B0)',
+    iconBorder: '#FDC888',
+    iconColor: '#EA580C',
+    valueColor: '#18120E',
+  },
+  success:  {
+    cardClass: 'kpi-card kpi-success',
+    iconBg: 'linear-gradient(135deg, #DCFCE7, #A7F3C0)',
+    iconBorder: '#6EE7A0',
+    iconColor: '#15803D',
+    valueColor: '#18120E',
+  },
+  warning:  {
+    cardClass: 'kpi-card kpi-warning',
+    iconBg: 'linear-gradient(135deg, #FEF3C7, #FDE9A0)',
+    iconBorder: '#FCD34D',
+    iconColor: '#B45309',
+    valueColor: '#18120E',
+  },
+  danger:   {
+    cardClass: 'kpi-card kpi-danger',
+    iconBg: 'linear-gradient(135deg, #FEE2E2, #FCCACA)',
+    iconBorder: '#FCA5A5',
+    iconColor: '#B91C1C',
+    valueColor: '#18120E',
+  },
+  info:     {
+    cardClass: 'kpi-card kpi-info',
+    iconBg: 'linear-gradient(135deg, #DBEAFE, #BFDBFE)',
+    iconBorder: '#93C5FD',
+    iconColor: '#1D4ED8',
+    valueColor: '#18120E',
+  },
+  violet:   {
+    cardClass: 'kpi-card kpi-orange',
+    iconBg: 'linear-gradient(135deg, #FFF0E0, #FFD9B0)',
+    iconBorder: '#FDC888',
+    iconColor: '#EA580C',
+    valueColor: '#18120E',
+  },
 }
 
 export function StatCard({
   title, value, subtitle, icon: Icon, trend,
-  variant = 'default', className, delay = 0, accent,
+  variant = 'default', className, delay = 0,
 }: StatCardProps) {
   const cfg = VARIANT_CONFIG[variant]
-  const accentColor = accent ?? (variant !== 'default' ? cfg.accent : undefined)
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.3, ease: [0.21, 0.47, 0.32, 0.98] }}
-      className={cn('kpi-card', cfg.glow, className)}
+      transition={{ delay, duration: 0.28, ease: [0.21, 0.47, 0.32, 0.98] }}
+      className={cn(cfg.cardClass, className)}
     >
-      {/* Left accent bar */}
-      {accentColor && (
-        <div
-          className="absolute left-0 top-4 bottom-4 w-[3px] rounded-full"
-          style={{ background: accentColor, opacity: 0.8 }}
-        />
-      )}
-
-      <div className="flex items-start justify-between mb-4">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider leading-none">
+      <div className="flex items-start justify-between mb-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wider leading-none" style={{ color: '#A09890' }}>
           {title}
         </p>
         {Icon && (
-          <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0', cfg.icon)}>
-            <Icon className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{
+              background: cfg.iconBg,
+              border: `1.5px solid ${cfg.iconBorder}`,
+            }}>
+            <Icon className="w-3.5 h-3.5" style={{ color: cfg.iconColor }} strokeWidth={2.2} />
           </div>
         )}
       </div>
 
-      <div className="text-2xl font-bold text-foreground font-mono tracking-tight leading-none mb-1">
+      <div className="text-[22px] font-bold font-mono tracking-tight leading-none mb-1"
+        style={{ color: cfg.valueColor }}>
         {value}
       </div>
 
       <div className="flex items-center justify-between mt-2">
         {subtitle && (
-          <p className="text-xs text-muted-foreground">{subtitle}</p>
+          <p className="text-xs leading-none" style={{ color: '#A09890' }}>{subtitle}</p>
         )}
         {trend && (
-          <div className={cn(
-            'flex items-center gap-1 text-xs font-semibold ml-auto',
-            trend.value >= 0 ? 'text-emerald-400' : 'text-rose-400',
-          )}>
+          <div className="flex items-center gap-1 text-xs font-semibold ml-auto"
+            style={{ color: trend.value >= 0 ? '#15803D' : '#B91C1C' }}>
             {trend.value >= 0
               ? <TrendingUp className="w-3 h-3" />
               : <TrendingDown className="w-3 h-3" />
             }
             <span>{Math.abs(trend.value)}%</span>
-            {trend.label && <span className="text-muted-foreground font-normal">{trend.label}</span>}
+            {trend.label && <span className="font-normal" style={{ color: '#A09890' }}>{trend.label}</span>}
           </div>
         )}
       </div>

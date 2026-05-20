@@ -11,14 +11,14 @@ import { cn } from '@/lib/utils'
 import { ArrowLeftRight, Search, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
 
 const TX_COLOR: Record<string, string> = {
-  PURCHASE: 'text-foreground',
-  PAYMENT: 'text-emerald-400',
-  EMI: 'text-violet-400',
-  CASH_ADVANCE: 'text-amber-400',
-  REFUND: 'text-emerald-400',
-  FEE: 'text-rose-400',
-  INTEREST: 'text-rose-400',
-  OTHER: 'text-muted-foreground',
+  PURCHASE: '#1C1410',
+  PAYMENT: '#16A34A',
+  EMI: '#F97316',
+  CASH_ADVANCE: '#D97706',
+  REFUND: '#16A34A',
+  FEE: '#DC2626',
+  INTEREST: '#DC2626',
+  OTHER: '#78716C',
 }
 
 const CATEGORIES = ['ALL', 'FOOD', 'DINING', 'GROCERIES', 'FUEL', 'SHOPPING', 'TRAVEL', 'UTILITIES', 'ENTERTAINMENT', 'INVESTMENT', 'HEALTHCARE', 'SUBSCRIPTION', 'EDUCATION', 'EMI', 'OTHER']
@@ -53,12 +53,12 @@ export default function TransactionsPage() {
 
   return (
     <AppShell>
-      <div className="p-6 xl:p-8 max-w-[1400px] mx-auto">
-        <PageHeader
+      <PageHeader
           icon={ArrowLeftRight}
           title="Transactions"
           subtitle={`${total.toLocaleString('en-IN')} transactions · ${formatCurrency(Number(totalAmount))} total`}
         />
+      <div className="p-5 xl:p-6 max-w-[1400px] mx-auto">
 
         {/* Filters */}
         <div className="card p-4 mb-5 flex flex-wrap gap-3">
@@ -117,7 +117,7 @@ export default function TransactionsPage() {
                           )}
                         </td>
                         <td>
-                          <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-white/5">
+                          <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg" style={{ background: '#FFF1E6' }}>
                             <span>{meta.icon}</span>
                             <span className="text-muted-foreground">{meta.label}</span>
                           </span>
@@ -126,13 +126,13 @@ export default function TransactionsPage() {
                           {card ? `${card.bank_name} ···${card.last_four}` : '—'}
                         </td>
                         <td className="text-right">
-                          <span className={cn('font-mono text-sm font-semibold', TX_COLOR[tx.transaction_type] ?? 'text-foreground')}>
+                          <span className="font-mono text-sm font-semibold" style={{ color: TX_COLOR[tx.transaction_type] ?? '#1C1410' }}>
                             {tx.transaction_type === 'PAYMENT' || tx.transaction_type === 'REFUND' ? '+' : ''}
                             {formatCurrency(Number(tx.amount))}
                           </span>
                         </td>
                         <td>
-                          <span className="text-xs text-muted-foreground bg-white/5 px-2 py-0.5 rounded-md">
+                          <span className="text-xs px-2 py-0.5 rounded-md" style={{ color: '#78716C', background: '#F5F0EB' }}>
                             {tx.transaction_type}
                           </span>
                         </td>
@@ -144,10 +144,10 @@ export default function TransactionsPage() {
                               </span>
                             )}
                             {tx.is_recurring && (
-                              <span title="Recurring" className="text-xs text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">R</span>
+                              <span title="Recurring" className="text-xs px-1.5 py-0.5 rounded" style={{ color: '#F97316', background: '#FFEDD5' }}>R</span>
                             )}
                             {tx.is_emi && (
-                              <span title="EMI" className="text-xs text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded">EMI</span>
+                              <span title="EMI" className="text-xs px-1.5 py-0.5 rounded" style={{ color: '#2563EB', background: '#DBEAFE' }}>EMI</span>
                             )}
                           </div>
                         </td>
