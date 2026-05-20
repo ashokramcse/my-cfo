@@ -92,22 +92,21 @@ export default function StatementsPage() {
         {/* Drop zone */}
         <div
           {...getRootProps()}
-          className={cn(
-            'border-2 border-dashed rounded-2xl p-10 text-center transition-all cursor-pointer mb-6',
-            isDragActive
-              ? 'border-orange-400 bg-orange-50'
-              : 'border-border hover:border-orange-300 hover:bg-[#FFF8F2]',
-          )}
+          className={cn('cursor-pointer mb-6 transition-all rounded-2xl p-10 text-center')}
+          style={{
+            border: isDragActive ? '2px dashed #F97316' : '2px dashed #CCC7C0',
+            background: isDragActive ? '#FFF7ED' : '#FFFFFF',
+          }}
         >
           <input {...getInputProps()} />
           <div className="w-12 h-12 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-            style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.2)' }}>
-            <Upload className="w-5 h-5 text-orange-500" />
+            style={{ background: 'linear-gradient(135deg, #FFF0E6, #FFE4CC)', border: '1.5px solid #FED7AA' }}>
+            <Upload className="w-5 h-5" style={{ color: '#F97316' }} />
           </div>
-          <p className="text-sm font-semibold text-foreground mb-1">
+          <p className="text-sm font-semibold mb-1" style={{ color: '#18120E' }}>
             {isDragActive ? 'Drop it here!' : 'Drag & drop your statement'}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs" style={{ color: '#A09890' }}>
             Supports PDF (all major banks) and images (PNG, JPG, WebP — Cred screenshots)
           </p>
         </div>
@@ -226,10 +225,11 @@ export default function StatementsPage() {
                     </button>
                   </div>
                 ) : (
-                  <div {...getRootProps()} className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-orange-300 transition-colors mb-5">
+                  <div {...getRootProps()} className="rounded-xl p-8 text-center cursor-pointer transition-colors mb-5"
+                    style={{ border: '2px dashed #CCC7C0', background: '#FFF8F4' }}>
                     <input {...getInputProps()} />
-                    <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Click or drag file here</p>
+                    <Upload className="w-6 h-6 mx-auto mb-2" style={{ color: '#F97316' }} />
+                    <p className="text-sm" style={{ color: '#6B6460' }}>Click or drag file here</p>
                   </div>
                 )}
 

@@ -6,9 +6,9 @@
 @layer base {
   :root {
     /* ── Backgrounds ── */
-    --bg-base:      #F5F0EB;
-    --bg-page:      #EDE8E2;
-    --surface-0:    #F5F0EB;
+    --bg-base:      #EDE8E2;
+    --bg-page:      #E6E0D8;
+    --surface-0:    #EDE8E2;
     --surface-1:    #FFFFFF;
     --surface-2:    #FFF7F2;
     --surface-3:    #FFF0E6;
@@ -35,7 +35,7 @@
     --info:    #2563EB;
 
     /* ── Tailwind CSS var bridge ── */
-    --background:       245 240 235;
+    --background:       237 232 226;
     --foreground:       24 18 14;
     --card:             255 255 255;
     --card-foreground:  24 18 14;
@@ -100,15 +100,15 @@
   /* ── Surface cards ───────────────────────────────── */
   .card {
     background: #FFFFFF;
-    border: 1.5px solid #DDD8D2;
+    border: 1px solid #D8D2CB;
     border-radius: 1rem;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.07);
   }
   .card-raised {
     background: #FFFFFF;
-    border: 1.5px solid #DDD8D2;
+    border: 1px solid #D8D2CB;
     border-radius: 1rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
   }
 
   /* ── KPI / Stat card ─────────────────────────────── */
@@ -119,7 +119,7 @@
     padding: 1.25rem 1.25rem 1.25rem 1.5rem;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.07);
     transition: box-shadow 0.2s, transform 0.15s;
     cursor: default;
   }
