@@ -1,4 +1,5 @@
 'use client'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { AppShell } from '@/components/layout/AppShell'
@@ -25,6 +26,14 @@ const SEVERITY: Record<string, { dot: string; label: string; bg: string; border:
 }
 
 export default function DashboardPage() {
+  const [time, setTime] = useState('')
+  useEffect(() => {
+    const fmt = () => setTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }))
+    fmt()
+    const t = setInterval(fmt, 60_000)
+    return () => clearInterval(t)
+  }, [])
+
   const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ['dashboard'],
     queryFn: async () => (await reportsApi.dashboard()).data,
@@ -48,7 +57,7 @@ export default function DashboardPage() {
       <PageHeader
         icon={LayoutDashboard}
         title="Financial Dashboard"
-        subtitle={`Updated ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`}
+        subtitle={time ? `Updated ${time}` : 'Financial overview'}
         actions={
           <Link href="/statements" className="btn-primary">
             <Zap className="w-3.5 h-3.5" strokeWidth={2.5} /> Upload Statement
