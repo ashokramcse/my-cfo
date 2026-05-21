@@ -8,12 +8,22 @@ import { FriendsView } from './FriendsView'
 import { StatementsView } from './StatementsView'
 import { ReportsView } from './ReportsView'
 import { SettingsView } from './SettingsView'
+import { NetWorthView } from './NetWorthView'
+import { BankingView } from './BankingView'
+import { InvestmentsView } from './InvestmentsView'
+import { LoansView } from './LoansView'
+import { AssetsView } from './AssetsView'
 
 export function ViewRouter() {
   const { currentView } = useUIStore()
 
   switch (currentView) {
     case 'dashboard':    return <DashboardView />
+    case 'net-worth':    return <NetWorthView />
+    case 'banking':      return <BankingView />
+    case 'investments':  return <InvestmentsView />
+    case 'loans':        return <LoansView />
+    case 'assets':       return <AssetsView />
     case 'cards':        return <CardsView />
     case 'transactions': return <TransactionsView />
     case 'emis':         return <EMIsView />

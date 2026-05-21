@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { useState, useEffect } from 'react'
-import { cardsApi, transactionsApi, emisApi, friendsApi, reportsApi, insightsApi, statementsApi } from '@/lib/api'
+import { cardsApi, transactionsApi, emisApi, friendsApi, reportsApi, insightsApi, statementsApi, netWorthApi, bankAccountsApi, investmentsApi, loansApi, assetsApi } from '@/lib/api'
 
 // Prefetch all pages' primary data as soon as the app loads so every
 // navigation feels instant — no skeleton flash on first visit.
@@ -18,6 +18,11 @@ function DataPrefetcher({ queryClient }: { queryClient: QueryClient }) {
     queryClient.prefetchQuery({ queryKey: ['statements'],                             queryFn: () => statementsApi.list().then(r => r.data) })
     queryClient.prefetchQuery({ queryKey: ['insights'],                               queryFn: () => insightsApi.list({ unread_only: true, limit: 5 }).then(r => r.data) })
     queryClient.prefetchQuery({ queryKey: ['spending'],                               queryFn: () => reportsApi.spending().then(r => r.data) })
+    queryClient.prefetchQuery({ queryKey: ['net-worth'],                              queryFn: () => netWorthApi.current().then(r => r.data) })
+    queryClient.prefetchQuery({ queryKey: ['bank-accounts'],                          queryFn: () => bankAccountsApi.list().then(r => r.data) })
+    queryClient.prefetchQuery({ queryKey: ['investments'],                            queryFn: () => investmentsApi.list().then(r => r.data) })
+    queryClient.prefetchQuery({ queryKey: ['loans'],                                  queryFn: () => loansApi.list().then(r => r.data) })
+    queryClient.prefetchQuery({ queryKey: ['assets'],                                 queryFn: () => assetsApi.list().then(r => r.data) })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   return null

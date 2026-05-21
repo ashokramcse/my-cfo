@@ -1,22 +1,47 @@
 'use client'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutDashboard, CreditCard, ArrowLeftRight, Calendar, Users, FileText, BarChart3, Settings, ChevronLeft, Zap, X } from 'lucide-react'
+import { LayoutDashboard, CreditCard, ArrowLeftRight, Calendar, Users, FileText, BarChart3, Settings, ChevronLeft, Zap, X, TrendingUp, Landmark, Building2, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore, ViewId } from '@/store/ui'
 import { useIsMobile } from '@/hooks/useIsMobile'
-import { cardsApi, transactionsApi, emisApi, friendsApi, reportsApi, insightsApi, statementsApi } from '@/lib/api'
+import { cardsApi, transactionsApi, emisApi, friendsApi, reportsApi, insightsApi, statementsApi, netWorthApi, bankAccountsApi, investmentsApi, loansApi, assetsApi } from '@/lib/api'
 
-const NAV: { view: ViewId; icon: React.ElementType; label: string }[] = [
-  { view: 'dashboard',    icon: LayoutDashboard, label: 'Dashboard'    },
-  { view: 'cards',        icon: CreditCard,      label: 'Cards'        },
-  { view: 'transactions', icon: ArrowLeftRight,  label: 'Transactions' },
-  { view: 'emis',         icon: Calendar,        label: 'EMI Tracker'  },
-  { view: 'friends',      icon: Users,           label: 'Friend EMIs'  },
-  { view: 'statements',   icon: FileText,        label: 'Statements'   },
-  { view: 'reports',      icon: BarChart3,       label: 'Reports'      },
-  { view: 'settings',     icon: Settings,        label: 'Settings'     },
+type NavGroup = { group: string; items: { view: ViewId; icon: React.ElementType; label: string }[] }
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    group: 'Wealth',
+    items: [
+      { view: 'net-worth',   icon: TrendingUp,      label: 'Net Worth'    },
+      { view: 'banking',     icon: Landmark,        label: 'Banking'      },
+      { view: 'investments', icon: BarChart3,       label: 'Investments'  },
+      { view: 'loans',       icon: Wallet,          label: 'Loans & Debt' },
+      { view: 'assets',      icon: Building2,       label: 'Assets'       },
+    ],
+  },
+  {
+    group: 'Credit Cards',
+    items: [
+      { view: 'dashboard',    icon: LayoutDashboard, label: 'Dashboard'    },
+      { view: 'cards',        icon: CreditCard,      label: 'Cards'        },
+      { view: 'transactions', icon: ArrowLeftRight,  label: 'Transactions' },
+      { view: 'emis',         icon: Calendar,        label: 'EMI Tracker'  },
+      { view: 'friends',      icon: Users,           label: 'Friend EMIs'  },
+      { view: 'statements',   icon: FileText,        label: 'Statements'   },
+      { view: 'reports',      icon: BarChart3,       label: 'Reports'      },
+    ],
+  },
+  {
+    group: '',
+    items: [
+      { view: 'settings', icon: Settings, label: 'Settings' },
+    ],
+  },
 ]
+
+// Flat nav for active check
+const NAV = NAV_GROUPS.flatMap(g => g.items)
 
 // Map each view to the queries it needs — prefetched on hover
 const VIEW_PREFETCH: Record<ViewId, (qc: ReturnType<typeof useQueryClient>) => void> = {
@@ -25,6 +50,20 @@ const VIEW_PREFETCH: Record<ViewId, (qc: ReturnType<typeof useQueryClient>) => v
     qc.prefetchQuery({ queryKey: ['insights'],     queryFn: () => insightsApi.list({ unread_only: true, limit: 5 }).then(r => r.data) })
     qc.prefetchQuery({ queryKey: ['emi-forecast'], queryFn: () => emisApi.forecast(6).then(r => r.data) })
   },
+  'net-worth':  (qc) => {
+    qc.prefetchQuery({ queryKey: ['net-worth'],         queryFn: () => netWorthApi.current().then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['net-worth-history'], queryFn: () => netWorthApi.history(12).then(r => r.data) })
+  },
+  banking:      (qc) => qc.prefetchQuery({ queryKey: ['bank-accounts'], queryFn: () => bankAccountsApi.list().then(r => r.data) }),
+  investments:  (qc) => {
+    qc.prefetchQuery({ queryKey: ['investments'],         queryFn: () => investmentsApi.list().then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['investments-summary'], queryFn: () => investmentsApi.summary().then(r => r.data) })
+  },
+  loans:        (qc) => {
+    qc.prefetchQuery({ queryKey: ['loans'],         queryFn: () => loansApi.list().then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['loans-summary'], queryFn: () => loansApi.summary().then(r => r.data) })
+  },
+  assets:       (qc) => qc.prefetchQuery({ queryKey: ['assets'], queryFn: () => assetsApi.list().then(r => r.data) }),
   cards:        (qc) => qc.prefetchQuery({ queryKey: ['cards'],        queryFn: () => cardsApi.list().then(r => r.data.items) }),
   transactions: (qc) => qc.prefetchQuery({ queryKey: ['transactions', 1, '', 'ALL', ''], queryFn: () => transactionsApi.list({ page: 1, page_size: 50 }).then(r => r.data) }),
   emis:         (qc) => {
@@ -76,27 +115,38 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto no-scrollbar">
-        {NAV.map(({ view, icon: Icon, label }) => {
-          const active = currentView === view
-          const prefetch = VIEW_PREFETCH[view]
-          return (
-            <button
-              key={view}
-              onClick={() => setView(view)}
-              onMouseEnter={() => prefetch?.(qc)}
-              onFocus={() => prefetch?.(qc)}
-              className="w-full text-left"
-            >
-              <div className={cn('nav-item', active && 'active')} title={(!isMobile && sidebarCollapsed) ? label : undefined}>
-                <Icon className="w-[17px] h-[17px] flex-shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-                {(isMobile || !sidebarCollapsed) && (
-                  <span className="whitespace-nowrap">{label}</span>
-                )}
+      <nav className="flex-1 py-2 px-2 overflow-y-auto no-scrollbar">
+        {NAV_GROUPS.map(({ group, items }) => (
+          <div key={group || 'misc'} className="mb-1">
+            {group && (isMobile || !sidebarCollapsed) && (
+              <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                {group}
               </div>
-            </button>
-          )
-        })}
+            )}
+            <div className="space-y-0.5">
+              {items.map(({ view, icon: Icon, label }) => {
+                const active = currentView === view
+                const prefetch = VIEW_PREFETCH[view]
+                return (
+                  <button
+                    key={view}
+                    onClick={() => setView(view)}
+                    onMouseEnter={() => prefetch?.(qc)}
+                    onFocus={() => prefetch?.(qc)}
+                    className="w-full text-left"
+                  >
+                    <div className={cn('nav-item', active && 'active')} title={(!isMobile && sidebarCollapsed) ? label : undefined}>
+                      <Icon className="w-[17px] h-[17px] flex-shrink-0" strokeWidth={active ? 2.2 : 1.8} />
+                      {(isMobile || !sidebarCollapsed) && (
+                        <span className="whitespace-nowrap">{label}</span>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Owner footer */}

@@ -239,3 +239,128 @@ export interface PaginatedResponse<T> {
   page_size: number
   total_amount?: number
 }
+
+// ── Financial OS: New Types ────────────────────────────────────────────────
+
+export interface BankAccount {
+  id: string
+  nickname: string
+  bank_name: string
+  account_type: 'SAVINGS' | 'CURRENT' | 'SALARY' | 'WALLET' | 'UPI' | 'CASH' | 'FD' | 'RD'
+  account_number_last4: string | null
+  ifsc_code: string | null
+  current_balance: string   // Decimal as string from Pydantic
+  minimum_balance: string
+  interest_rate: string
+  maturity_date: string | null
+  maturity_amount: string | null
+  account_color: string
+  is_active: boolean
+  is_primary: boolean
+  notes: string | null
+  created_at: string
+}
+
+export interface Investment {
+  id: string
+  investment_type: 'STOCKS' | 'MUTUAL_FUND' | 'ETF' | 'CRYPTO' | 'GOLD' | 'SILVER' | 'SGB' | 'PPF' | 'EPF' | 'NPS' | 'BONDS' | 'REITS' | 'OTHER'
+  name: string
+  symbol: string | null
+  folio_number: string | null
+  units: string
+  avg_buy_price: string
+  current_price: string
+  current_value: string
+  invested_amount: string
+  is_sip: boolean
+  sip_amount: string | null
+  sip_date: number | null
+  sip_status: string | null
+  sip_start_date: string | null
+  weight_grams: string | null
+  purity: string | null
+  broker: string | null
+  platform: string | null
+  lock_in_until: string | null
+  is_locked: boolean
+  unrealized_pnl: string
+  realized_pnl: string
+  xirr: string | null
+  cagr: string | null
+  purchase_date: string | null
+  notes: string | null
+  last_price_updated: string | null
+  created_at: string
+}
+
+export interface Loan {
+  id: string
+  loan_type: 'HOME' | 'PERSONAL' | 'VEHICLE' | 'EDUCATION' | 'GOLD' | 'BUSINESS' | 'BNPL' | 'INFORMAL' | 'OTHER'
+  lender_name: string
+  loan_account_number: string | null
+  nickname: string | null
+  principal_amount: string
+  outstanding_balance: string
+  emi_amount: string | null
+  total_paid: string
+  total_interest_paid: string
+  interest_rate: string
+  tenure_months: number | null
+  remaining_months: number | null
+  start_date: string
+  end_date: string | null
+  emi_due_day: number
+  status: 'ACTIVE' | 'CLOSED' | 'OVERDUE' | 'WRITTEN_OFF'
+  is_secured: boolean
+  collateral: string | null
+  prepayment_penalty: string
+  notes: string | null
+  created_at: string
+}
+
+export interface Asset {
+  id: string
+  asset_type: 'REAL_ESTATE' | 'VEHICLE' | 'JEWELRY' | 'ELECTRONICS' | 'FURNITURE' | 'ARTWORK' | 'OTHER'
+  name: string
+  description: string | null
+  purchase_price: string | null
+  current_value: string
+  purchase_date: string | null
+  depreciation_rate: string
+  location: string | null
+  area_sqft: string | null
+  registration_number: string | null
+  make_model: string | null
+  year_of_manufacture: number | null
+  is_insured: boolean
+  insurance_expiry: string | null
+  insurance_value: string | null
+  is_mortgaged: boolean
+  mortgage_outstanding: string
+  notes: string | null
+  created_at: string
+}
+
+export interface NetWorthData {
+  bank_balance: number
+  investment_value: number
+  total_invested: number
+  investment_pnl: number
+  asset_value: number
+  total_assets: number
+  credit_card_outstanding: number
+  loan_outstanding: number
+  total_liabilities: number
+  net_worth: number
+  change_amount: number
+  change_pct: number
+}
+
+export interface NetWorthHistoryPoint {
+  date: string
+  net_worth: number
+  total_assets: number
+  total_liabilities: number
+  change_amount: number
+  change_pct: number
+}

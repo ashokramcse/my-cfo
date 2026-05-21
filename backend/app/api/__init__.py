@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.api import auth, cards, transactions, emis, friends, statements, reports, insights
+from app.api import bank_accounts, investments, loans, assets, net_worth
 
 router = APIRouter()
 router.include_router(auth.router, prefix="/auth", tags=["Auth"])
@@ -10,3 +11,8 @@ router.include_router(friends.router, prefix="/friends", tags=["Friends"])
 router.include_router(statements.router, prefix="/statements", tags=["Statements"])
 router.include_router(reports.router, prefix="/reports", tags=["Reports"])
 router.include_router(insights.router, prefix="/insights", tags=["Insights"])
+router.include_router(bank_accounts.router, prefix="/bank-accounts", tags=["Banking"])
+router.include_router(investments.router, prefix="/investments", tags=["Investments"])
+router.include_router(loans.router, prefix="/loans", tags=["Loans"])
+router.include_router(assets.router, prefix="/assets", tags=["Assets"])
+router.include_router(net_worth.router, prefix="/net-worth", tags=["Net Worth"])

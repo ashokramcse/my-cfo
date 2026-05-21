@@ -71,3 +71,41 @@ export const insightsApi = {
   dismiss: (id: string) => api.patch(`/insights/${id}/dismiss`),
   generate: () => api.post('/insights/generate'),
 }
+
+// ── Financial OS: New API modules ──────────────────────────────────────────
+
+export const bankAccountsApi = {
+  list: () => api.get('/bank-accounts'),
+  create: (data: unknown) => api.post('/bank-accounts', data),
+  update: (id: string, data: unknown) => api.patch(`/bank-accounts/${id}`, data),
+  delete: (id: string) => api.delete(`/bank-accounts/${id}`),
+}
+
+export const investmentsApi = {
+  list: () => api.get('/investments'),
+  create: (data: unknown) => api.post('/investments', data),
+  update: (id: string, data: unknown) => api.patch(`/investments/${id}`, data),
+  delete: (id: string) => api.delete(`/investments/${id}`),
+  summary: () => api.get('/investments/analytics/summary'),
+}
+
+export const loansApi = {
+  list: () => api.get('/loans'),
+  create: (data: unknown) => api.post('/loans', data),
+  update: (id: string, data: unknown) => api.patch(`/loans/${id}`, data),
+  delete: (id: string) => api.delete(`/loans/${id}`),
+  summary: () => api.get('/loans/analytics/summary'),
+}
+
+export const assetsApi = {
+  list: () => api.get('/assets'),
+  create: (data: unknown) => api.post('/assets', data),
+  update: (id: string, data: unknown) => api.patch(`/assets/${id}`, data),
+  delete: (id: string) => api.delete(`/assets/${id}`),
+}
+
+export const netWorthApi = {
+  current: () => api.get('/net-worth/current'),
+  snapshot: () => api.post('/net-worth/snapshot'),
+  history: (months?: number) => api.get('/net-worth/history', { params: { months } }),
+}

@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 
 export type ViewId =
-  | 'dashboard' | 'cards' | 'transactions' | 'emis'
+  | 'dashboard' | 'net-worth' | 'banking' | 'investments' | 'loans' | 'assets'
+  | 'cards' | 'transactions' | 'emis'
   | 'friends'   | 'statements' | 'reports' | 'settings'
 
 interface UIState {
