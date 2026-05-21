@@ -96,6 +96,7 @@ export const investmentsApi = {
   update: (id: string, data: unknown) => api.patch(`/investments/${id}`, data),
   delete: (id: string) => api.delete(`/investments/${id}`),
   summary: () => api.get('/investments/analytics/summary'),
+  intelligence: () => api.get('/investments/analytics/intelligence'),
 }
 
 export const loansApi = {
@@ -104,6 +105,7 @@ export const loansApi = {
   update: (id: string, data: unknown) => api.patch(`/loans/${id}`, data),
   delete: (id: string) => api.delete(`/loans/${id}`),
   summary: () => api.get('/loans/analytics/summary'),
+  intelligence: () => api.get('/loans/analytics/intelligence'),
 }
 
 export const assetsApi = {
@@ -111,6 +113,7 @@ export const assetsApi = {
   create: (data: unknown) => api.post('/assets', data),
   update: (id: string, data: unknown) => api.patch(`/assets/${id}`, data),
   delete: (id: string) => api.delete(`/assets/${id}`),
+  intelligence: () => api.get('/assets/analytics/intelligence'),
 }
 
 export const netWorthApi = {

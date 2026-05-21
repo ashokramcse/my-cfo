@@ -1,298 +1,347 @@
 'use client'
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useQuery } from '@tanstack/react-query'
+import { motion } from 'framer-motion'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { StatCard } from '@/components/ui/StatCard'
 import { assetsApi } from '@/lib/api'
-import { Asset } from '@/types'
-import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils'
-import { Building2, Plus, X, Trash2, Home, Car, Gem, Monitor, Package } from 'lucide-react'
-import { toast } from '@/components/ui/Toast'
-import { useForm, Controller } from 'react-hook-form'
-import { Select } from '@/components/ui/Select'
+import { formatCurrency, formatCurrencyCompact } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import {
+  AlertTriangle, Info, Zap, ChevronRight, TrendingUp, TrendingDown,
+  Shield, ShieldOff, Building2, Car, Gem, BarChart3, Package,
+} from 'lucide-react'
+import { useUIStore } from '@/store/ui'
+import type { ViewId } from '@/store/ui'
+import {
+  PieChart, Pie, Cell, BarChart, Bar,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+} from 'recharts'
+import type {
+  AssetIntelligence, AssetTypeBreakdown, AssetCard, LiquidityTier, AssetInsight,
+} from '@/types'
 
-const ASSET_TYPES = [
-  { value: 'REAL_ESTATE', label: '🏠 Real Estate' },
-  { value: 'VEHICLE', label: '🚗 Vehicle' },
-  { value: 'JEWELRY', label: '💎 Jewelry' },
-  { value: 'ELECTRONICS', label: '💻 Electronics' },
-  { value: 'FURNITURE', label: '🪑 Furniture' },
-  { value: 'ARTWORK', label: '🎨 Artwork' },
-  { value: 'OTHER', label: '📦 Other' },
-]
-
-const TYPE_EMOJI: Record<string, string> = {
-  REAL_ESTATE: '🏠', VEHICLE: '🚗', JEWELRY: '💎',
-  ELECTRONICS: '💻', FURNITURE: '🪑', ARTWORK: '🎨', OTHER: '📦',
+const SEV = {
+  CRITICAL: { bg: '#FEF2F2', border: '#FECACA', icon: AlertTriangle, iconBg: '#FEE2E2', iconColor: '#DC2626' },
+  WARNING:  { bg: '#FFFBEB', border: '#FDE68A', icon: AlertTriangle, iconBg: '#FEF3C7', iconColor: '#D97706' },
+  INFO:     { bg: '#F0F9FF', border: '#BAE6FD', icon: Info,          iconBg: '#E0F2FE', iconColor: '#0284C7' },
 }
 
-const TYPE_COLOR: Record<string, string> = {
-  REAL_ESTATE: '#10B981', VEHICLE: '#F97316', JEWELRY: '#F59E0B',
-  ELECTRONICS: '#0EA5E9', FURNITURE: '#8B5CF6', ARTWORK: '#EC4899', OTHER: '#6B7280',
+// ─── Metric tile ──────────────────────────────────────────────────────────────
+function MetricTile({
+  label, value, sub, color = '#18120E', bg = '#FFF8F4', border = '#F0EAE4',
+  icon: Icon, delay = 0,
+}: {
+  label: string; value: string; sub?: string; color?: string; bg?: string; border?: string
+  icon: React.ElementType; delay?: number
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.35 }}
+      className="rounded-xl p-4 border flex flex-col gap-1"
+      style={{ background: bg, borderColor: border }}>
+      <div className="flex items-center gap-2">
+        <Icon size={15} style={{ color }} />
+        <span className="text-xs font-medium text-amber-700">{label}</span>
+      </div>
+      <p className="text-lg font-bold leading-tight" style={{ color }}>{value}</p>
+      {sub && <p className="text-xs text-amber-600">{sub}</p>}
+    </motion.div>
+  )
 }
 
-export function AssetsView() {
-  const [showForm, setShowForm] = useState(false)
-  const [selected, setSelected] = useState<Asset | null>(null)
-  const qc = useQueryClient()
+// ─── Asset card ───────────────────────────────────────────────────────────────
+function AssetCardItem({ asset }: { asset: AssetCard }) {
+  const hasGain = asset.purchase_price > 0
+  const gainPositive = asset.gain >= 0
 
-  const { data: assets = [], isLoading } = useQuery<Asset[]>({
-    queryKey: ['assets'],
-    queryFn: async () => (await assetsApi.list()).data,
-  })
-
-  const { register, handleSubmit, reset, control } = useForm({
-    defaultValues: {
-      asset_type: 'REAL_ESTATE', name: '', description: '',
-      purchase_price: 0, current_value: 0, purchase_date: '',
-      depreciation_rate: 0, location: '', make_model: '',
-      registration_number: '', year_of_manufacture: 0,
-      is_insured: false, is_mortgaged: false, mortgage_outstanding: 0,
-    },
-  })
-
-  const createAsset = useMutation({
-    mutationFn: (data: unknown) => assetsApi.create(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['assets'] })
-      qc.invalidateQueries({ queryKey: ['net-worth'] })
-      toast.success('Asset added')
-      setShowForm(false)
-      reset()
-    },
-    onError: () => toast.error('Failed to add asset'),
-  })
-
-  const deleteAsset = useMutation({
-    mutationFn: (id: string) => assetsApi.delete(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['assets'] })
-      qc.invalidateQueries({ queryKey: ['net-worth'] })
-      setSelected(null)
-      toast.success('Asset removed')
-    },
-  })
-
-  const totalValue = assets.reduce((s, a) => s + Number(a.current_value), 0)
-  const totalPurchased = assets.reduce((s, a) => s + Number(a.purchase_price ?? 0), 0)
-  const appreciation = totalPurchased > 0 ? totalValue - totalPurchased : 0
-
-  // Group by type
-  const byType = assets.reduce<Record<string, Asset[]>>((acc, a) => {
-    if (!acc[a.asset_type]) acc[a.asset_type] = []
-    acc[a.asset_type].push(a)
-    return acc
-  }, {})
+  const typeIcon: Record<string, React.ElementType> = {
+    REAL_ESTATE: Building2, VEHICLE: Car, JEWELRY: Gem,
+  }
+  const Icon = typeIcon[asset.type] || Building2
 
   return (
-    <>
-      <PageHeader
-        icon={Building2}
-        title="Assets"
-        subtitle={`${assets.length} asset${assets.length !== 1 ? 's' : ''}`}
-        actions={
-          <button onClick={() => setShowForm(true)} className="btn-primary">
-            <Plus className="w-4 h-4" /> Add Asset
-          </button>
-        }
-      />
-      <div className="p-3 sm:p-5 xl:p-6 max-w-[1200px] mx-auto">
-        {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-          <StatCard title="Total Value" value={formatCurrencyCompact(totalValue)} icon={Building2} variant="success" delay={0} />
-          <StatCard title="Cost Basis" value={formatCurrencyCompact(totalPurchased)} icon={Package} delay={0.05} />
-          <StatCard title="Appreciation" value={`${appreciation >= 0 ? '+' : ''}${formatCurrencyCompact(appreciation)}`} icon={Home} variant={appreciation >= 0 ? 'success' : 'danger'} delay={0.1} />
+    <div className="rounded-xl border border-amber-200 bg-white p-4 hover:shadow-md transition-shadow">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ background: `${asset.color}20` }}>
+            <Icon size={15} style={{ color: asset.color }} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-amber-900">{asset.name}</p>
+            <p className="text-xs text-amber-600">{asset.label}</p>
+          </div>
         </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {asset.is_insured
+            ? <Shield size={13} className="text-emerald-500" />
+            : <ShieldOff size={13} className="text-red-400" />}
+          <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium',
+            asset.liquidity === 'Illiquid'    ? 'bg-red-100 text-red-700' :
+            asset.liquidity === 'Semi-liquid' ? 'bg-amber-100 text-amber-700' :
+            'bg-gray-100 text-gray-600')}>
+            {asset.liquidity}
+          </span>
+        </div>
+      </div>
 
-        {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 rounded-2xl bg-[#FFF1E6] shimmer" />)}
-          </div>
-        ) : assets.length ? (
-          <div className="space-y-6">
-            {Object.entries(byType).map(([type, items]) => (
-              <div key={type}>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-base">{TYPE_EMOJI[type]}</span>
-                  <h3 className="text-sm font-bold text-foreground">{type.replace('_', ' ')}</h3>
-                  <span className="text-xs text-muted-foreground">({items.length})</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {items.map((asset, i) => {
-                    const color = TYPE_COLOR[asset.asset_type] ?? '#6B7280'
-                    const purchaseAmt = Number(asset.purchase_price ?? 0)
-                    const currentAmt = Number(asset.current_value)
-                    const gain = purchaseAmt > 0 ? currentAmt - purchaseAmt : 0
-                    return (
-                      <motion.div
-                        key={asset.id}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.05 }}
-                        onClick={() => setSelected(asset)}
-                        className="card p-4 cursor-pointer hover:border-orange-200 transition-all"
-                      >
-                        <div className="flex items-start gap-3 mb-3">
-                          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base"
-                            style={{ background: `${color}18`, border: `1.5px solid ${color}40` }}>
-                            {TYPE_EMOJI[asset.asset_type]}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold text-foreground truncate">{asset.name}</div>
-                            {asset.location && <div className="text-xs text-muted-foreground truncate">{asset.location}</div>}
-                            {asset.make_model && <div className="text-xs text-muted-foreground truncate">{asset.make_model}</div>}
-                          </div>
-                        </div>
-                        <div className="text-xl font-bold font-mono text-foreground" style={{ letterSpacing: '-0.02em', fontFeatureSettings: '"tnum" 1' }}>
-                          {formatCurrencyCompact(currentAmt)}
-                        </div>
-                        {gain !== 0 && (
-                          <div className={`text-xs font-semibold mt-0.5 ${gain >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                            {gain >= 0 ? '+' : ''}{formatCurrencyCompact(gain)} from purchase
-                          </div>
-                        )}
-                        {asset.is_insured && (
-                          <div className="mt-2 text-xs text-emerald-600 font-medium">✓ Insured</div>
-                        )}
-                      </motion.div>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center py-20 gap-4">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #F0FDF4, #DCFCE7)', border: '2px solid #BBF7D0' }}>
-              <Building2 className="w-7 h-7 text-emerald-600" strokeWidth={1.8} />
+      {/* Value */}
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="text-xs text-amber-500 mb-0.5">Current Value</p>
+          <p className="text-xl font-bold text-amber-900">{formatCurrencyCompact(asset.current_value)}</p>
+        </div>
+        {hasGain && (
+          <div className="text-right">
+            <div className={cn('flex items-center gap-1 text-sm font-bold',
+              gainPositive ? 'text-emerald-600' : 'text-red-500')}>
+              {gainPositive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+              {gainPositive ? '+' : ''}{formatCurrencyCompact(asset.gain)}
             </div>
-            <div className="text-center">
-              <p className="text-sm font-semibold" style={{ color: '#18120E' }}>No assets tracked</p>
-              <p className="text-xs mt-1" style={{ color: '#A09890' }}>Track real estate, vehicles, jewelry & more</p>
-            </div>
-            <button onClick={() => setShowForm(true)} className="btn-primary">
-              <Plus className="w-4 h-4" /> Add Asset
-            </button>
+            {asset.cagr !== 0 && (
+              <p className="text-xs text-amber-500">{asset.cagr > 0 ? '+' : ''}{asset.cagr}% CAGR</p>
+            )}
           </div>
         )}
-
-        {/* Detail Modal */}
-        <AnimatePresence>
-          {selected && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
-              style={{ background: 'rgba(24,18,14,0.55)' }} onClick={() => setSelected(null)}>
-              <motion.div initial={{ scale: 0.92, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, y: 20 }}
-                className="card p-6 w-full max-w-md"
-                style={{ boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }} onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <div className="text-lg font-bold text-foreground">{TYPE_EMOJI[selected.asset_type]} {selected.name}</div>
-                    {selected.description && <div className="text-xs text-muted-foreground">{selected.description}</div>}
-                  </div>
-                  <button onClick={() => setSelected(null)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-[#FFD9B0] active:scale-95" style={{ background: '#FFF1E6' }}>
-                    <X className="w-4 h-4" style={{ color: '#18120E' }} />
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  {[
-                    ['Current Value', formatCurrency(Number(selected.current_value))],
-                    ['Purchase Price', selected.purchase_price ? formatCurrency(Number(selected.purchase_price)) : '—'],
-                    ['Purchase Date', selected.purchase_date ? formatDate(selected.purchase_date, 'dd MMM yyyy') : '—'],
-                    ['Depreciation', `${selected.depreciation_rate}% p.a.`],
-                    ...(selected.location ? [['Location', selected.location]] : []),
-                    ...(selected.make_model ? [['Model', selected.make_model]] : []),
-                  ].map(([label, value]) => (
-                    <div key={label} className="p-3 rounded-xl bg-[#FFF8F2] border border-border/50">
-                      <div className="text-xs text-muted-foreground mb-0.5">{label}</div>
-                      <div className="text-sm font-semibold text-foreground font-mono truncate">{value}</div>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={() => deleteAsset.mutate(selected.id)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-rose-400 border border-[#FECACA] bg-[#FEF2F2] hover:bg-[#FEE2E2] transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" /> Remove Asset
-                </button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Add Modal */}
-        <AnimatePresence>
-          {showForm && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
-              style={{ background: 'rgba(24,18,14,0.55)' }} onClick={() => setShowForm(false)}>
-              <motion.div initial={{ scale: 0.92, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, y: 20 }}
-                className="card p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
-                style={{ boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }} onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-base font-bold text-foreground">Add Asset</h2>
-                  <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-[#FFD9B0] active:scale-95" style={{ background: '#FFF1E6' }}>
-                    <X className="w-4 h-4" style={{ color: '#18120E' }} />
-                  </button>
-                </div>
-                <form onSubmit={handleSubmit(d => createAsset.mutate(d))} className="space-y-4">
-                  <div>
-                    <label className="field-label">Type</label>
-                    <Controller name="asset_type" control={control} render={({ field }) => (
-                      <Select value={field.value} onChange={field.onChange} options={ASSET_TYPES} />
-                    )} />
-                  </div>
-                  <div>
-                    <label className="field-label">Asset Name *</label>
-                    <input {...register('name', { required: true })} placeholder="3BHK Flat, Bangalore / Honda City 2020" />
-                  </div>
-                  <div>
-                    <label className="field-label">Description</label>
-                    <input {...register('description')} placeholder="Optional description" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="field-label">Current Value (₹) *</label>
-                      <input type="number" {...register('current_value', { valueAsNumber: true, required: true })} placeholder="5000000" />
-                    </div>
-                    <div>
-                      <label className="field-label">Purchase Price (₹)</label>
-                      <input type="number" {...register('purchase_price', { valueAsNumber: true })} placeholder="4000000" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="field-label">Purchase Date</label>
-                      <input type="date" {...register('purchase_date')} />
-                    </div>
-                    <div>
-                      <label className="field-label">Depreciation % p.a.</label>
-                      <input type="number" step="0.01" {...register('depreciation_rate', { valueAsNumber: true })} placeholder="0" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="field-label">Location / Address</label>
-                    <input {...register('location')} placeholder="Whitefield, Bangalore" />
-                  </div>
-                  <div>
-                    <label className="field-label">Make/Model (for vehicles)</label>
-                    <input {...register('make_model')} placeholder="Honda City ZX 2020" />
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-[#FFF8F2] border border-border">
-                    <input type="checkbox" id="is_insured" {...register('is_insured')} className="w-4 h-4 accent-orange-500" />
-                    <label htmlFor="is_insured" className="text-sm font-medium text-foreground cursor-pointer">Asset is insured</label>
-                  </div>
-                  <button type="submit" disabled={createAsset.isPending} className="btn-primary w-full justify-center py-2.5">
-                    {createAsset.isPending ? 'Adding…' : 'Add Asset'}
-                  </button>
-                </form>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
-    </>
+
+      {/* Metadata */}
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-amber-500">
+        {asset.purchase_date && <span>Bought: {asset.purchase_date}</span>}
+        {asset.location       && <span>📍 {asset.location}</span>}
+        {asset.area_sqft > 0  && <span>{asset.area_sqft.toLocaleString()} sqft</span>}
+        {asset.make_model     && <span>{asset.make_model}</span>}
+        {asset.year_of_manufacture && <span>Year: {asset.year_of_manufacture}</span>}
+        {asset.depreciation_rate > 0 && <span className="text-red-400">Depr: {asset.depreciation_rate}%/yr</span>}
+      </div>
+
+      {/* Mortgage badge */}
+      {asset.is_mortgaged && asset.mortgage_outstanding > 0 && (
+        <div className="mt-2 text-xs text-red-600 bg-red-50 rounded px-2 py-1 border border-red-100">
+          Mortgage: {formatCurrencyCompact(asset.mortgage_outstanding)} outstanding
+        </div>
+      )}
+
+      {/* Insurance expiry warning */}
+      {asset.is_insured && asset.ins_expiry_days != null && asset.ins_expiry_days <= 60 && (
+        <div className={cn('mt-2 text-xs rounded px-2 py-1 border',
+          asset.ins_expiry_days <= 0
+            ? 'bg-red-50 text-red-700 border-red-200'
+            : 'bg-amber-50 text-amber-700 border-amber-200')}>
+          Insurance {asset.ins_expiry_days <= 0 ? 'EXPIRED' : `expires in ${asset.ins_expiry_days}d`}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Allocation row ───────────────────────────────────────────────────────────
+function AllocRow({ t }: { t: AssetTypeBreakdown }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: t.color }} />
+      <span className="text-sm text-amber-900 flex-1 truncate">{t.label}</span>
+      <span className="text-xs font-semibold text-amber-700">{t.pct}%</span>
+      <span className="text-xs text-amber-600 w-20 text-right">{formatCurrencyCompact(t.value)}</span>
+    </div>
+  )
+}
+
+const EMPTY: AssetIntelligence = {
+  total_value: 0, free_value: 0, mortgaged_value: 0,
+  insured_value: 0, uninsured_value: 0,
+  purchase_total: 0, appreciation: 0, asset_count: 0,
+  by_type: [], liquidity_breakdown: [], asset_cards: [], insights: [],
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+export function AssetsView() {
+  const setView = useUIStore(s => s.setView)
+
+  const { data: intel = EMPTY } = useQuery<AssetIntelligence>({
+    queryKey: ['asset-intelligence'],
+    queryFn: () => assetsApi.intelligence().then(r => r.data),
+  })
+
+  const NAV: Record<string, ViewId> = {
+    'net-worth': 'net-worth', banking: 'banking', investments: 'investments',
+    assets: 'assets', loans: 'loans', cards: 'cards',
+  }
+
+  const appreciationPos = intel.appreciation >= 0
+  const appreciationPct = intel.purchase_total > 0
+    ? (intel.appreciation / intel.purchase_total * 100) : 0
+
+  return (
+    <div className="space-y-6 pb-10">
+      <PageHeader icon={Package} title="Asset Intelligence" subtitle="Physical & non-traditional wealth management" />
+
+      {/* ── Hero ── */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl overflow-hidden relative"
+        style={{ background: 'linear-gradient(135deg, #1A0F0A 0%, #2D1810 50%, #1A2E1A 100%)' }}>
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/3 w-64 h-64 rounded-full opacity-10"
+               style={{ background: '#3B82F6', filter: 'blur(80px)' }} />
+          <div className="absolute bottom-0 right-1/4 w-48 h-48 rounded-full opacity-10"
+               style={{ background: '#D97706', filter: 'blur(60px)' }} />
+        </div>
+        <div className="relative p-6 flex flex-col md:flex-row gap-6 items-start md:items-end">
+          <div className="flex-1">
+            <p className="text-blue-400 text-sm font-medium mb-1">Total Asset Value</p>
+            <p className="text-4xl font-black text-white">{formatCurrencyCompact(intel.total_value)}</p>
+            <div className="flex items-center gap-3 mt-2 flex-wrap text-sm">
+              <span className="text-emerald-300">Free: {formatCurrencyCompact(intel.free_value)}</span>
+              <span className="text-red-300">Mortgaged: {formatCurrencyCompact(intel.mortgaged_value)}</span>
+              {intel.purchase_total > 0 && (
+                <span className={cn('flex items-center gap-1 font-bold px-2 py-0.5 rounded-full',
+                  appreciationPos ? 'bg-emerald-900/50 text-emerald-300' : 'bg-red-900/50 text-red-300')}>
+                  {appreciationPos ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  {appreciationPos ? '+' : ''}{formatCurrencyCompact(intel.appreciation)} ({appreciationPct.toFixed(1)}%)
+                </span>
+              )}
+            </div>
+            <div className="flex gap-4 mt-3 text-xs text-amber-500 flex-wrap">
+              <span>Insured: {formatCurrencyCompact(intel.insured_value)}</span>
+              <span className={intel.uninsured_value > 100000 ? 'text-red-400' : ''}>
+                Uninsured: {formatCurrencyCompact(intel.uninsured_value)}
+              </span>
+              <span>{intel.asset_count} assets</span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── Metric tiles ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <MetricTile delay={0.05} label="Free Value"     value={formatCurrencyCompact(intel.free_value)}      icon={Building2} />
+        <MetricTile delay={0.10} label="Appreciation"
+          value={formatCurrencyCompact(Math.abs(intel.appreciation))}
+          sub={`${appreciationPct.toFixed(1)}% overall`}
+          icon={appreciationPos ? TrendingUp : TrendingDown}
+          bg={appreciationPos ? '#F0FDF4' : '#FEF2F2'} border={appreciationPos ? '#BBF7D0' : '#FECACA'}
+          color={appreciationPos ? '#166534' : '#991B1B'} />
+        <MetricTile delay={0.15} label="Insured Value"  value={formatCurrencyCompact(intel.insured_value)}   icon={Shield}     bg="#F0FDF4" border="#BBF7D0" color="#166534" />
+        <MetricTile delay={0.20} label="Uninsured"      value={formatCurrencyCompact(intel.uninsured_value)} icon={ShieldOff}  bg="#FEF2F2" border="#FECACA" color="#991B1B" />
+      </div>
+
+      {/* ── Charts ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Asset allocation donut */}
+        <div className="rounded-2xl border border-amber-200 bg-white p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-amber-600">◉</span>
+            <h3 className="text-sm font-semibold text-amber-900">Asset Allocation</h3>
+          </div>
+          {intel.by_type.length > 0 ? (
+            <div className="flex items-center gap-4">
+              <ResponsiveContainer width={140} height={140}>
+                <PieChart>
+                  <Pie data={intel.by_type} dataKey="value" cx="50%" cy="50%"
+                       innerRadius={38} outerRadius={62} paddingAngle={2}>
+                    {intel.by_type.map((t, i) => <Cell key={i} fill={t.color} />)}
+                  </Pie>
+                  <Tooltip formatter={(v: number) => formatCurrencyCompact(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex-1 space-y-2 min-w-0">
+                {intel.by_type.map((t, i) => <AllocRow key={i} t={t} />)}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-amber-500 text-center py-8">Add assets to see allocation</p>
+          )}
+        </div>
+
+        {/* Liquidity breakdown */}
+        <div className="rounded-2xl border border-amber-200 bg-white p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 size={16} className="text-amber-600" />
+            <h3 className="text-sm font-semibold text-amber-900">Liquidity Breakdown</h3>
+          </div>
+          {intel.liquidity_breakdown.length > 0 ? (
+            <div className="space-y-3 mt-2">
+              {intel.liquidity_breakdown.map((tier, i) => (
+                <div key={i}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-amber-700 font-medium">{tier.tier}</span>
+                    <span className="text-amber-600">{formatCurrencyCompact(tier.value)} ({tier.pct}%)</span>
+                  </div>
+                  <div className="h-3 rounded-full bg-amber-100 overflow-hidden">
+                    <motion.div className="h-full rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${tier.pct}%` }}
+                      transition={{ duration: 0.8, delay: 0.1 * i }}
+                      style={{ background: tier.color }} />
+                  </div>
+                </div>
+              ))}
+              <p className="text-xs text-amber-500 mt-2">
+                💡 Illiquid assets cannot be quickly converted to cash in emergencies
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-amber-500 text-center py-8">No data yet</p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Asset cards ── */}
+      {intel.asset_cards.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-amber-900 mb-3">Your Assets</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {intel.asset_cards.map(asset => <AssetCardItem key={asset.id} asset={asset} />)}
+          </div>
+        </div>
+      )}
+
+      {/* ── AI Insights ── */}
+      {intel.insights.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-white p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Zap size={16} className="text-amber-600" />
+            <h3 className="text-sm font-semibold text-amber-900">Asset Intelligence</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {intel.insights.map((ins, i) => {
+              const cfg = SEV[ins.severity]
+              const Icon = cfg.icon
+              return (
+                <motion.div key={i}
+                  initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.05 * i }}
+                  className="rounded-xl p-4 border cursor-pointer hover:brightness-95 transition-all"
+                  style={{ background: cfg.bg, borderColor: cfg.border }}
+                  onClick={() => ins.action && NAV[ins.action] && setView(NAV[ins.action] as ViewId)}>
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: cfg.iconBg }}>
+                      <Icon size={14} style={{ color: cfg.iconColor }} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{ins.title}</p>
+                      <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{ins.body}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Net Worth link ── */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+        className="rounded-xl border border-amber-200 bg-gradient-to-r from-blue-50 to-amber-50 p-4 flex items-center justify-between cursor-pointer hover:brightness-95 transition-all"
+        onClick={() => setView('net-worth')}>
+        <div>
+          <p className="text-sm font-semibold text-amber-900">View in Net Worth Engine</p>
+          <p className="text-xs text-amber-600 mt-0.5">See how physical assets contribute to your total wealth</p>
+        </div>
+        <ChevronRight size={18} className="text-amber-500" />
+      </motion.div>
+    </div>
   )
 }

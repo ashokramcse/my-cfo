@@ -398,6 +398,89 @@ export interface CashflowIntelligence {
   insights: { severity: string; title: string; body: string; action: string | null }[]
 }
 
+// ── Investment Intelligence ────────────────────────────────────────────────
+export interface InvAllocationSlice {
+  key: string; label: string; value: number; pct: number; color: string
+}
+export interface InvTypeBreakdown {
+  type: string; label: string; color: string
+  invested: number; current: number; pnl: number; pnl_pct: number
+  count: number; sip_amount: number; pct: number
+}
+export interface InvHolding {
+  id: string; name: string; type: string; label: string; color: string
+  invested: number; current: number; pnl: number; pnl_pct: number
+  is_sip: boolean; sip_amount: number; broker: string; symbol: string
+  is_locked: boolean; pct: number
+}
+export interface InvPerformer { name: string; type: string; pnl: number; pnl_pct: number }
+export interface InvInsight { severity: 'CRITICAL'|'WARNING'|'INFO'; title: string; body: string; action: string|null }
+
+export interface InvestmentIntelligence {
+  total_invested: number; total_value: number; total_pnl: number; pnl_pct: number
+  realized_pnl: number; sip_monthly: number; sip_count: number; locked_value: number
+  diversification_score: number
+  allocation: InvAllocationSlice[]
+  by_type: InvTypeBreakdown[]
+  top_holdings: InvHolding[]
+  best_performers: InvPerformer[]
+  worst_performers: InvPerformer[]
+  insights: InvInsight[]
+}
+
+// ── Loan Intelligence ──────────────────────────────────────────────────────
+export interface LoanTypeBreakdown {
+  type: string; label: string; color: string
+  outstanding: number; emi: number; count: number; pct: number
+}
+export interface LoanCard {
+  id: string; name: string; lender: string; type: string; label: string; color: string
+  principal: number; outstanding: number; paid: number; paid_pct: number
+  emi: number; interest_rate: number; remaining_months: number|null
+  tenure_months: number|null; emi_due_day: number; status: string
+  is_secured: boolean; prepayment_penalty: number; notes: string|null
+}
+export interface AmortizationMonth { month: string; interest: number; principal: number; emi: number }
+export interface HighInterestLoan  { name: string; rate: number; outstanding: number }
+export interface LoanInsight        { severity: 'CRITICAL'|'WARNING'|'INFO'; title: string; body: string; action: string|null }
+
+export interface LoanIntelligence {
+  total_outstanding: number; total_monthly_emi: number; total_principal: number
+  total_paid: number; total_interest_paid: number; weighted_avg_rate: number
+  secured_total: number; unsecured_total: number; active_count: number
+  by_type: LoanTypeBreakdown[]
+  loan_cards: LoanCard[]
+  amortization: AmortizationMonth[]
+  high_interest: HighInterestLoan[]
+  insights: LoanInsight[]
+}
+
+// ── Asset Intelligence ─────────────────────────────────────────────────────
+export interface AssetTypeBreakdown {
+  type: string; label: string; color: string; value: number; count: number; pct: number
+}
+export interface LiquidityTier  { tier: string; value: number; pct: number; color: string }
+export interface AssetCard {
+  id: string; name: string; type: string; label: string; color: string; liquidity: string
+  purchase_price: number; current_value: number; gain: number; gain_pct: number; cagr: number
+  is_insured: boolean; insurance_expiry: string|null; ins_expiry_days: number|null
+  insurance_value: number; is_mortgaged: boolean; mortgage_outstanding: number
+  depreciation_rate: number; location: string|null; area_sqft: number
+  registration_number: string|null; make_model: string|null; year_of_manufacture: number|null
+  purchase_date: string|null; notes: string|null
+}
+export interface AssetInsight { severity: 'CRITICAL'|'WARNING'|'INFO'; title: string; body: string; action: string|null }
+
+export interface AssetIntelligence {
+  total_value: number; free_value: number; mortgaged_value: number
+  insured_value: number; uninsured_value: number
+  purchase_total: number; appreciation: number; asset_count: number
+  by_type: AssetTypeBreakdown[]
+  liquidity_breakdown: LiquidityTier[]
+  asset_cards: AssetCard[]
+  insights: AssetInsight[]
+}
+
 export interface NetWorthHistoryPoint {
   date: string
   net_worth: number
