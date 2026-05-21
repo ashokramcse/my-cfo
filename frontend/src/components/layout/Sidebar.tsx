@@ -1,11 +1,13 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LayoutDashboard, CreditCard, ArrowLeftRight, Calendar, Users, FileText, BarChart3, Settings, ChevronLeft, Zap, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { cardsApi, transactionsApi, emisApi, friendsApi, reportsApi, insightsApi, statementsApi } from '@/lib/api'
 
 const NAV = [
   { href: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard'    },
@@ -18,8 +20,30 @@ const NAV = [
   { href: '/settings',     icon: Settings,        label: 'Settings'     },
 ]
 
+// Map each route to the queries it needs — prefetched on hover
+const ROUTE_PREFETCH: Record<string, (qc: ReturnType<typeof useQueryClient>) => void> = {
+  '/dashboard':    (qc) => {
+    qc.prefetchQuery({ queryKey: ['dashboard'],    queryFn: () => reportsApi.dashboard().then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['insights'],     queryFn: () => insightsApi.list({ limit: 10 }).then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['emi-forecast'], queryFn: () => emisApi.forecast(6).then(r => r.data) })
+  },
+  '/cards':        (qc) => qc.prefetchQuery({ queryKey: ['cards'],        queryFn: () => cardsApi.list().then(r => r.data.items) }),
+  '/transactions': (qc) => qc.prefetchQuery({ queryKey: ['transactions'], queryFn: () => transactionsApi.list({ limit: 50 }).then(r => r.data) }),
+  '/emis':         (qc) => {
+    qc.prefetchQuery({ queryKey: ['emis'],         queryFn: () => emisApi.list({}).then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['emi-forecast'], queryFn: () => emisApi.forecast(6).then(r => r.data) })
+  },
+  '/friends':      (qc) => qc.prefetchQuery({ queryKey: ['friends'],      queryFn: () => friendsApi.list().then(r => r.data) }),
+  '/statements':   (qc) => qc.prefetchQuery({ queryKey: ['statements'],   queryFn: () => statementsApi.list({}).then(r => r.data) }),
+  '/reports':      (qc) => {
+    qc.prefetchQuery({ queryKey: ['spending'],     queryFn: () => reportsApi.spending().then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['dashboard'],    queryFn: () => reportsApi.dashboard().then(r => r.data) })
+  },
+}
+
 export function Sidebar() {
   const pathname = usePathname()
+  const qc = useQueryClient()
   const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, closeMobileSidebar } = useUIStore()
   const isMobile = useIsMobile()
 
@@ -57,8 +81,15 @@ export function Sidebar() {
       <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto no-scrollbar">
         {NAV.map(({ href, icon: Icon, label }) => {
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+          const prefetch = ROUTE_PREFETCH[href]
           return (
-            <Link key={href} href={href} onClick={isMobile ? closeMobileSidebar : undefined}>
+            <Link
+              key={href}
+              href={href}
+              onClick={isMobile ? closeMobileSidebar : undefined}
+              onMouseEnter={() => prefetch?.(qc)}
+              onFocus={() => prefetch?.(qc)}
+            >
               <div className={cn('nav-item', active && 'active')} title={(!isMobile && sidebarCollapsed) ? label : undefined}>
                 <Icon className="w-[17px] h-[17px] flex-shrink-0" strokeWidth={active ? 2.2 : 1.8} />
                 {(isMobile || !sidebarCollapsed) && (
@@ -91,7 +122,6 @@ export function Sidebar() {
       <AnimatePresence>
         {mobileSidebarOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
@@ -99,7 +129,6 @@ export function Sidebar() {
               style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
               onClick={closeMobileSidebar}
             />
-            {/* Drawer */}
             <motion.aside
               initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }}
               transition={{ duration: 0.25, ease: 'easeOut' }}

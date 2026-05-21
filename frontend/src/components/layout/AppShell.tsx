@@ -1,12 +1,21 @@
 'use client'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Sidebar } from './Sidebar'
 import { useUIStore } from '@/store/ui'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { usePathname } from 'next/navigation'
+
+const PAGE_TRANSITION = {
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0 },
+  exit:    { opacity: 0, y: -4 },
+  transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { sidebarCollapsed } = useUIStore()
   const isMobile = useIsMobile()
+  const pathname = usePathname()
 
   return (
     <div className="flex min-h-screen" style={{ background: '#E6E0D8' }}>
@@ -16,7 +25,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         transition={{ duration: 0.22, ease: 'easeInOut' }}
         className="flex-1 min-h-screen min-w-0"
       >
-        {children}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={pathname}
+            initial={PAGE_TRANSITION.initial}
+            animate={PAGE_TRANSITION.animate}
+            exit={PAGE_TRANSITION.exit}
+            transition={PAGE_TRANSITION.transition}
+            className="min-h-screen"
+            style={{ background: '#E6E0D8' }}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
       </motion.main>
     </div>
   )
