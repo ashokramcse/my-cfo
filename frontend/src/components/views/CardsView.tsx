@@ -129,8 +129,8 @@ export function CardsView() {
               >
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-base font-bold text-foreground">{selected.nickname}</h2>
-                  <button onClick={() => setSelected(null)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors" style={{ background: '#FFF1E6' }}>
-                    <X className="w-4 h-4 text-muted-foreground" />
+                  <button onClick={() => setSelected(null)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-[#FFD9B0] active:scale-95" style={{ background: '#FFF1E6' }}>
+                    <X className="w-4 h-4" style={{ color: '#18120E' }} />
                   </button>
                 </div>
 
@@ -183,8 +183,8 @@ export function CardsView() {
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-base font-bold text-foreground">Add Credit Card</h2>
-                  <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors" style={{ background: '#FFF1E6' }}>
-                    <X className="w-4 h-4 text-muted-foreground" />
+                  <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-[#FFD9B0] active:scale-95" style={{ background: '#FFF1E6' }}>
+                    <X className="w-4 h-4" style={{ color: '#18120E' }} />
                   </button>
                 </div>
 

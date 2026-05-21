@@ -214,7 +214,7 @@ export function StatementsView() {
                   <h2 className="text-base font-bold text-foreground">Upload Statement</h2>
                   <button onClick={() => { setShowUpload(false); setPendingFile(null) }}
                     className="w-8 h-8 rounded-xl bg-[#FFF1E6] hover:bg-[#FFE8D6] flex items-center justify-center transition-colors">
-                    <X className="w-4 h-4 text-muted-foreground" />
+                    <X className="w-4 h-4" style={{ color: '#18120E' }} />
                   </button>
                 </div>
 
@@ -225,7 +225,7 @@ export function StatementsView() {
                       : <FileText className="w-5 h-5 text-orange-500 flex-shrink-0" />
                     }
                     <span className="text-sm text-foreground truncate flex-1">{pendingFile.name}</span>
-                    <button onClick={() => setPendingFile(null)} className="text-muted-foreground hover:text-foreground">
+                    <button onClick={() => setPendingFile(null)} className="hover:opacity-70 transition-opacity" style={{ color: '#18120E' }}>
                       <X className="w-4 h-4" />
                     </button>
                   </div>
