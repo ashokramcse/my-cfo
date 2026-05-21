@@ -79,7 +79,7 @@ export function StatCard({
       className={cn(cfg.cardClass, className)}
     >
       <div className="flex items-start justify-between mb-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wider leading-none" style={{ color: '#A09890' }}>
+        <p className="text-[10.5px] font-bold uppercase leading-none" style={{ color: '#A09890', letterSpacing: '0.055em' }}>
           {title}
         </p>
         {Icon && (
@@ -93,8 +93,8 @@ export function StatCard({
         )}
       </div>
 
-      <div className="text-[22px] font-bold font-mono tracking-tight leading-none mb-1"
-        style={{ color: cfg.valueColor }}>
+      <div className="text-[21px] font-bold font-mono leading-none mb-1"
+        style={{ color: cfg.valueColor, letterSpacing: '-0.03em', fontFeatureSettings: '"tnum" 1' }}>
         {value}
       </div>
 

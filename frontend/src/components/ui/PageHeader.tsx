@@ -32,9 +32,9 @@ export function PageHeader({ icon: Icon, title, subtitle, actions }: PageHeaderP
           <Icon className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" strokeWidth={2.2} />
         </div>
         <div className="min-w-0">
-          <h1 className="text-[13px] md:text-[15px] font-bold leading-tight tracking-tight truncate" style={{ color: '#18120E' }}>{title}</h1>
+          <h1 className="text-[13px] md:text-[15px] font-extrabold leading-tight truncate" style={{ color: '#18120E', letterSpacing: '-0.022em' }}>{title}</h1>
           {subtitle && (
-            <p className="text-[11px] leading-none mt-0.5 truncate hidden sm:block" style={{ color: '#A09890' }}>{subtitle}</p>
+            <p className="text-[11px] font-medium leading-none mt-0.5 truncate hidden sm:block" style={{ color: '#A09890', letterSpacing: '-0.005em' }}>{subtitle}</p>
           )}
         </div>
       </div>
