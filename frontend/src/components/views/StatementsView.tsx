@@ -10,7 +10,7 @@ import { formatCurrencyCompact, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { FileText, Upload, X, CheckCircle, Clock, AlertCircle, Loader2, Image } from 'lucide-react'
 import { Select } from '@/components/ui/Select'
-import toast from 'react-hot-toast'
+import { toast } from '@/components/ui/Toast'
 
 const STATUS_CFG = {
   PENDING:    { label: 'Pending',    icon: Clock,        cls: 'badge-neutral', spin: false },

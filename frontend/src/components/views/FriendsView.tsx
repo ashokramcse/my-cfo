@@ -9,7 +9,7 @@ import { Friend } from '@/types'
 import { formatCurrencyCompact, formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { Users, Plus, X, Phone, Trash2, TrendingDown, CheckCircle2, Activity } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from '@/components/ui/Toast'
 import { useForm, Controller } from 'react-hook-form'
 import { Select } from '@/components/ui/Select'
 

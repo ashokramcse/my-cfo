@@ -9,7 +9,7 @@ import { cardsApi } from '@/lib/api'
 import { CreditCard as CreditCardType } from '@/types'
 import { formatCurrencyCompact } from '@/lib/utils'
 import { CreditCard, Plus, X, Trash2 } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from '@/components/ui/Toast'
 import { useForm, Controller } from 'react-hook-form'
 import { Select } from '@/components/ui/Select'
 

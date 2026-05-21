@@ -2,6 +2,7 @@
 import { LucideIcon, Menu } from 'lucide-react'
 import { useUIStore } from '@/store/ui'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { NotificationPanel } from './NotificationPanel'
 
 interface PageHeaderProps {
   icon: LucideIcon
@@ -38,7 +39,10 @@ export function PageHeader({ icon: Icon, title, subtitle, actions }: PageHeaderP
           )}
         </div>
       </div>
-      {actions && <div className="flex items-center gap-2 flex-shrink-0 ml-2">{actions}</div>}
+      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        {actions}
+        <NotificationPanel />
+      </div>
     </div>
   )
 }

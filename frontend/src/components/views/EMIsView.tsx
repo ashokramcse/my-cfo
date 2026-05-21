@@ -10,7 +10,7 @@ import { EMI, CreditCard, Friend } from '@/types'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { Calendar, Plus, X, CheckCircle, Clock, AlertCircle, TrendingDown } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from '@/components/ui/Toast'
 import { useForm, Controller } from 'react-hook-form'
 import { Select } from '@/components/ui/Select'
 
