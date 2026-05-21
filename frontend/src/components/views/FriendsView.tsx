@@ -10,7 +10,8 @@ import { formatCurrencyCompact, formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { Users, Plus, X, Phone, Trash2, TrendingDown, CheckCircle2, Activity } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import { Select } from '@/components/ui/Select'
 
 const RISK_CFG = {
   LOW:    { cls: 'badge-success', label: 'Low risk'    },
@@ -31,7 +32,7 @@ export function FriendsView() {
     queryFn: async () => (await friendsApi.list()).data,
   })
 
-  const { register, handleSubmit, reset, watch } = useForm({
+  const { register, handleSubmit, reset, watch, control } = useForm({
     defaultValues: {
       name: '', phone: '', whatsapp: '', relation: 'FRIEND', avatar_color: '#7C3AED',
     },
@@ -256,9 +257,10 @@ export function FriendsView() {
                     </div>
                     <div>
                       <label className="field-label">Relation</label>
-                      <select {...register('relation')}>
-                        {RELATIONS.map((r) => <option key={r}>{r}</option>)}
-                      </select>
+                      <Controller name="relation" control={control} render={({ field }) => (
+                        <Select value={field.value} onChange={field.onChange}
+                          options={RELATIONS.map((r) => ({ value: r, label: r.charAt(0) + r.slice(1).toLowerCase() }))} />
+                      )} />
                     </div>
                   </div>
                   <div>

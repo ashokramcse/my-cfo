@@ -11,7 +11,8 @@ import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { Calendar, Plus, X, CheckCircle, Clock, AlertCircle, TrendingDown } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import { Select } from '@/components/ui/Select'
 
 const STATUS_CFG = {
   ACTIVE:    { label: 'Active',     cls: 'badge-success' },
@@ -51,7 +52,7 @@ export function EMIsView() {
     queryFn: async () => (await friendsApi.list()).data,
   })
 
-  const { register, handleSubmit, reset, watch } = useForm({
+  const { register, handleSubmit, reset, watch, control } = useForm({
     defaultValues: {
       product_name: '', purchase_amount: 0, total_amount: 0,
       monthly_emi: 0, tenure_months: 12, purchase_date: '',
@@ -342,26 +343,25 @@ export function EMIsView() {
                   </div>
                   <div>
                     <label className="field-label">Card</label>
-                    <select {...register('card_id')}>
-                      <option value="">Select card…</option>
-                      {cards.map((c) => <option key={c.id} value={c.id}>{c.nickname} ···{c.last_four}</option>)}
-                    </select>
+                    <Controller name="card_id" control={control} render={({ field }) => (
+                      <Select value={field.value ?? ''} onChange={field.onChange}
+                        options={[{ value: '', label: 'Select card…' }, ...cards.map((c) => ({ value: c.id, label: `${c.nickname} ···${c.last_four}` }))]} />
+                    )} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="field-label">Owner Type</label>
-                      <select {...register('owner_type')}>
-                        {Object.entries(OWNER_CFG).map(([k, v]) => (
-                          <option key={k} value={k}>{v.icon} {v.label}</option>
-                        ))}
-                      </select>
+                      <Controller name="owner_type" control={control} render={({ field }) => (
+                        <Select value={field.value} onChange={field.onChange}
+                          options={Object.entries(OWNER_CFG).map(([k, v]) => ({ value: k, label: v.label, icon: v.icon }))} />
+                      )} />
                     </div>
                     <div>
                       <label className="field-label">Friend (if applicable)</label>
-                      <select {...register('friend_id')}>
-                        <option value="">None</option>
-                        {friends.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                      </select>
+                      <Controller name="friend_id" control={control} render={({ field }) => (
+                        <Select value={field.value ?? ''} onChange={field.onChange}
+                          options={[{ value: '', label: 'None' }, ...friends.map((f) => ({ value: f.id, label: f.name }))]} />
+                      )} />
                     </div>
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer">

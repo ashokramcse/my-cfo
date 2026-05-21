@@ -10,7 +10,8 @@ import { CreditCard as CreditCardType } from '@/types'
 import { formatCurrencyCompact } from '@/lib/utils'
 import { CreditCard, Plus, X, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import { Select } from '@/components/ui/Select'
 
 const BANKS = ['HDFC', 'ICICI', 'SBI', 'Axis', 'Amex', 'IDFC', 'OneCard', 'AU', 'Kotak', 'Federal', 'Standard Chartered', 'Other']
 const NETWORKS = ['VISA', 'MASTERCARD', 'AMEX', 'RUPAY', 'DINERS', 'OTHER']
@@ -26,7 +27,7 @@ export function CardsView() {
     queryFn: async () => (await cardsApi.list()).data.items,
   })
 
-  const { register, handleSubmit, reset, watch } = useForm({
+  const { register, handleSubmit, reset, watch, control } = useForm({
     defaultValues: {
       nickname: '', bank_name: 'HDFC', last_four: '', card_color: '#F97316',
       network: 'VISA', billing_cycle_day: 1, due_date_day: 25,
@@ -196,9 +197,10 @@ export function CardsView() {
                     </div>
                     <div>
                       <label className="field-label">Bank *</label>
-                      <select {...register('bank_name')}>
-                        {BANKS.map((b) => <option key={b}>{b}</option>)}
-                      </select>
+                      <Controller name="bank_name" control={control} render={({ field }) => (
+                        <Select value={field.value} onChange={field.onChange}
+                          options={BANKS.map((b) => ({ value: b, label: b }))} />
+                      )} />
                     </div>
                   </div>
 
@@ -209,9 +211,10 @@ export function CardsView() {
                     </div>
                     <div>
                       <label className="field-label">Network</label>
-                      <select {...register('network')}>
-                        {NETWORKS.map((n) => <option key={n}>{n}</option>)}
-                      </select>
+                      <Controller name="network" control={control} render={({ field }) => (
+                        <Select value={field.value} onChange={field.onChange}
+                          options={NETWORKS.map((n) => ({ value: n, label: n }))} />
+                      )} />
                     </div>
                   </div>
 

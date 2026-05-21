@@ -9,6 +9,7 @@ import { Statement, CreditCard } from '@/types'
 import { formatCurrencyCompact, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { FileText, Upload, X, CheckCircle, Clock, AlertCircle, Loader2, Image } from 'lucide-react'
+import { Select } from '@/components/ui/Select'
 import toast from 'react-hot-toast'
 
 const STATUS_CFG = {
@@ -241,10 +242,11 @@ export function StatementsView() {
                 <div className="space-y-4">
                   <div>
                     <label className="field-label">Card *</label>
-                    <select value={uploadCard} onChange={(e) => setUploadCard(e.target.value)}>
-                      <option value="">Select card…</option>
-                      {cards.map((c) => <option key={c.id} value={c.id}>{c.nickname} ···{c.last_four}</option>)}
-                    </select>
+                    <Select
+                      value={uploadCard}
+                      onChange={setUploadCard}
+                      options={[{ value: '', label: 'Select card…' }, ...cards.map((c) => ({ value: c.id, label: `${c.nickname} ···${c.last_four}` }))]}
+                    />
                   </div>
 
                   {pendingFile && !isImage && (
