@@ -1,5 +1,9 @@
 import { create } from 'zustand'
 
+export type ViewId =
+  | 'dashboard' | 'cards' | 'transactions' | 'emis'
+  | 'friends'   | 'statements' | 'reports' | 'settings'
+
 interface UIState {
   sidebarCollapsed: boolean
   toggleSidebar: () => void
@@ -9,6 +13,9 @@ interface UIState {
   activeModal: string | null
   openModal: (id: string) => void
   closeModal: () => void
+  // SPA view routing — changes content without touching the URL
+  currentView: ViewId
+  setView: (v: ViewId) => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -20,4 +27,6 @@ export const useUIStore = create<UIState>((set) => ({
   activeModal: null,
   openModal: (id) => set({ activeModal: id }),
   closeModal: () => set({ activeModal: null }),
+  currentView: 'dashboard',
+  setView: (v) => set({ currentView: v, mobileSidebarOpen: false }),
 }))

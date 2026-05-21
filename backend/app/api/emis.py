@@ -10,9 +10,34 @@ from app.database import get_db
 from app.utils.deps import get_current_user
 from app.models.user import User
 from app.models.emi import EMI, EMIPayment, EMIStatus, EMIOwnerType
+from app.models.friend import Friend
 from app.schemas.emi import EMICreate, EMIUpdate, EMIOut, EMIPaymentCreate, EMIPaymentOut
 
 router = APIRouter()
+
+
+async def _refresh_friend_totals(db: AsyncSession, friend_id: uuid.UUID):
+    """Recompute and persist aggregated totals for a friend after EMI changes."""
+    result = await db.execute(
+        select(
+            func.sum(EMI.total_amount).label("total"),
+            func.sum(EMI.amount_collected).label("collected"),
+            func.count().label("count"),
+        ).where(EMI.friend_id == friend_id, EMI.status == EMIStatus.ACTIVE)
+    )
+    row = result.one()
+    total = row.total or Decimal(0)
+    collected = row.collected or Decimal(0)
+    pending = total - collected
+
+    friend_result = await db.execute(select(Friend).where(Friend.id == friend_id))
+    friend = friend_result.scalar_one_or_none()
+    if friend:
+        friend.total_emi_amount = total
+        friend.total_collected = collected
+        friend.total_pending = pending
+        friend.active_emi_count = row.count or 0
+        friend.risk_level = "HIGH" if pending > 50000 else "MEDIUM" if pending > 10000 else "LOW"
 
 
 def _build_payments(emi: EMI) -> list[EMIPayment]:
@@ -103,6 +128,9 @@ async def create_emi(
     for p in payments:
         db.add(p)
 
+    if emi.friend_id:
+        await _refresh_friend_totals(db, emi.friend_id)
+
     await db.commit()
     result = await db.execute(
         select(EMI).options(selectinload(EMI.payments)).where(EMI.id == emi.id)
@@ -149,6 +177,9 @@ async def update_emi(
         emi.amount_remaining = emi.monthly_emi * emi.remaining_months
         if payload.paid_months >= emi.tenure_months:
             emi.status = EMIStatus.COMPLETED
+
+    if emi.friend_id:
+        await _refresh_friend_totals(db, emi.friend_id)
     return emi
 
 
@@ -164,7 +195,11 @@ async def delete_emi(
     emi = result.scalar_one_or_none()
     if not emi:
         raise HTTPException(status_code=404, detail="EMI not found")
+    friend_id = emi.friend_id
     await db.delete(emi)
+    if friend_id:
+        await db.flush()
+        await _refresh_friend_totals(db, friend_id)
 
 
 @router.post("/{emi_id}/record-payment", response_model=EMIPaymentOut)
@@ -208,6 +243,9 @@ async def record_payment(
     if installment_no >= emi.tenure_months:
         emi.status = EMIStatus.COMPLETED
 
+    if emi.friend_id:
+        await _refresh_friend_totals(db, emi.friend_id)
+
     return payment
 
 
@@ -236,7 +274,11 @@ async def emi_forecast(
 
         for emi in emis:
             if emi.start_date and emi.end_date:
-                if emi.start_date <= month <= emi.end_date:
+                # Compare year-month ordinals to avoid datetime/timezone edge cases
+                start_ord = emi.start_date.year * 12 + emi.start_date.month
+                end_ord = emi.end_date.year * 12 + emi.end_date.month
+                month_ord = month.year * 12 + month.month
+                if start_ord <= month_ord <= end_ord:
                     total += emi.monthly_emi
                     emi_list.append({"id": str(emi.id), "product": emi.product_name, "amount": float(emi.monthly_emi)})
 

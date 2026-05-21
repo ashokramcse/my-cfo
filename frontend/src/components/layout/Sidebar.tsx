@@ -1,50 +1,48 @@
 'use client'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LayoutDashboard, CreditCard, ArrowLeftRight, Calendar, Users, FileText, BarChart3, Settings, ChevronLeft, Zap, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useUIStore } from '@/store/ui'
+import { useUIStore, ViewId } from '@/store/ui'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { cardsApi, transactionsApi, emisApi, friendsApi, reportsApi, insightsApi, statementsApi } from '@/lib/api'
 
-const NAV = [
-  { href: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard'    },
-  { href: '/cards',        icon: CreditCard,      label: 'Cards'        },
-  { href: '/transactions', icon: ArrowLeftRight,  label: 'Transactions' },
-  { href: '/emis',         icon: Calendar,        label: 'EMI Tracker'  },
-  { href: '/friends',      icon: Users,           label: 'Friend EMIs'  },
-  { href: '/statements',   icon: FileText,        label: 'Statements'   },
-  { href: '/reports',      icon: BarChart3,       label: 'Reports'      },
-  { href: '/settings',     icon: Settings,        label: 'Settings'     },
+const NAV: { view: ViewId; icon: React.ElementType; label: string }[] = [
+  { view: 'dashboard',    icon: LayoutDashboard, label: 'Dashboard'    },
+  { view: 'cards',        icon: CreditCard,      label: 'Cards'        },
+  { view: 'transactions', icon: ArrowLeftRight,  label: 'Transactions' },
+  { view: 'emis',         icon: Calendar,        label: 'EMI Tracker'  },
+  { view: 'friends',      icon: Users,           label: 'Friend EMIs'  },
+  { view: 'statements',   icon: FileText,        label: 'Statements'   },
+  { view: 'reports',      icon: BarChart3,       label: 'Reports'      },
+  { view: 'settings',     icon: Settings,        label: 'Settings'     },
 ]
 
-// Map each route to the queries it needs — prefetched on hover
-const ROUTE_PREFETCH: Record<string, (qc: ReturnType<typeof useQueryClient>) => void> = {
-  '/dashboard':    (qc) => {
+// Map each view to the queries it needs — prefetched on hover
+const VIEW_PREFETCH: Record<ViewId, (qc: ReturnType<typeof useQueryClient>) => void> = {
+  dashboard:    (qc) => {
     qc.prefetchQuery({ queryKey: ['dashboard'],    queryFn: () => reportsApi.dashboard().then(r => r.data) })
-    qc.prefetchQuery({ queryKey: ['insights'],     queryFn: () => insightsApi.list({ limit: 10 }).then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['insights'],     queryFn: () => insightsApi.list({ unread_only: true, limit: 5 }).then(r => r.data) })
     qc.prefetchQuery({ queryKey: ['emi-forecast'], queryFn: () => emisApi.forecast(6).then(r => r.data) })
   },
-  '/cards':        (qc) => qc.prefetchQuery({ queryKey: ['cards'],        queryFn: () => cardsApi.list().then(r => r.data.items) }),
-  '/transactions': (qc) => qc.prefetchQuery({ queryKey: ['transactions'], queryFn: () => transactionsApi.list({ limit: 50 }).then(r => r.data) }),
-  '/emis':         (qc) => {
-    qc.prefetchQuery({ queryKey: ['emis'],         queryFn: () => emisApi.list({}).then(r => r.data) })
-    qc.prefetchQuery({ queryKey: ['emi-forecast'], queryFn: () => emisApi.forecast(6).then(r => r.data) })
+  cards:        (qc) => qc.prefetchQuery({ queryKey: ['cards'],        queryFn: () => cardsApi.list().then(r => r.data.items) }),
+  transactions: (qc) => qc.prefetchQuery({ queryKey: ['transactions', 1, '', 'ALL', ''], queryFn: () => transactionsApi.list({ page: 1, page_size: 50 }).then(r => r.data) }),
+  emis:         (qc) => {
+    qc.prefetchQuery({ queryKey: ['emis', 'ACTIVE'], queryFn: () => emisApi.list({ status: 'ACTIVE' }).then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['emi-forecast'],   queryFn: () => emisApi.forecast(6).then(r => r.data) })
   },
-  '/friends':      (qc) => qc.prefetchQuery({ queryKey: ['friends'],      queryFn: () => friendsApi.list().then(r => r.data) }),
-  '/statements':   (qc) => qc.prefetchQuery({ queryKey: ['statements'],   queryFn: () => statementsApi.list({}).then(r => r.data) }),
-  '/reports':      (qc) => {
+  friends:      (qc) => qc.prefetchQuery({ queryKey: ['friends'],      queryFn: () => friendsApi.list().then(r => r.data) }),
+  statements:   (qc) => qc.prefetchQuery({ queryKey: ['statements'],   queryFn: () => statementsApi.list({}).then(r => r.data) }),
+  reports:      (qc) => {
     qc.prefetchQuery({ queryKey: ['spending'],     queryFn: () => reportsApi.spending().then(r => r.data) })
     qc.prefetchQuery({ queryKey: ['dashboard'],    queryFn: () => reportsApi.dashboard().then(r => r.data) })
   },
+  settings:     () => {/* static page, no prefetch needed */},
 }
 
 export function Sidebar() {
-  const pathname = usePathname()
   const qc = useQueryClient()
-  const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, closeMobileSidebar } = useUIStore()
+  const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, closeMobileSidebar, currentView, setView } = useUIStore()
   const isMobile = useIsMobile()
 
   const W = sidebarCollapsed ? 64 : 232
@@ -79,16 +77,16 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto no-scrollbar">
-        {NAV.map(({ href, icon: Icon, label }) => {
-          const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
-          const prefetch = ROUTE_PREFETCH[href]
+        {NAV.map(({ view, icon: Icon, label }) => {
+          const active = currentView === view
+          const prefetch = VIEW_PREFETCH[view]
           return (
-            <Link
-              key={href}
-              href={href}
-              onClick={isMobile ? closeMobileSidebar : undefined}
+            <button
+              key={view}
+              onClick={() => setView(view)}
               onMouseEnter={() => prefetch?.(qc)}
               onFocus={() => prefetch?.(qc)}
+              className="w-full text-left"
             >
               <div className={cn('nav-item', active && 'active')} title={(!isMobile && sidebarCollapsed) ? label : undefined}>
                 <Icon className="w-[17px] h-[17px] flex-shrink-0" strokeWidth={active ? 2.2 : 1.8} />
@@ -96,7 +94,7 @@ export function Sidebar() {
                   <span className="whitespace-nowrap">{label}</span>
                 )}
               </div>
-            </Link>
+            </button>
           )
         })}
       </nav>

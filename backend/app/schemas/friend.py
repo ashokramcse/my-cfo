@@ -38,7 +38,7 @@ class FriendOut(BaseModel):
     total_emi_amount: Decimal
     total_collected: Decimal
     total_pending: Decimal
-    active_emi_count: Decimal
+    active_emi_count: int
     risk_level: str
     notes: Optional[str]
     created_at: datetime

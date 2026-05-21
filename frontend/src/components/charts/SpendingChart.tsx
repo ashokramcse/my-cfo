@@ -22,7 +22,13 @@ const Tip = ({ active, payload, label }: any) => {
 }
 
 export function SpendingChart({ data }: { data: MonthlyTrend[] }) {
-  const sorted = [...data].reverse()
+  const sorted = [...data].reverse().map((m) => ({
+    ...m,
+    spend: Number(m.spend),
+    emi: Number(m.emi),
+    payments: Number(m.payments),
+    fees: Number(m.fees),
+  }))
   return (
     <ResponsiveContainer width="100%" height={230}>
       <AreaChart data={sorted} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>

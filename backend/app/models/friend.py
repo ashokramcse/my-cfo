@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Numeric, ForeignKey, Text
+from sqlalchemy import Column, String, Boolean, DateTime, Numeric, Integer, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -26,7 +26,7 @@ class Friend(Base):
     total_emi_amount = Column(Numeric(12, 2), default=0)
     total_collected = Column(Numeric(12, 2), default=0)
     total_pending = Column(Numeric(12, 2), default=0)
-    active_emi_count = Column(Numeric(4, 0), default=0)
+    active_emi_count = Column(Integer, default=0)
     risk_level = Column(String(10), default="LOW")  # LOW, MEDIUM, HIGH
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

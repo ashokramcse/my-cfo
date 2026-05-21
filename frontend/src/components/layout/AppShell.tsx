@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sidebar } from './Sidebar'
 import { useUIStore } from '@/store/ui'
 import { useIsMobile } from '@/hooks/useIsMobile'
-import { usePathname } from 'next/navigation'
 
 const PAGE_TRANSITION = {
   initial: { opacity: 0, y: 6 },
@@ -13,9 +12,8 @@ const PAGE_TRANSITION = {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { sidebarCollapsed } = useUIStore()
+  const { sidebarCollapsed, currentView } = useUIStore()
   const isMobile = useIsMobile()
-  const pathname = usePathname()
 
   return (
     <div className="flex min-h-screen" style={{ background: '#E6E0D8' }}>
@@ -27,7 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={pathname}
+            key={currentView}
             initial={PAGE_TRANSITION.initial}
             animate={PAGE_TRANSITION.animate}
             exit={PAGE_TRANSITION.exit}

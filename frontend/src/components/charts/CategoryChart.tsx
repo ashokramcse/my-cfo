@@ -3,7 +3,7 @@ import { CategorySpend } from '@/types'
 import { CATEGORY_META, formatCurrencyCompact } from '@/lib/utils'
 
 export function CategoryChart({ data }: { data: CategorySpend[] }) {
-  const top = data.slice(0, 7)
+  const top = data.slice(0, 7).map((e) => ({ ...e, amount: Number(e.amount), percentage: Number(e.percentage) }))
   const max = top[0]?.amount ?? 1
 
   return (
@@ -23,7 +23,7 @@ export function CategoryChart({ data }: { data: CategorySpend[] }) {
                 <span className="text-xs font-mono font-semibold text-foreground w-14 text-right">
                   {formatCurrencyCompact(entry.amount)}
                 </span>
-                <span className="text-2xs text-muted-foreground w-7 text-right">{entry.percentage}%</span>
+                <span className="text-2xs text-muted-foreground w-7 text-right">{Math.round(entry.percentage)}%</span>
               </div>
             </div>
             <div className="progress-track">
