@@ -124,7 +124,7 @@ export function Sidebar() {
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="fixed inset-0 z-[55]"
-              style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+              style={{ background: 'rgba(24,18,14,0.5)' }}
               onClick={closeMobileSidebar}
             />
             <motion.aside

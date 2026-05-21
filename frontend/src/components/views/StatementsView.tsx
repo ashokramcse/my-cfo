@@ -201,7 +201,7 @@ export function StatementsView() {
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
-              style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+              style={{ background: 'rgba(24,18,14,0.55)' }}
               onClick={() => { setShowUpload(false); setPendingFile(null) }}
             >
               <motion.div

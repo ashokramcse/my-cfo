@@ -376,7 +376,7 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    backdrop-filter: blur(8px);
+    /* no backdrop blur — keeps content crisp */
   }
 
   /* ── Stat card accent variants ───────────────────── */
