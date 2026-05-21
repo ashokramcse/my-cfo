@@ -8,6 +8,7 @@ import { Transaction, CreditCard } from '@/types'
 import { formatCurrency, formatDate, CATEGORY_META } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { ArrowLeftRight, Search, ChevronLeft, ChevronRight, AlertTriangle, Receipt } from 'lucide-react'
+import { Select, SelectOption } from '@/components/ui/Select'
 
 const TX_COLOR: Record<string, string> = {
   PURCHASE: '#1C1410',
@@ -20,7 +21,14 @@ const TX_COLOR: Record<string, string> = {
   OTHER: '#78716C',
 }
 
-const CATEGORIES = ['ALL', 'FOOD', 'DINING', 'GROCERIES', 'FUEL', 'SHOPPING', 'TRAVEL', 'UTILITIES', 'ENTERTAINMENT', 'INVESTMENT', 'HEALTHCARE', 'SUBSCRIPTION', 'EDUCATION', 'EMI', 'OTHER']
+const CATEGORY_OPTIONS: SelectOption[] = [
+  { value: 'ALL', label: 'All Categories' },
+  ...['FOOD','DINING','GROCERIES','FUEL','SHOPPING','TRAVEL','UTILITIES','ENTERTAINMENT','INVESTMENT','HEALTHCARE','SUBSCRIPTION','EDUCATION','EMI','OTHER'].map((c) => ({
+    value: c,
+    label: CATEGORY_META[c]?.label ?? c,
+    icon: CATEGORY_META[c]?.icon,
+  })),
+]
 
 export function TransactionsView() {
   const [page, setPage] = useState(1)
@@ -59,26 +67,36 @@ export function TransactionsView() {
         />
       <div className="p-3 sm:p-5 xl:p-6 max-w-[1400px] mx-auto">
 
-        {/* Filters */}
-        <div className="card p-3 sm:p-4 mb-5 flex flex-col sm:flex-row flex-wrap gap-3">
-          <div className="relative flex-1 min-w-[180px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        {/* Filters — compact single row */}
+        <div className="flex items-center gap-2 mb-4">
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#A09890' }} />
             <input
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-              placeholder="Search merchant, description…"
-              className="w-full pl-9"
+              placeholder="Search merchant…"
+              className="w-full pl-8 !py-1.5 !text-[13px] !rounded-lg !border-[#C8C2BB]"
+              style={{ height: '32px' }}
             />
           </div>
-          <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1) }} className="min-w-[160px]">
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c === 'ALL' ? 'All Categories' : (CATEGORY_META[c]?.icon ?? '') + ' ' + (CATEGORY_META[c]?.label ?? c)}</option>
-            ))}
-          </select>
-          <select value={cardId} onChange={(e) => { setCardId(e.target.value); setPage(1) }} className="min-w-[160px]">
-            <option value="">All Cards</option>
-            {cards.map((c) => <option key={c.id} value={c.id}>{c.nickname} ···{c.last_four}</option>)}
-          </select>
+          {/* Category */}
+          <Select
+            value={category}
+            onChange={(v) => { setCategory(v); setPage(1) }}
+            options={CATEGORY_OPTIONS}
+            className="w-[160px]"
+          />
+          {/* Card */}
+          <Select
+            value={cardId}
+            onChange={(v) => { setCardId(v); setPage(1) }}
+            options={[
+              { value: '', label: 'All Cards' },
+              ...cards.map((c) => ({ value: c.id, label: `${c.bank_name} ···${c.last_four}` })),
+            ]}
+            className="w-[160px]"
+          />
         </div>
 
         {/* Table */}

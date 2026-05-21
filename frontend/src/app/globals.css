@@ -76,7 +76,7 @@
   ::-webkit-scrollbar-thumb { background: #C8C3BC; border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: #A09890; }
 
-  input, select, textarea {
+  input, textarea {
     display: block;
     width: 100%;
     background: #FFFFFF;
@@ -92,11 +92,40 @@
     letter-spacing: -0.008em;
   }
   input::placeholder, textarea::placeholder { color: var(--fg-subtle); }
-  input:focus, select:focus, textarea:focus {
+  input:focus, textarea:focus {
     border-color: var(--orange);
     box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
   }
-  select { cursor: pointer; }
+
+  /* Native <select> — branded, no browser chrome */
+  select {
+    display: block;
+    width: 100%;
+    background: #FFFFFF;
+    border: 1.5px solid #C8C2BB;
+    border-radius: 0.75rem;
+    padding: 0.45rem 2.25rem 0.45rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--fg-base);
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: var(--font-sans), system-ui, sans-serif;
+    letter-spacing: -0.008em;
+    /* Custom chevron arrow */
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A09890' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    background-size: 14px;
+  }
+  select:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
+  }
+  select option { font-weight: 400; }
 }
 
 @layer components {
