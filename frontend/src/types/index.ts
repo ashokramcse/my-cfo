@@ -356,6 +356,48 @@ export interface NetWorthData {
   change_pct: number
 }
 
+// Banking
+export interface BankTransaction {
+  id: string
+  account_id: string
+  transaction_date: string
+  description: string
+  amount: number
+  tx_type: 'CREDIT' | 'DEBIT' | 'TRANSFER'
+  category: string
+  merchant_name: string | null
+  reference_no: string | null
+  balance_after: number | null
+  is_hidden_charge: boolean
+  is_recurring: boolean
+  is_duplicate: boolean
+  import_source: string
+  notes: string | null
+}
+
+export interface CashflowIntelligence {
+  total_balance: number
+  liquid_balance: number
+  monthly_avg_in: number
+  monthly_avg_out: number
+  burn_rate: number
+  runway_months: number
+  monthly_loan_emi: number
+  monthly_emi: number
+  hidden_total: number
+  hidden_count: number
+  monthly_cashflow: { month: string; inflow: number; outflow: number; net: number }[]
+  category_breakdown: { category: string; amount: number }[]
+  hidden_charges: BankTransaction[]
+  upcoming_payments: { label: string; amount: number; days_left: number; type: string }[]
+  account_health: {
+    id: string; nickname: string; bank_name: string; account_type: string
+    balance: number; minimum_balance: number; below_min: boolean
+    interest_rate: number; account_color: string; is_primary: boolean
+  }[]
+  insights: { severity: string; title: string; body: string; action: string | null }[]
+}
+
 export interface NetWorthHistoryPoint {
   date: string
   net_worth: number

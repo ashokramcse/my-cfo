@@ -31,6 +31,7 @@ class User(Base):
     emis = relationship("EMI", back_populates="user", cascade="all, delete-orphan")
     insights = relationship("Insight", back_populates="user", cascade="all, delete-orphan")
     bank_accounts = relationship("BankAccount", back_populates="user", cascade="all, delete-orphan")
+    bank_transactions = relationship("BankTransaction", back_populates="user", cascade="all, delete-orphan")
     investments = relationship("Investment", back_populates="user", cascade="all, delete-orphan")
     loans = relationship("Loan", back_populates="user", cascade="all, delete-orphan")
     assets = relationship("Asset", back_populates="user", cascade="all, delete-orphan")

@@ -17,5 +17,7 @@ __all__ = [
     "User", "CreditCard", "Statement", "Transaction",
     "EMI", "EMIPayment", "Friend", "Category", "MerchantRule",
     "Insight", "AuditLog",
-    "BankAccount", "Investment", "Loan", "Asset", "NetWorthSnapshot",
+    "BankAccount", "Investment", "Loan", "Asset", "NetWorthSnapshot", "BankTransaction",
 ]
+
+from app.models.bank_transaction import BankTransaction

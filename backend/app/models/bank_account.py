@@ -52,3 +52,7 @@ class BankAccount(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     user = relationship("User", back_populates="bank_accounts")
+    transactions = relationship("BankTransaction", back_populates="account",
+                                foreign_keys="BankTransaction.account_id",
+                                cascade="all, delete-orphan",
+                                order_by="BankTransaction.transaction_date.desc()")

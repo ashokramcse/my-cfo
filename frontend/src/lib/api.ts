@@ -78,7 +78,16 @@ export const bankAccountsApi = {
   list: () => api.get('/bank-accounts'),
   create: (data: unknown) => api.post('/bank-accounts', data),
   update: (id: string, data: unknown) => api.patch(`/bank-accounts/${id}`, data),
+  updateBalance: (id: string, balance: number, notes?: string) =>
+    api.patch(`/bank-accounts/${id}/balance`, null, { params: { balance, notes } }),
   delete: (id: string) => api.delete(`/bank-accounts/${id}`),
+  cashflow: (months?: number) => api.get('/bank-accounts/analytics/cashflow', { params: { months } }),
+  transactions: (id: string, params?: Record<string, unknown>) =>
+    api.get(`/bank-accounts/${id}/transactions`, { params }),
+  addTransaction: (id: string, data: unknown) =>
+    api.post(`/bank-accounts/${id}/transactions`, data),
+  importTransactions: (id: string, transactions: unknown[]) =>
+    api.post(`/bank-accounts/${id}/transactions/import`, transactions),
 }
 
 export const investmentsApi = {
@@ -106,6 +115,7 @@ export const assetsApi = {
 
 export const netWorthApi = {
   current: () => api.get('/net-worth/current'),
+  intelligence: () => api.get('/net-worth/intelligence'),
   snapshot: () => api.post('/net-worth/snapshot'),
   history: (months?: number) => api.get('/net-worth/history', { params: { months } }),
 }
