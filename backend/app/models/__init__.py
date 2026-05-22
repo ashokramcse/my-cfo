@@ -17,6 +17,7 @@ from app.models.income import IncomeSource, IncomeEntry
 from app.models.insurance import Insurance
 from app.models.goal import Goal
 from app.models.ai_conversation import AIConversation
+from app.models.notification import Notification
 
 __all__ = [
     "User", "CreditCard", "Statement", "Transaction",
@@ -28,4 +29,5 @@ __all__ = [
     "Insurance",
     "Goal",
     "AIConversation",
+    "Notification",
 ]

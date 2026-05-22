@@ -262,7 +262,7 @@ export function InvestmentsView() {
         </div>
       </div>
 
-      {/* ── Top Holdings ── */}
+      {/* ── Top Holdings (D-17: mobile responsive) ── */}
       {intel.top_holdings.length > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
           className="rounded-2xl border border-amber-200 bg-white p-5">
@@ -270,7 +270,9 @@ export function InvestmentsView() {
             <Layers size={16} className="text-amber-600" />
             <h3 className="text-sm font-semibold text-amber-900">Top Holdings</h3>
           </div>
-          {intel.top_holdings.map((h, i) => <HoldingRow key={h.id} h={h} rank={i + 1} />)}
+          <div className="overflow-x-auto">
+            {intel.top_holdings.map((h, i) => <HoldingRow key={h.id} h={h} rank={i + 1} />)}
+          </div>
         </motion.div>
       )}
 

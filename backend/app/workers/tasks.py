@@ -238,6 +238,34 @@ def check_loan_overdue_notifications():
         db.close()
 
 
+@celery_app.task(name="workers.tasks.advance_emi_progress")
+def advance_emi_progress():
+    """Auto-advance paid_months for EMIs where next payment date has passed."""
+    import asyncio
+    from datetime import date
+    async def _run():
+        from app.database import AsyncSessionLocal
+        from app.models.emi import EMI, EMIStatus
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(EMI).where(EMI.status == EMIStatus.ACTIVE)
+            )
+            emis = result.scalars().all()
+            today = date.today()
+            for emi in emis:
+                if emi.start_date and emi.total_months:
+                    from dateutil.relativedelta import relativedelta
+                    months_elapsed = (today.year - emi.start_date.year) * 12 + (today.month - emi.start_date.month)
+                    expected_paid = min(months_elapsed, emi.total_months)
+                    if expected_paid > (emi.paid_months or 0):
+                        emi.paid_months = expected_paid
+                        if emi.paid_months >= emi.total_months:
+                            emi.status = EMIStatus.COMPLETED
+            await db.commit()
+    asyncio.run(_run())
+
+
 @celery_app.task(name="app.workers.tasks.update_all_friend_totals")
 def update_all_friend_totals():
     """Recompute friend totals from EMI data."""

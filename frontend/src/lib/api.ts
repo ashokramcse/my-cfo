@@ -196,6 +196,13 @@ export const aiCfoApi = {
   clearHistory: () => api.delete('/ai-cfo/history'),
 }
 
+export const notificationsApi = {
+  list: (limit?: number) => api.get('/notifications', { params: { limit } }),
+  markRead: (id: string) => api.patch(`/notifications/${id}/read`),
+  markAllRead: () => api.patch('/notifications/read-all'),
+  delete: (id: string) => api.delete(`/notifications/${id}`),
+}
+
 export const netWorthApi = {
   current: () => api.get('/net-worth/current'),
   intelligence: () => api.get('/net-worth/intelligence'),

@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # Security
     secret_key: str = "change_me_in_production"
-    encryption_key: str = "change_me_must_be_32bytes_exactly!"
+    encryption_key: str = "CHANGE_ME_must_be_32bytes_exactly"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
     refresh_token_expire_days: int = 30

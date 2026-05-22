@@ -59,6 +59,11 @@ class Loan(Base):
     is_secured = Column(Boolean, default=False)
     collateral = Column(String(200))
 
+    # Floating rate (D-09)
+    is_floating_rate     = Column(Boolean, default=False)
+    next_rate_reset_date = Column(Date, nullable=True)
+    floating_rate_index  = Column(String(50), nullable=True)  # e.g. "REPO", "MCLR"
+
     # Prepayment
     prepayment_penalty = Column(Numeric(5, 2), default=0)  # %
 

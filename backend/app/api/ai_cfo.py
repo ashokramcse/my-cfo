@@ -89,6 +89,15 @@ def _fmt_ctx(ctx: dict) -> str:
         f"📊 EMI BURDEN: {fmt(ctx['emi_burden']['total_monthly'])}/mo = "
         f"{ctx['emi_burden']['pct_of_income']}% of income [{ctx['emi_burden']['status']}]",
     ]
+    if ctx.get("spending"):
+        sp = ctx["spending"]
+        top_cats = ", ".join(f"{c['category']}:{fmt(c['amount'])}" for c in sp.get("top_categories", []))
+        lines.append(
+            f"\n💳 SPENDING (last 30d): CC={fmt(sp.get('monthly_cc_spend', 0))}, "
+            f"Bank Debits={fmt(sp.get('monthly_bank_debit', 0))}"
+        )
+        if top_cats:
+            lines.append(f"   Top categories: {top_cats}")
     return "\n".join(lines)
 
 
@@ -160,6 +169,19 @@ def _rule_based_response(message: str, ctx: dict) -> str:
                 f"• Monthly income (net): {fmt(ctx['income']['monthly_net'])}\n"
                 f"• Monthly EMI burden: {fmt(ctx['emi_burden']['total_monthly'])}\n\n"
                 "Go to **Banking** for cashflow analysis and burn rate details.")
+
+    # Spending
+    if any(k in msg for k in ["spend", "expense", "merchant", "category", "shopping", "food"]):
+        sp = ctx.get("spending", {})
+        top_cats = sp.get("top_categories", [])
+        response = f"Your spending analysis (last 30 days):\n\n"
+        response += f"• CC spend: {fmt(sp.get('monthly_cc_spend', 0))}\n"
+        response += f"• Bank debits: {fmt(sp.get('monthly_bank_debit', 0))}\n"
+        if top_cats:
+            response += "\n**Top CC categories:**\n"
+            for c in top_cats[:5]:
+                response += f"• {c['category']}: {fmt(c['amount'])}\n"
+        return response
 
     # Goals
     if any(k in msg for k in ["goal", "target", "save", "corpus", "retire", "house", "car"]):

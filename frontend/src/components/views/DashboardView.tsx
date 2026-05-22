@@ -14,7 +14,7 @@ import {
   LayoutDashboard, CreditCard, TrendingDown, Calendar, Users,
   Zap, Star, ArrowUpRight, Bell, ChevronRight,
   TrendingUp, Sparkles, DollarSign, Target, Landmark,
-  BarChart3, Wallet, Shield, Building2,
+  BarChart3, Wallet, Shield, Building2, AlertCircle, X,
 } from 'lucide-react'
 import { useUIStore } from '@/store/ui'
 import { DashboardStats, Insight } from '@/types'
@@ -53,9 +53,19 @@ const QUICK_ACTIONS = [
   { icon: Sparkles,   label: 'AI CFO',      view: 'ai-cfo'      as const, color: '#F97316' },
 ]
 
+const MODULE_VIEW_MAP: Record<string, string> = {
+  'bank account': 'banking',
+  'income': 'income',
+  'investment': 'investments',
+  'insurance health': 'insurance',
+  'insurance term': 'insurance',
+  'goal': 'goals',
+}
+
 export function DashboardView() {
   const { setView } = useUIStore()
   const [time, setTime] = useState('')
+  const [completenessHidden, setCompletenessHidden] = useState(false)
   useEffect(() => {
     const fmt = () => setTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }))
     fmt()
@@ -94,6 +104,7 @@ export function DashboardView() {
     queryFn: async () => (await goalsApi.intelligence()).data,
   })
 
+  const completeness = (netWorth as any)?.profile_completeness
   const showSkeletons = isLoading || !stats
 
   const nwVal   = netWorth?.net_worth ?? 0
@@ -127,6 +138,40 @@ export function DashboardView() {
 
       <div className="p-3 sm:p-5 xl:p-6 max-w-[1440px] mx-auto space-y-4">
 
+        {/* ── Profile Completeness Banner (D-15) ── */}
+        {completeness && completeness.score < 100 && !completenessHidden && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl p-4 flex items-start gap-3"
+            style={{ background: '#FFF8ED', border: '1.5px solid #FDC888' }}>
+            <AlertCircle size={16} style={{ color: '#EA580C', marginTop: 2 }} />
+            <div className="flex-1">
+              <p className="text-sm font-semibold" style={{ color: '#18120E' }}>
+                Profile {completeness.score}% complete
+              </p>
+              <p className="text-xs mt-0.5 mb-2" style={{ color: '#6B6460' }}>
+                Add missing modules for better AI insights
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {completeness.missing_items.map((item: string) => (
+                  <button key={item}
+                    onClick={() => {
+                      const v = MODULE_VIEW_MAP[item] || item.replace(/ /g, '-')
+                      setView(v as any)
+                    }}
+                    className="text-xs font-semibold px-2.5 py-1 rounded-lg hover:opacity-80 transition-opacity"
+                    style={{ background: '#F97316', color: 'white' }}>
+                    + {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button onClick={() => setCompletenessHidden(true)} className="text-amber-400 hover:text-amber-600">
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+
         {/* ── Net Worth hero banner ── */}
         <motion.div
           initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
@@ -158,22 +203,34 @@ export function DashboardView() {
           </div>
         </motion.div>
 
-        {/* ── Quick action modules ── */}
+        {/* ── Quick action modules (D-16: data-aware) ── */}
         <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-          {QUICK_ACTIONS.map(({ icon: Icon, label, view, color }, i) => (
-            <motion.button
-              key={view}
-              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              onClick={() => setView(view)}
-              className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-amber-100 bg-white hover:border-amber-300 hover:shadow-sm transition-all group">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: color + '18' }}>
-                <Icon size={16} style={{ color }} strokeWidth={1.8} />
-              </div>
-              <span className="text-[10px] font-semibold text-amber-800 group-hover:text-amber-950">{label}</span>
-            </motion.button>
-          ))}
+          {QUICK_ACTIONS.map(({ icon: Icon, label, view, color }, i) => {
+            let subtitle = ''
+            if (view === 'net-worth')   subtitle = formatCurrencyCompact(nwVal)
+            if (view === 'banking')     subtitle = formatCurrencyCompact(cashVal)
+            if (view === 'investments') subtitle = formatCurrencyCompact(invVal)
+            if (view === 'loans')       subtitle = formatCurrencyCompact(debtVal)
+            if (view === 'income')      subtitle = formatCurrencyCompact(monthlyIncome) + '/mo'
+            if (view === 'goals')       subtitle = `${activeGoals} active`
+            if (view === 'insurance')   subtitle = netWorth?.insurance?.has_health && netWorth?.insurance?.has_term ? '✓ covered' : '⚠ gaps'
+            if (view === 'ai-cfo')      subtitle = 'Ask anything'
+            return (
+              <motion.button
+                key={view}
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                onClick={() => setView(view)}
+                className="flex flex-col items-center gap-1 p-3 rounded-xl border border-amber-100 bg-white hover:border-amber-300 hover:shadow-sm transition-all group">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={{ background: color + '18' }}>
+                  <Icon size={16} style={{ color }} strokeWidth={1.8} />
+                </div>
+                <span className="text-[10px] font-semibold text-amber-800 group-hover:text-amber-950">{label}</span>
+                {subtitle && <span className="text-[9px] text-amber-500 font-medium truncate w-full text-center">{subtitle}</span>}
+              </motion.button>
+            )
+          })}
         </div>
 
         {/* ── Credit card KPI row ── */}

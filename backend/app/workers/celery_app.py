@@ -40,5 +40,9 @@ celery_app.conf.update(
             "task": "app.workers.tasks.check_loan_overdue_notifications",
             "schedule": crontab(hour=9, minute=0),   # 9 AM IST daily
         },
+        "advance-emi-progress": {
+            "task": "workers.tasks.advance_emi_progress",
+            "schedule": crontab(hour=0, minute=30),
+        },
     },
 )

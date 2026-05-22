@@ -77,12 +77,15 @@ def _effective_current(goal, fin_ctx: dict) -> float:
     base = float(goal.current_amount or 0)
     gtype = str(goal.goal_type)
     if gtype == "EMERGENCY_FUND":
-        return max(base, fin_ctx["bank_liquid"])
-    if gtype == "DEBT_FREE":
-        debt_cleared = max(0, fin_ctx.get("initial_debt", fin_ctx["loan_outstanding"]) - fin_ctx["loan_outstanding"])
-        return max(base, debt_cleared)
+        return max(base, fin_ctx.get("bank_liquid", 0))
     if gtype == "RETIREMENT":
-        return max(base, fin_ctx["pf_nps"] + fin_ctx["mutual_funds"])
+        # Only retirement goal gets investment attribution (pf_nps + mutual funds)
+        return max(base, fin_ctx.get("pf_nps", 0) + fin_ctx.get("mutual_funds", 0))
+    if gtype == "DEBT_FREE":
+        total_debt = fin_ctx.get("loans", {}).get("total_outstanding", 0)
+        original_debt = float(goal.target_amount or 0)
+        debt_cleared = max(0, original_debt - total_debt)
+        return max(base, debt_cleared)
     return base
 
 

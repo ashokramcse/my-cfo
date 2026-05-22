@@ -4,8 +4,8 @@ Single source of truth for net worth and financial snapshot computation.
 Consumed by: Net Worth API, AI CFO, Goals Intelligence, Loans Intelligence.
 """
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from datetime import date
+from sqlalchemy import select, func
+from datetime import date, datetime, timedelta
 import math
 
 from app.models.bank_account import BankAccount
@@ -17,6 +17,9 @@ from app.models.emi import EMI, EMIStatus
 from app.models.income import IncomeSource
 from app.models.insurance import Insurance, PremiumFrequency
 from app.models.goal import Goal
+from app.models.friend import Friend
+from app.models.bank_transaction import BankTransaction, BankTxType
+from app.models.transaction import Transaction, CategoryType
 
 LIQUID_ACCOUNT_TYPES  = {"SAVINGS", "CURRENT", "SALARY", "WALLET", "UPI", "CASH"}
 SEMI_LIQUID_TYPES     = {"FD", "RD"}
@@ -136,8 +139,42 @@ async def build_financial_context(db: AsyncSession, user_id) -> dict:
     goals = goal_res.scalars().all()
     monthly_goal_contribution = sum(float(g.monthly_contribution or 0) for g in goals)
 
+    # ── Friend receivables (D-08) ────────────────────────────────────────────
+    friend_result = await db.execute(
+        select(func.sum(Friend.total_pending))
+        .where(Friend.user_id == user_id, Friend.is_active == True)
+    )
+    friend_receivables = float(friend_result.scalar() or 0)
+
+    # ── Bank expense data (D-06) ─────────────────────────────────────────────
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    expense_result = await db.execute(
+        select(func.sum(BankTransaction.amount))
+        .where(
+            BankTransaction.user_id == user_id,
+            BankTransaction.tx_type == BankTxType.DEBIT,
+            BankTransaction.transaction_date >= thirty_days_ago,
+        )
+    )
+    avg_monthly_expenses = float(expense_result.scalar() or 0)
+
+    # ── CC spending by category (D-12) ────────────────────────────────────────
+    cc_spend_result = await db.execute(
+        select(Transaction.category, func.sum(Transaction.amount).label('total'))
+        .where(Transaction.user_id == user_id, Transaction.transaction_date >= thirty_days_ago)
+        .group_by(Transaction.category)
+        .order_by(func.sum(Transaction.amount).desc())
+        .limit(5)
+    )
+    top_cc_categories = [{"category": str(r.category), "amount": float(r.total)} for r in cc_spend_result]
+    monthly_cc_spend_result = await db.execute(
+        select(func.sum(Transaction.amount))
+        .where(Transaction.user_id == user_id, Transaction.transaction_date >= thirty_days_ago)
+    )
+    monthly_cc_spend = float(monthly_cc_spend_result.scalar() or 0)
+
     # ── Aggregate ─────────────────────────────────────────────────────────────
-    total_assets      = bank_total + investment_value + asset_value
+    total_assets      = bank_total + investment_value + asset_value + friend_receivables
     # CC outstanding already separate from loans - no double-counting
     total_liabilities = loan_outstanding + cc_outstanding
     net_worth         = total_assets - total_liabilities
@@ -152,8 +189,12 @@ async def build_financial_context(db: AsyncSession, user_id) -> dict:
     emi_burden_pct = round(total_monthly_emi_burden / monthly_net * 100, 1) if monthly_net > 0 else 0.0
     emi_status = "CRITICAL" if emi_burden_pct > 50 else "WARNING" if emi_burden_pct > 35 else "HEALTHY"
 
-    # ── Monthly surplus ───────────────────────────────────────────────────────
-    monthly_surplus = monthly_net - total_monthly_emi_burden - monthly_insurance - monthly_goal_contribution
+    # ── Monthly surplus (D-06: use real bank debits if available) ────────────
+    emi_burden = total_monthly_emi_burden + monthly_insurance + monthly_goal_contribution
+    if avg_monthly_expenses > 0:
+        monthly_surplus = monthly_net - avg_monthly_expenses
+    else:
+        monthly_surplus = monthly_net - emi_burden
 
     # Debt ratio
     debt_ratio       = (total_liabilities / total_assets * 100) if total_assets > 0 else 0.0
@@ -250,11 +291,19 @@ async def build_financial_context(db: AsyncSession, user_id) -> dict:
             "active": len(goals),
             "names":  [g.name for g in goals],
         },
+        # ── Friend receivables ────────────────────────────────────────────────
+        "friend_receivables": round(friend_receivables, 2),
         # income sub-dict for ai_cfo _fmt_ctx compatibility
         "income": {
             "monthly_gross": round(monthly_gross, 2),
             "monthly_net":   round(monthly_net, 2),
             "sources":       len(income_sources),
             "source_names":  [s.name for s in income_sources],
+        },
+        # ── Spending context (D-12) ───────────────────────────────────────────
+        "spending": {
+            "top_categories":      top_cc_categories,
+            "monthly_cc_spend":    round(monthly_cc_spend, 2),
+            "monthly_bank_debit":  round(avg_monthly_expenses, 2),
         },
     }

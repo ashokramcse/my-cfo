@@ -413,6 +413,22 @@ def _generate_insights(
     return items[:6]   # cap at 6
 
 
+def compute_profile_completeness(ctx: dict) -> dict:
+    checks = {
+        "has_bank_account":    ctx.get("banking", {}).get("accounts", 0) > 0,
+        "has_income":          ctx.get("income", {}).get("sources", 0) > 0,
+        "has_investment":      ctx.get("investments", {}).get("count", 0) > 0,
+        "has_insurance_health": ctx.get("insurance", {}).get("has_health", False),
+        "has_insurance_term":  ctx.get("insurance", {}).get("has_term", False),
+        "has_goal":            ctx.get("goals", {}).get("active", 0) > 0,
+        "has_loan_tracked":    ctx.get("loans", {}).get("count", 0) > 0,
+    }
+    required = ["has_bank_account", "has_income", "has_investment", "has_insurance_health", "has_insurance_term", "has_goal"]
+    score = sum(1 for k in required if checks[k]) / len(required) * 100
+    missing = [k.replace("has_", "").replace("_", " ") for k in required if not checks[k]]
+    return {"score": round(score), "checks": checks, "missing_items": missing}
+
+
 def _fmt(v: float) -> str:
     if v >= 1_00_00_000: return f"₹{v/1_00_00_000:.1f}Cr"
     if v >= 1_00_000:    return f"₹{v/1_00_000:.1f}L"
@@ -464,6 +480,12 @@ async def get_current_net_worth(
         prev = float(last.net_worth or 0)
         data["change_amount"] = round(data["net_worth"] - prev, 2)
         data["change_pct"]    = round((data["net_worth"] - prev) / abs(prev) * 100, 2) if prev else 0
+
+    # D-15: Profile completeness
+    from app.services.financial_context import build_financial_context
+    fin_ctx = await build_financial_context(db, current_user.id)
+    data["profile_completeness"] = compute_profile_completeness(fin_ctx)
+
     return data
 
 

@@ -23,6 +23,9 @@ class LoanCreate(BaseModel):
     is_secured: bool = False
     collateral: Optional[str] = None
     prepayment_penalty: Decimal = Decimal("0")
+    is_floating_rate: bool = False
+    next_rate_reset_date: Optional[date] = None
+    floating_rate_index: Optional[str] = None
     notes: Optional[str] = None
 
 
@@ -59,6 +62,9 @@ class LoanOut(BaseModel):
     is_secured: bool
     collateral: Optional[str]
     prepayment_penalty: Decimal
+    is_floating_rate: bool
+    next_rate_reset_date: Optional[date]
+    floating_rate_index: Optional[str]
     notes: Optional[str]
     created_at: datetime
 
