@@ -481,6 +481,83 @@ export interface AssetIntelligence {
   insights: AssetInsight[]
 }
 
+// ── Income Intelligence ───────────────────────────────────────────────────
+export interface IncomeTypeBreakdown {
+  type: string; label: string; color: string; monthly: number; count: number; pct: number
+}
+export interface IncomeSourceCard {
+  id: string; name: string; income_type: string; label: string; color: string
+  employer: string; monthly: number; tds_pct: number; net_monthly: number
+  is_variable: boolean; variable_min: number; variable_max: number
+  is_active: boolean; start_date: string|null
+}
+export interface IncomeMonthlyTrend { month: string; amount: number }
+export interface IncomeInsight { severity: 'CRITICAL'|'WARNING'|'INFO'; title: string; body: string; action: string|null }
+
+export interface IncomeIntelligence {
+  total_monthly_gross: number; total_monthly_net: number; total_tds: number
+  annual_gross: number; annual_net: number; source_count: number
+  by_type: IncomeTypeBreakdown[]
+  source_cards: IncomeSourceCard[]
+  monthly_trend: IncomeMonthlyTrend[]
+  insights: IncomeInsight[]
+}
+
+// ── Insurance Intelligence ────────────────────────────────────────────────
+export interface InsuranceTypeBreakdown {
+  type: string; label: string; color: string; annual_premium: number; cover: number; count: number
+}
+export interface PolicyCard {
+  id: string; insurance_type: string; label: string; color: string
+  policy_name: string; insurer: string; policy_number: string|null
+  premium_amount: number; premium_frequency: string; annual_premium: number
+  sum_assured: number; cover_amount: number
+  renewal_date: string|null; days_to_renewal: number|null
+  beneficiary: string|null; is_active: boolean; notes: string|null
+}
+export interface InsuranceInsight { severity: 'CRITICAL'|'WARNING'|'INFO'; title: string; body: string; action: string|null }
+
+export interface InsuranceIntelligence {
+  total_annual_premium: number; total_monthly_premium: number
+  total_cover: number; total_sum_assured: number; policy_count: number
+  by_type: InsuranceTypeBreakdown[]
+  policy_cards: PolicyCard[]
+  coverage_gaps: string[]
+  insights: InsuranceInsight[]
+}
+
+// ── Goal Intelligence ─────────────────────────────────────────────────────
+export interface GoalCard {
+  id: string; name: string; goal_type: string; label: string; color: string; emoji: string
+  target: number; current: number; remaining: number; pct_done: number
+  monthly: number; months_to: number|null; eta: string|null
+  target_date: string|null; on_track: boolean
+  priority: string; status: string; notes: string|null
+}
+export interface GoalInsight { severity: 'CRITICAL'|'WARNING'|'INFO'; title: string; body: string; action: string|null }
+
+export interface GoalIntelligence {
+  total_target: number; total_saved: number; overall_pct: number
+  total_monthly_req: number; active_count: number; achieved_count: number
+  goal_cards: GoalCard[]
+  insights: GoalInsight[]
+}
+
+// ── AI CFO ────────────────────────────────────────────────────────────────
+export interface AIChatMessage { role: 'user'|'assistant'; content: string; created_at: string; model: string|null }
+export interface AIChatSession { session_id: string; messages: AIChatMessage[]; created_at: string }
+export interface AIChatResponse {
+  session_id: string; response: string; model: string
+  context: {
+    net_worth: number; total_assets: number; total_liabilities: number
+    banking: { total_balance: number; accounts: number }
+    income: { monthly_gross: number; monthly_net: number; sources: number }
+    investments: { total_invested: number; current_value: number; unrealised_pnl: number; sip_monthly: number }
+    loans: { total_outstanding: number; monthly_emi: number; count: number }
+    emi_burden: { total_monthly: number; pct_of_income: number; status: string }
+  }
+}
+
 export interface NetWorthHistoryPoint {
   date: string
   net_worth: number

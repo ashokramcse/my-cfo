@@ -2,8 +2,9 @@ import { create } from 'zustand'
 
 export type ViewId =
   | 'dashboard' | 'net-worth' | 'banking' | 'investments' | 'loans' | 'assets'
+  | 'income' | 'insurance' | 'goals' | 'ai-cfo'
   | 'cards' | 'transactions' | 'emis'
-  | 'friends'   | 'statements' | 'reports' | 'settings'
+  | 'friends' | 'statements' | 'reports' | 'settings'
 
 interface UIState {
   sidebarCollapsed: boolean

@@ -116,6 +116,42 @@ export const assetsApi = {
   intelligence: () => api.get('/assets/analytics/intelligence'),
 }
 
+export const incomeApi = {
+  sources: () => api.get('/income/sources'),
+  createSource: (data: unknown) => api.post('/income/sources', data),
+  updateSource: (id: string, data: unknown) => api.patch(`/income/sources/${id}`, data),
+  deleteSource: (id: string) => api.delete(`/income/sources/${id}`),
+  entries: (params?: Record<string, unknown>) => api.get('/income/entries', { params }),
+  createEntry: (data: unknown) => api.post('/income/entries', data),
+  deleteEntry: (id: string) => api.delete(`/income/entries/${id}`),
+  intelligence: (months?: number) => api.get('/income/analytics/intelligence', { params: { months } }),
+}
+
+export const insuranceApi = {
+  list: () => api.get('/insurance'),
+  create: (data: unknown) => api.post('/insurance', data),
+  update: (id: string, data: unknown) => api.patch(`/insurance/${id}`, data),
+  delete: (id: string) => api.delete(`/insurance/${id}`),
+  intelligence: () => api.get('/insurance/analytics/intelligence'),
+}
+
+export const goalsApi = {
+  list: () => api.get('/goals'),
+  create: (data: unknown) => api.post('/goals', data),
+  update: (id: string, data: unknown) => api.patch(`/goals/${id}`, data),
+  delete: (id: string) => api.delete(`/goals/${id}`),
+  contribute: (id: string, amount: number, notes?: string) =>
+    api.post(`/goals/${id}/contribute`, { amount, notes }),
+  intelligence: () => api.get('/goals/analytics/intelligence'),
+}
+
+export const aiCfoApi = {
+  chat: (message: string, sessionId?: string, model?: string) =>
+    api.post('/ai-cfo/chat', { message, session_id: sessionId, model }),
+  history: (limit?: number) => api.get('/ai-cfo/history', { params: { limit } }),
+  clearHistory: () => api.delete('/ai-cfo/history'),
+}
+
 export const netWorthApi = {
   current: () => api.get('/net-worth/current'),
   intelligence: () => api.get('/net-worth/intelligence'),

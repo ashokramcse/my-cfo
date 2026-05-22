@@ -36,3 +36,8 @@ class User(Base):
     loans = relationship("Loan", back_populates="user", cascade="all, delete-orphan")
     assets = relationship("Asset", back_populates="user", cascade="all, delete-orphan")
     net_worth_snapshots = relationship("NetWorthSnapshot", back_populates="user", cascade="all, delete-orphan")
+    income_sources      = relationship("IncomeSource", back_populates="user", cascade="all, delete-orphan")
+    income_entries      = relationship("IncomeEntry", back_populates="user", cascade="all, delete-orphan")
+    insurances          = relationship("Insurance", back_populates="user", cascade="all, delete-orphan")
+    goals               = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
+    ai_conversations    = relationship("AIConversation", back_populates="user", cascade="all, delete-orphan")

@@ -6,14 +6,15 @@ import { StatCard } from '@/components/ui/StatCard'
 import { StatCardSkeleton } from '@/components/ui/Skeleton'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SpendingChart } from '@/components/charts/SpendingChart'
-import { CategoryChart } from '@/components/charts/CategoryChart'
 import { EMIForecastChart } from '@/components/charts/EMIForecastChart'
-import { reportsApi, emisApi, insightsApi } from '@/lib/api'
+import { reportsApi, emisApi, insightsApi, netWorthApi, incomeApi, goalsApi } from '@/lib/api'
 import { formatCurrencyCompact, formatDate } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, CreditCard, TrendingDown, Calendar, Users,
   Zap, Star, ArrowUpRight, Bell, ChevronRight,
-  TrendingUp, Sparkles,
+  TrendingUp, Sparkles, DollarSign, Target, Landmark,
+  BarChart3, Wallet, Shield, Building2,
 } from 'lucide-react'
 import { useUIStore } from '@/store/ui'
 import { DashboardStats, Insight } from '@/types'
@@ -41,6 +42,17 @@ function EmptyState({ icon: Icon, message, children }: {
   )
 }
 
+const QUICK_ACTIONS = [
+  { icon: TrendingUp, label: 'Net Worth',   view: 'net-worth'   as const, color: '#6366F1' },
+  { icon: Landmark,   label: 'Banking',     view: 'banking'     as const, color: '#0EA5E9' },
+  { icon: BarChart3,  label: 'Invest',      view: 'investments' as const, color: '#10B981' },
+  { icon: Wallet,     label: 'Loans',       view: 'loans'       as const, color: '#F59E0B' },
+  { icon: DollarSign, label: 'Income',      view: 'income'      as const, color: '#8B5CF6' },
+  { icon: Target,     label: 'Goals',       view: 'goals'       as const, color: '#EC4899' },
+  { icon: Shield,     label: 'Insurance',   view: 'insurance'   as const, color: '#EF4444' },
+  { icon: Sparkles,   label: 'AI CFO',      view: 'ai-cfo'      as const, color: '#F97316' },
+]
+
 export function DashboardView() {
   const { setView } = useUIStore()
   const [time, setTime] = useState('')
@@ -67,31 +79,111 @@ export function DashboardView() {
     queryFn: async () => (await insightsApi.list({ unread_only: true, limit: 5 })).data,
   })
 
+  const { data: netWorth } = useQuery({
+    queryKey: ['net-worth'],
+    queryFn: async () => (await netWorthApi.current()).data,
+  })
+
+  const { data: incomeIntel } = useQuery({
+    queryKey: ['income-intelligence'],
+    queryFn: async () => (await incomeApi.intelligence()).data,
+  })
+
+  const { data: goalIntel } = useQuery({
+    queryKey: ['goal-intelligence'],
+    queryFn: async () => (await goalsApi.intelligence()).data,
+  })
+
   const showSkeletons = isLoading || !stats
+
+  const nwVal   = netWorth?.net_worth ?? 0
+  const cashVal = netWorth?.components?.find((c: { label: string }) => c.label === 'Banking')?.value ?? 0
+  const invVal  = netWorth?.components?.find((c: { label: string }) => c.label === 'Investments')?.value ?? 0
+  const debtVal = netWorth?.components?.find((c: { label: string }) => c.label === 'Loans')?.value ?? 0
+
+  const monthlyIncome = incomeIntel?.total_monthly_net ?? 0
+  const activeGoals   = goalIntel?.active_count ?? 0
+  const goalsPct      = goalIntel?.overall_pct ?? 0
 
   return (
     <>
       <PageHeader
         icon={LayoutDashboard}
-        title="Financial Dashboard"
-        subtitle={time ? `Updated ${time}` : 'Financial overview'}
+        title="Financial Command Center"
+        subtitle={time ? `Live · ${time}` : 'Your complete financial overview'}
         actions={
-          <button onClick={() => setView('statements')} className="btn-primary">
-            <Zap className="w-3.5 h-3.5" strokeWidth={2.5} /> Upload Statement
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setView('ai-cfo')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg,#F97316,#EA580C)' }}>
+              <Sparkles size={14} /> Ask AI CFO
+            </button>
+            <button onClick={() => setView('statements')} className="btn-primary">
+              <Zap className="w-3.5 h-3.5" strokeWidth={2.5} /> Upload Statement
+            </button>
+          </div>
         }
       />
 
-      <div className="p-3 sm:p-5 xl:p-6 max-w-[1440px] mx-auto">
+      <div className="p-3 sm:p-5 xl:p-6 max-w-[1440px] mx-auto space-y-4">
 
-        {/* KPI row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-5">
+        {/* ── Net Worth hero banner ── */}
+        <motion.div
+          initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl p-5 sm:p-6 text-white relative overflow-hidden"
+          style={{ background: 'linear-gradient(135deg,#1A0F0A 0%,#2D1810 50%,#1A0F0A 100%)' }}>
+          {/* glow */}
+          <div className="absolute inset-0 opacity-20"
+            style={{ background: 'radial-gradient(ellipse at 30% 50%,#F9731650,transparent 70%)' }} />
+          <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <p className="text-xs text-amber-400 font-semibold uppercase tracking-widest mb-1">Total Net Worth</p>
+              <p className="text-3xl sm:text-4xl font-bold tracking-tight">
+                {formatCurrencyCompact(nwVal)}
+              </p>
+              <p className="text-xs text-amber-300/60 mt-1">All assets minus all liabilities</p>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-3 gap-3 sm:gap-4">
+              {[
+                { label: 'Cash & Bank', val: cashVal,     color: '#34D399' },
+                { label: 'Investments', val: invVal,      color: '#60A5FA' },
+                { label: 'Total Debt',  val: debtVal,     color: '#F87171' },
+              ].map(({ label, val, color }) => (
+                <div key={label} className="text-center">
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.4)' }}>{label}</p>
+                  <p className="text-base font-bold mt-0.5" style={{ color }}>{formatCurrencyCompact(val)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ── Quick action modules ── */}
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+          {QUICK_ACTIONS.map(({ icon: Icon, label, view, color }, i) => (
+            <motion.button
+              key={view}
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              onClick={() => setView(view)}
+              className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-amber-100 bg-white hover:border-amber-300 hover:shadow-sm transition-all group">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                style={{ background: color + '18' }}>
+                <Icon size={16} style={{ color }} strokeWidth={1.8} />
+              </div>
+              <span className="text-[10px] font-semibold text-amber-800 group-hover:text-amber-950">{label}</span>
+            </motion.button>
+          ))}
+        </div>
+
+        {/* ── Credit card KPI row ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
           {showSkeletons
             ? Array.from({ length: 6 }).map((_, i) => <StatCardSkeleton key={i} />)
             : (
               <>
                 <StatCard
-                  title="Outstanding"
+                  title="CC Outstanding"
                   value={formatCurrencyCompact(stats.total_outstanding)}
                   subtitle={`${stats.utilization_pct}% utilized`}
                   icon={CreditCard}
@@ -99,11 +191,11 @@ export function DashboardView() {
                   delay={0}
                 />
                 <StatCard
-                  title="Available Credit"
-                  value={formatCurrencyCompact(stats.total_available)}
-                  subtitle={`of ${formatCurrencyCompact(stats.total_credit_limit)}`}
-                  icon={TrendingDown}
-                  variant="info"
+                  title="Monthly Income"
+                  value={formatCurrencyCompact(monthlyIncome)}
+                  subtitle="net take-home"
+                  icon={DollarSign}
+                  variant="success"
                   delay={0.04}
                 />
                 <StatCard
@@ -123,11 +215,11 @@ export function DashboardView() {
                   delay={0.12}
                 />
                 <StatCard
-                  title="Receivables"
-                  value={formatCurrencyCompact(stats.total_receivables)}
-                  subtitle={`${stats.friend_receivables.length} people`}
-                  icon={Users}
-                  variant={Number(stats.total_receivables) > 0 ? 'warning' : 'success'}
+                  title="Goals"
+                  value={`${activeGoals} active`}
+                  subtitle={`${goalsPct.toFixed(0)}% avg progress`}
+                  icon={Target}
+                  variant={goalsPct > 60 ? 'success' : 'default'}
                   delay={0.16}
                 />
                 <StatCard
@@ -142,14 +234,14 @@ export function DashboardView() {
             )}
         </div>
 
-        {/* Charts row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        {/* ── Charts row ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Spending Trend */}
           <div className="lg:col-span-2 card p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="section-title">Spending Trend</h2>
-                <p className="section-sub">6-month overview</p>
+                <p className="section-sub">6-month credit card spend</p>
               </div>
               <button onClick={() => setView('reports')}
                 className="flex items-center gap-1 text-xs font-semibold transition-colors hover:opacity-70"
@@ -162,30 +254,6 @@ export function DashboardView() {
               : <SpendingChart data={stats.monthly_trends ?? []} />}
           </div>
 
-          {/* Category Spend */}
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="section-title">Category Spend</h2>
-                <p className="section-sub">This month</p>
-              </div>
-              <button onClick={() => setView('transactions')}
-                className="flex items-center gap-1 text-xs font-semibold transition-colors hover:opacity-70"
-                style={{ color: '#F97316' }}>
-                All txns <ChevronRight className="w-3 h-3" />
-              </button>
-            </div>
-            {showSkeletons
-              ? <div className="h-[220px] rounded-xl shimmer" />
-              : stats.category_spending?.length
-                ? <CategoryChart data={stats.category_spending} />
-                : <EmptyState icon={TrendingUp} message="No transactions yet" />
-            }
-          </div>
-        </div>
-
-        {/* Bottom row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* EMI Forecast */}
           <div className="card p-5">
             <div className="flex items-center justify-between mb-4">
@@ -200,7 +268,10 @@ export function DashboardView() {
               ? <div className="h-[190px] rounded-xl shimmer" />
               : <EMIForecastChart data={forecast ?? []} />}
           </div>
+        </div>
 
+        {/* ── Bottom row ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Upcoming dues */}
           <div className="card p-5">
             <div className="flex items-center justify-between mb-4">
@@ -241,7 +312,7 @@ export function DashboardView() {
             </div>
           </div>
 
-          {/* Insights */}
+          {/* AI Insights */}
           <div className="card p-5">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-4 h-4" style={{ color: '#F97316' }} strokeWidth={2} />
@@ -272,15 +343,53 @@ export function DashboardView() {
                       </motion.div>
                     )
                   })
-                  : <EmptyState icon={Bell} message="No insights yet. Upload a statement to get started." />
+                  : <EmptyState icon={Bell} message="No insights yet. Upload a statement to get started.">
+                      <button onClick={() => setView('ai-cfo')} className="text-xs font-semibold mt-1 inline-block" style={{ color: '#F97316' }}>Chat with AI CFO →</button>
+                    </EmptyState>
               }
             </div>
+          </div>
+
+          {/* Goals summary */}
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="section-title">Goals Progress</h2>
+              <button onClick={() => setView('goals')} className="text-xs font-semibold transition-colors hover:opacity-70"
+                style={{ color: '#F97316' }}>All goals</button>
+            </div>
+            {goalIntel?.goals?.length
+              ? (
+                <div className="space-y-3">
+                  {goalIntel.goals.slice(0, 4).map((g: { id: string; emoji: string; name: string; progress_pct: number; color: string; on_track: boolean }) => (
+                    <div key={g.id} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-amber-900 truncate max-w-[60%]">{g.emoji} {g.name}</span>
+                        <span className={cn('font-semibold', g.on_track ? 'text-emerald-600' : 'text-amber-500')}>
+                          {g.progress_pct.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-amber-100 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }} animate={{ width: `${Math.min(100, g.progress_pct)}%` }}
+                          transition={{ duration: 0.8, ease: 'easeOut' }}
+                          className="h-full rounded-full"
+                          style={{ background: g.color || '#F97316' }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+              : <EmptyState icon={Target} message="No goals yet">
+                  <button onClick={() => setView('goals')} className="text-xs font-semibold mt-1 inline-block" style={{ color: '#F97316' }}>Set a goal →</button>
+                </EmptyState>
+            }
           </div>
         </div>
 
         {/* Friend receivables */}
         {!!stats?.friend_receivables?.length && (
-          <div className="card p-5 mt-4">
+          <div className="card p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="section-title">Friend EMI Receivables</h2>

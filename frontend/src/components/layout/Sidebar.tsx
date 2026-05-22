@@ -1,35 +1,49 @@
 'use client'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutDashboard, CreditCard, ArrowLeftRight, Calendar, Users, FileText, BarChart3, Settings, ChevronLeft, Zap, X, TrendingUp, Landmark, Building2, Wallet } from 'lucide-react'
+import { LayoutDashboard, CreditCard, ArrowLeftRight, Calendar, Users, FileText, BarChart3, Settings, ChevronLeft, Zap, X, TrendingUp, Landmark, Building2, Wallet, DollarSign, Shield, Target, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore, ViewId } from '@/store/ui'
 import { useIsMobile } from '@/hooks/useIsMobile'
-import { cardsApi, transactionsApi, emisApi, friendsApi, reportsApi, insightsApi, statementsApi, netWorthApi, bankAccountsApi, investmentsApi, loansApi, assetsApi } from '@/lib/api'
+import { cardsApi, transactionsApi, emisApi, friendsApi, reportsApi, insightsApi, statementsApi, netWorthApi, bankAccountsApi, investmentsApi, loansApi, assetsApi, incomeApi, insuranceApi, goalsApi } from '@/lib/api'
 
 type NavGroup = { group: string; items: { view: ViewId; icon: React.ElementType; label: string }[] }
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    group: 'Wealth',
+    group: 'Command Center',
     items: [
-      { view: 'net-worth',   icon: TrendingUp,      label: 'Net Worth'    },
-      { view: 'banking',     icon: Landmark,        label: 'Banking'      },
-      { view: 'investments', icon: BarChart3,       label: 'Investments'  },
-      { view: 'loans',       icon: Wallet,          label: 'Loans & Debt' },
-      { view: 'assets',      icon: Building2,       label: 'Assets'       },
+      { view: 'dashboard', icon: LayoutDashboard, label: 'Dashboard'    },
+      { view: 'ai-cfo',    icon: Sparkles,        label: 'AI CFO'       },
+    ],
+  },
+  {
+    group: 'Financial OS',
+    items: [
+      { view: 'net-worth',   icon: TrendingUp,  label: 'Net Worth'    },
+      { view: 'banking',     icon: Landmark,    label: 'Banking'      },
+      { view: 'investments', icon: BarChart3,   label: 'Investments'  },
+      { view: 'loans',       icon: Wallet,      label: 'Loans & Debt' },
+      { view: 'assets',      icon: Building2,   label: 'Assets'       },
+    ],
+  },
+  {
+    group: 'Life Finance',
+    items: [
+      { view: 'income',    icon: DollarSign, label: 'Income'    },
+      { view: 'insurance', icon: Shield,     label: 'Insurance' },
+      { view: 'goals',     icon: Target,     label: 'Goals'     },
     ],
   },
   {
     group: 'Credit Cards',
     items: [
-      { view: 'dashboard',    icon: LayoutDashboard, label: 'Dashboard'    },
-      { view: 'cards',        icon: CreditCard,      label: 'Cards'        },
-      { view: 'transactions', icon: ArrowLeftRight,  label: 'Transactions' },
-      { view: 'emis',         icon: Calendar,        label: 'EMI Tracker'  },
-      { view: 'friends',      icon: Users,           label: 'Friend EMIs'  },
-      { view: 'statements',   icon: FileText,        label: 'Statements'   },
-      { view: 'reports',      icon: BarChart3,       label: 'Reports'      },
+      { view: 'cards',        icon: CreditCard,     label: 'Cards'        },
+      { view: 'transactions', icon: ArrowLeftRight, label: 'Transactions' },
+      { view: 'emis',         icon: Calendar,       label: 'EMI Tracker'  },
+      { view: 'friends',      icon: Users,          label: 'Friend EMIs'  },
+      { view: 'statements',   icon: FileText,       label: 'Statements'   },
+      { view: 'reports',      icon: BarChart3,      label: 'Reports'      },
     ],
   },
   {
@@ -64,6 +78,10 @@ const VIEW_PREFETCH: Record<ViewId, (qc: ReturnType<typeof useQueryClient>) => v
     qc.prefetchQuery({ queryKey: ['loans-summary'], queryFn: () => loansApi.summary().then(r => r.data) })
   },
   assets:       (qc) => qc.prefetchQuery({ queryKey: ['assets'], queryFn: () => assetsApi.list().then(r => r.data) }),
+  income:       (qc) => qc.prefetchQuery({ queryKey: ['income-intelligence'], queryFn: () => incomeApi.intelligence().then(r => r.data) }),
+  insurance:    (qc) => qc.prefetchQuery({ queryKey: ['insurance-intelligence'], queryFn: () => insuranceApi.intelligence().then(r => r.data) }),
+  goals:        (qc) => qc.prefetchQuery({ queryKey: ['goal-intelligence'], queryFn: () => goalsApi.intelligence().then(r => r.data) }),
+  'ai-cfo':     () => {/* no prefetch — chat is session-based */},
   cards:        (qc) => qc.prefetchQuery({ queryKey: ['cards'],        queryFn: () => cardsApi.list().then(r => r.data.items) }),
   transactions: (qc) => qc.prefetchQuery({ queryKey: ['transactions', 1, '', 'ALL', ''], queryFn: () => transactionsApi.list({ page: 1, page_size: 50 }).then(r => r.data) }),
   emis:         (qc) => {

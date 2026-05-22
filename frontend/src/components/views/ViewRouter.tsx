@@ -1,18 +1,22 @@
 'use client'
 import { useUIStore } from '@/store/ui'
-import { DashboardView } from './DashboardView'
-import { CardsView } from './CardsView'
-import { TransactionsView } from './TransactionsView'
-import { EMIsView } from './EMIsView'
-import { FriendsView } from './FriendsView'
-import { StatementsView } from './StatementsView'
-import { ReportsView } from './ReportsView'
-import { SettingsView } from './SettingsView'
-import { NetWorthView } from './NetWorthView'
-import { BankingView } from './BankingView'
+import { DashboardView }   from './DashboardView'
+import { CardsView }       from './CardsView'
+import { TransactionsView }from './TransactionsView'
+import { EMIsView }        from './EMIsView'
+import { FriendsView }     from './FriendsView'
+import { StatementsView }  from './StatementsView'
+import { ReportsView }     from './ReportsView'
+import { SettingsView }    from './SettingsView'
+import { NetWorthView }    from './NetWorthView'
+import { BankingView }     from './BankingView'
 import { InvestmentsView } from './InvestmentsView'
-import { LoansView } from './LoansView'
-import { AssetsView } from './AssetsView'
+import { LoansView }       from './LoansView'
+import { AssetsView }      from './AssetsView'
+import { IncomeView }      from './IncomeView'
+import { InsuranceView }   from './InsuranceView'
+import { GoalsView }       from './GoalsView'
+import { AICFOView }       from './AICFOView'
 
 export function ViewRouter() {
   const { currentView } = useUIStore()
@@ -24,6 +28,10 @@ export function ViewRouter() {
     case 'investments':  return <InvestmentsView />
     case 'loans':        return <LoansView />
     case 'assets':       return <AssetsView />
+    case 'income':       return <IncomeView />
+    case 'insurance':    return <InsuranceView />
+    case 'goals':        return <GoalsView />
+    case 'ai-cfo':       return <AICFOView />
     case 'cards':        return <CardsView />
     case 'transactions': return <TransactionsView />
     case 'emis':         return <EMIsView />
