@@ -97,9 +97,9 @@ export function DashboardView() {
   const showSkeletons = isLoading || !stats
 
   const nwVal   = netWorth?.net_worth ?? 0
-  const cashVal = netWorth?.components?.find((c: { label: string }) => c.label === 'Banking')?.value ?? 0
-  const invVal  = netWorth?.components?.find((c: { label: string }) => c.label === 'Investments')?.value ?? 0
-  const debtVal = netWorth?.components?.find((c: { label: string }) => c.label === 'Loans')?.value ?? 0
+  const cashVal = netWorth?.bank_liquid ?? netWorth?.bank_total ?? 0
+  const invVal  = netWorth?.investment_value ?? 0
+  const debtVal = netWorth?.total_liabilities ?? 0
 
   const monthlyIncome = incomeIntel?.total_monthly_net ?? 0
   const activeGoals   = goalIntel?.active_count ?? 0

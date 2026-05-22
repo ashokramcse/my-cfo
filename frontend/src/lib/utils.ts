@@ -17,13 +17,15 @@ export function formatCurrency(amount: number | string | null | undefined, curre
   }).format(n)
 }
 
-export function formatCurrencyCompact(amount: number | string | null | undefined): string {
-  const n = Number(amount ?? 0)
-  if (!isFinite(n)) return '₹0'
-  if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(1)}Cr`
-  if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(1)}L`
-  if (n >= 1_000) return `₹${(n / 1_000).toFixed(1)}K`
-  return `₹${n.toFixed(0)}`
+export function formatCurrencyCompact(value: number | string | null | undefined): string {
+  const num = Number(value ?? 0)
+  if (isNaN(num)) return '₹0'
+  const abs = Math.abs(num)
+  const sign = num < 0 ? '-' : ''
+  if (abs >= 1_00_00_000) return `${sign}₹${(abs / 1_00_00_000).toFixed(2)}Cr`
+  if (abs >= 1_00_000)    return `${sign}₹${(abs / 1_00_000).toFixed(2)}L`
+  if (abs >= 1_000)       return `${sign}₹${(abs / 1_000).toFixed(1)}K`
+  return `${sign}₹${abs.toFixed(0)}`
 }
 
 export function formatDate(dateStr: string | null, fmt = 'dd MMM yyyy'): string {

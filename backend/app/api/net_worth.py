@@ -16,7 +16,7 @@ Derived metrics:
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 from app.database import get_db
@@ -29,6 +29,7 @@ from app.models.asset import Asset
 from app.models.card import CreditCard
 from app.models.emi import EMI, EMIStatus
 from app.models.net_worth import NetWorthSnapshot
+from app.services.financial_context import build_financial_context
 
 router = APIRouter()
 
@@ -511,33 +512,42 @@ async def take_snapshot(
     return {"ok": True, "net_worth": data["net_worth"], "health_score": data["health_score"]}
 
 
+def format_snap(s) -> dict:
+    return {
+        "date":              s.snapshot_date.isoformat(),
+        "net_worth":         float(s.net_worth or 0),
+        "total_assets":      float(s.total_assets or 0),
+        "total_liabilities": float(s.total_liabilities or 0),
+        "bank_balance":      float(s.bank_balance or 0),
+        "investment_value":  float(s.investment_value or 0),
+        "asset_value":       float(s.asset_value or 0),
+        "change_amount":     float(s.change_amount or 0),
+        "change_pct":        float(s.change_pct or 0),
+        "health_score":      (s.extra_data or {}).get("health_score", 0),
+        "liquid_net_worth":  (s.extra_data or {}).get("liquid_net_worth", 0),
+    }
+
+
 @router.get("/history")
 async def net_worth_history(
     months: int = 12,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Historical snapshots for trend charts."""
+    """Historical snapshots for trend charts — one snapshot per calendar month."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=months * 31)
     result = await db.execute(
         select(NetWorthSnapshot)
-        .where(NetWorthSnapshot.user_id == current_user.id)
-        .order_by(NetWorthSnapshot.snapshot_date.desc())
-        .limit(months * 5)
+        .where(
+            NetWorthSnapshot.user_id == current_user.id,
+            NetWorthSnapshot.snapshot_date >= cutoff,
+        )
+        .order_by(NetWorthSnapshot.snapshot_date.asc())
     )
     snaps = result.scalars().all()
-    return [
-        {
-            "date":              s.snapshot_date.isoformat(),
-            "net_worth":         float(s.net_worth or 0),
-            "total_assets":      float(s.total_assets or 0),
-            "total_liabilities": float(s.total_liabilities or 0),
-            "bank_balance":      float(s.bank_balance or 0),
-            "investment_value":  float(s.investment_value or 0),
-            "asset_value":       float(s.asset_value or 0),
-            "change_amount":     float(s.change_amount or 0),
-            "change_pct":        float(s.change_pct or 0),
-            "health_score":      (s.extra_data or {}).get("health_score", 0),
-            "liquid_net_worth":  (s.extra_data or {}).get("liquid_net_worth", 0),
-        }
-        for s in reversed(snaps)
-    ]
+    # Deduplicate: keep last snapshot per calendar month
+    monthly_map: dict = {}
+    for s in snaps:
+        key = s.snapshot_date.strftime("%Y-%m")
+        monthly_map[key] = s  # last one wins
+    return [format_snap(s) for s in monthly_map.values()]

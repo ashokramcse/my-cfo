@@ -162,6 +162,7 @@ function ContributeModal({goal, onClose, onSave}:{goal:GoalCard;onClose:()=>void
 const EMPTY: GoalIntelligence = {
   total_target:0, total_saved:0, overall_pct:0, total_monthly_req:0,
   active_count:0, achieved_count:0, goal_cards:[], insights:[],
+  monthly_surplus: undefined, monthly_income: undefined,
 }
 
 export function GoalsView() {
@@ -233,13 +234,30 @@ export function GoalsView() {
         </div>
       </motion.div>
 
+      {/* Surplus conflict banner */}
+      {intel.monthly_surplus !== undefined && intel.total_monthly_req > (intel.monthly_surplus ?? 0) && intel.total_monthly_req > 0 && (
+        <motion.div initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}}
+          className="rounded-xl p-4 border border-amber-300 bg-amber-50 flex items-start gap-3">
+          <AlertTriangle size={16} className="text-amber-600 mt-0.5 flex-shrink-0"/>
+          <p className="text-sm text-amber-800">
+            ⚠️ Your total goal contributions ({formatCurrencyCompact(intel.total_monthly_req)}/mo) exceed your monthly surplus ({formatCurrencyCompact(intel.monthly_surplus ?? 0)}/mo). Consider adjusting.
+          </p>
+        </motion.div>
+      )}
+
       {/* Summary tiles */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           {label:'Total Target', value:formatCurrencyCompact(intel.total_target), icon:Target, delay:0.05},
           {label:'Total Saved', value:formatCurrencyCompact(intel.total_saved), icon:TrendingUp, delay:0.10, bg:'#F0FDF4', border:'#BBF7D0', color:'#166534'},
           {label:'Monthly Required', value:formatCurrencyCompact(intel.total_monthly_req), icon:Clock, delay:0.15},
-          {label:'Goals', value:`${intel.active_count} active`, icon:CheckCircle2, delay:0.20, bg:'#F5F3FF', border:'#DDD6FE', color:'#5B21B6'},
+          ...(intel.monthly_surplus !== undefined
+            ? [{label:'Monthly Surplus', value:formatCurrencyCompact(intel.monthly_surplus), icon:CheckCircle2, delay:0.20,
+                bg: (intel.monthly_surplus ?? 0) >= 0 ? '#F0FDF4' : '#FEF2F2',
+                border: (intel.monthly_surplus ?? 0) >= 0 ? '#BBF7D0' : '#FECACA',
+                color: (intel.monthly_surplus ?? 0) >= 0 ? '#166534' : '#991B1B'}]
+            : [{label:'Goals', value:`${intel.active_count} active`, icon:CheckCircle2, delay:0.20, bg:'#F5F3FF', border:'#DDD6FE', color:'#5B21B6'}]
+          ),
         ].map(({label,value,icon:Icon,delay,bg='#FFF8F4',border='#F0EAE4',color='#18120E'})=>(
           <motion.div key={label} initial={{opacity:0,y:14}} animate={{opacity:1,y:0}}
             transition={{delay,duration:0.35}}

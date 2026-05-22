@@ -11,6 +11,7 @@ from app.utils.deps import get_current_user
 from app.models.user import User
 from app.models.loan import Loan
 from app.schemas.loan import LoanCreate, LoanUpdate, LoanOut
+from app.services.financial_context import build_financial_context
 
 router = APIRouter()
 
@@ -342,8 +343,9 @@ async def loan_intelligence(
         if float(l.interest_rate or 0) >= HIGH_INTEREST_THRESHOLD
     ]
 
-    # ── Estimated monthly income from bank module (fallback = 0) ─────────────
-    monthly_income_est = 0.0  # will be enriched from bank cashflow in future
+    # ── Get real monthly income from shared financial context ─────────────────
+    fin_ctx = await build_financial_context(db, current_user.id)
+    monthly_income_est = fin_ctx["monthly_net"]
 
     # ── Insights ──────────────────────────────────────────────────────────────
     insights = _loan_insights(loans, total_outstanding, total_monthly_emi, monthly_income_est)
@@ -363,4 +365,5 @@ async def loan_intelligence(
         "amortization":       amortization,
         "high_interest":      high_interest,
         "insights":           insights,
+        "monthly_income":     round(monthly_income_est, 2),
     }

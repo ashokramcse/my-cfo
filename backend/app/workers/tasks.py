@@ -67,6 +67,20 @@ def parse_statement_task(self, statement_id: str, file_path: str, password: Opti
             merchant = extract_merchant_name(ptx.description)
             category = categorize(ptx.description, merchant)
 
+            # Check for duplicate: same card, date, amount
+            from sqlalchemy import and_
+            existing = db.query(Transaction).filter(
+                and_(
+                    Transaction.card_id == stmt.card_id,
+                    Transaction.transaction_date == ptx.date,
+                    Transaction.amount == ptx.amount,
+                )
+            ).first()
+            if existing:
+                existing.is_duplicate = True
+                db.add(existing)
+                continue  # skip inserting duplicate
+
             tx = Transaction(
                 user_id=uuid.UUID(user_id),
                 card_id=stmt.card_id,
@@ -132,6 +146,96 @@ def run_daily_insights():
         result = conn.execute(text("SELECT id FROM users WHERE is_active = true"))
         for row in result:
             generate_insights_task.delay(str(row[0]))
+
+
+@celery_app.task(name="app.workers.tasks.take_daily_net_worth_snapshots")
+def take_daily_net_worth_snapshots():
+    """Take net worth snapshots for all active users. Run daily via beat."""
+    import asyncio
+    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+    from sqlalchemy.orm import sessionmaker
+    from app.config import settings
+    from app.models.user import User
+    from app.models.net_worth import NetWorthSnapshot
+    from app.services.financial_context import build_financial_context
+    from sqlalchemy import select
+
+    async def _run():
+        engine = create_async_engine(settings.database_url)
+        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        async with async_session() as db:
+            users_result = await db.execute(select(User).where(User.is_active == True))
+            users = users_result.scalars().all()
+            for user in users:
+                try:
+                    data = await build_financial_context(db, user.id)
+                    # Get last snapshot for change calculation
+                    last_res = await db.execute(
+                        select(NetWorthSnapshot)
+                        .where(NetWorthSnapshot.user_id == user.id)
+                        .order_by(NetWorthSnapshot.snapshot_date.desc())
+                        .limit(1)
+                    )
+                    last = last_res.scalar_one_or_none()
+                    prev_nw = float(last.net_worth or 0) if last else 0
+                    change = data["net_worth"] - prev_nw
+                    change_pct = (change / abs(prev_nw) * 100) if prev_nw else 0
+                    snap = NetWorthSnapshot(
+                        user_id=user.id,
+                        bank_balance=data["bank_total"],
+                        investment_value=data["investment_value"],
+                        asset_value=data["asset_value"],
+                        total_assets=data["total_assets"],
+                        credit_card_outstanding=data["cc_outstanding"],
+                        loan_outstanding=data["loan_outstanding"],
+                        total_liabilities=data["total_liabilities"],
+                        net_worth=data["net_worth"],
+                        change_amount=change,
+                        change_pct=change_pct,
+                        extra_data={
+                            "liquid_net_worth": data["liquid_net_worth"],
+                            "health_score": 0,
+                            "debt_ratio": data["debt_ratio"],
+                            "investment_ratio": data["investment_ratio"],
+                            "emergency_months": data["emergency_months"],
+                            "monthly_surplus": data["monthly_surplus"],
+                        },
+                    )
+                    db.add(snap)
+                except Exception as e:
+                    logger.error(f"Net worth snapshot failed for user {user.id}: {e}")
+            await db.commit()
+        await engine.dispose()
+
+    asyncio.run(_run())
+
+
+@celery_app.task(name="app.workers.tasks.check_loan_overdue_notifications")
+def check_loan_overdue_notifications():
+    """Check for overdue loans and upcoming EMI dues. Run daily."""
+    from app.models.loan import Loan, LoanStatus
+    from app.models.insurance import Insurance
+    from datetime import date, timedelta
+    db = get_sync_db()
+    try:
+        today = date.today()
+        warning_date = today + timedelta(days=7)
+        # Find loans overdue
+        overdue = db.query(Loan).filter(Loan.status == LoanStatus.OVERDUE).all()
+        for loan in overdue:
+            logger.warning(f"OVERDUE LOAN: user={loan.user_id} loan={loan.id} amount={loan.outstanding_balance}")
+        # Find insurance renewals within 30 days
+        renewals = db.query(Insurance).filter(
+            Insurance.is_active == True,
+            Insurance.renewal_date != None,
+            Insurance.renewal_date <= today + timedelta(days=30),
+            Insurance.renewal_date >= today,
+        ).all()
+        for ins in renewals:
+            days = (ins.renewal_date - today).days
+            logger.info(f"INSURANCE RENEWAL in {days} days: user={ins.user_id} policy={ins.policy_name}")
+    finally:
+        db.close()
 
 
 @celery_app.task(name="app.workers.tasks.update_all_friend_totals")

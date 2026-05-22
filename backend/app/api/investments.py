@@ -183,6 +183,7 @@ async def create_investment(
         payload["current_value"] = payload["invested_amount"]
 
     investment = Investment(user_id=current_user.id, **payload)
+    investment.unrealized_pnl = (investment.current_value or 0) - (investment.invested_amount or 0)
     db.add(investment)
     await db.commit()
     await db.refresh(investment)
@@ -212,7 +213,7 @@ async def update_investment(
 
     if "current_price" in updates or "units" in updates:
         inv.current_value = (inv.units or Decimal("0")) * (inv.current_price or Decimal("0"))
-        inv.unrealized_pnl = inv.current_value - (inv.invested_amount or Decimal("0"))
+    inv.unrealized_pnl = (inv.current_value or Decimal("0")) - (inv.invested_amount or Decimal("0"))
 
     await db.commit()
     await db.refresh(inv)
@@ -375,6 +376,20 @@ async def investment_intelligence(
         }
         for i in sorted_holdings[:15]
     ]
+
+    # ── CAGR computation for top holdings ─────────────────────────────────────
+    for holding in top_holdings:
+        inv = next((i for i in investments if str(i.id) == holding["id"]), None)
+        if inv and inv.purchase_date and float(inv.invested_amount or 0) > 0:
+            years = max(0.083, (today - inv.purchase_date).days / 365.25)  # min 1 month
+            ratio = float(inv.current_value or 0) / float(inv.invested_amount)
+            if ratio > 0:
+                cagr = (ratio ** (1 / years) - 1) * 100
+            else:
+                cagr = -100.0
+            holding["cagr"] = round(cagr, 2)
+        else:
+            holding["cagr"] = None
 
     # ── Best / worst performers ───────────────────────────────────────────────
     perf_candidates = [i for i in investments if float(i.invested_amount or 0) > 0]

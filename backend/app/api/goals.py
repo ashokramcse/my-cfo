@@ -10,6 +10,7 @@ from app.database import get_db
 from app.utils.deps import get_current_user
 from app.models.user import User
 from app.models.goal import Goal
+from app.services.financial_context import build_financial_context
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -72,7 +73,20 @@ def _months_to_achieve(remaining: float, monthly: float) -> int | None:
     return int(remaining / monthly) + 1
 
 
-def _goal_insights(goals: list) -> list:
+def _effective_current(goal, fin_ctx: dict) -> float:
+    base = float(goal.current_amount or 0)
+    gtype = str(goal.goal_type)
+    if gtype == "EMERGENCY_FUND":
+        return max(base, fin_ctx["bank_liquid"])
+    if gtype == "DEBT_FREE":
+        debt_cleared = max(0, fin_ctx.get("initial_debt", fin_ctx["loan_outstanding"]) - fin_ctx["loan_outstanding"])
+        return max(base, debt_cleared)
+    if gtype == "RETIREMENT":
+        return max(base, fin_ctx["pf_nps"] + fin_ctx["mutual_funds"])
+    return base
+
+
+def _goal_insights(goals: list, fin_ctx: Optional[dict] = None) -> list:
     insights = []
     active = [g for g in goals if str(g.status) == "ACTIVE"]
 
@@ -96,21 +110,34 @@ def _goal_insights(goals: list) -> list:
         months_left = (g.target_date.year - today.year) * 12 + (g.target_date.month - today.month)
         if months_left <= 0:
             continue
-        needed_monthly = remaining / months_left
+        needed_monthly = remaining / max(months_left, 1)
         actual_monthly = float(g.monthly_contribution or 0)
-        if needed_monthly > actual_monthly * 1.2 and actual_monthly > 0:
+        if needed_monthly > actual_monthly * 1.5 and actual_monthly > 0:
             behind.append(g.name)
 
     if behind:
         insights.append({
-            "severity": "WARNING",
-            "title": f"{len(behind)} Goal(s) Behind Schedule",
-            "body": f"{', '.join(behind[:2])} will miss target date at current contribution rate. "
-                    "Consider increasing monthly savings.",
+            "severity": "CRITICAL",
+            "title": f"{len(behind)} Goal(s) Far Behind Schedule",
+            "body": f"{', '.join(behind[:2])} need 50%+ more monthly contributions to meet target date. "
+                    "Consider adjusting target date or increasing contributions.",
             "action": "goals",
         })
 
-    return insights[:4]
+    # Contribution conflict check
+    if fin_ctx:
+        total_monthly_req = sum(float(g.monthly_contribution or 0) for g in active)
+        monthly_surplus = fin_ctx.get("monthly_surplus", 0)
+        if monthly_surplus > 0 and total_monthly_req > monthly_surplus * 0.8:
+            insights.append({
+                "severity": "WARNING",
+                "title": "Goal Contributions Exceed Surplus",
+                "body": f"Total goal contributions (₹{total_monthly_req:,.0f}/mo) exceed 80% of your "
+                        f"monthly surplus (₹{monthly_surplus:,.0f}/mo). Consider reducing contributions or increasing income.",
+                "action": "goals",
+            })
+
+    return insights[:5]
 
 
 # ─── CRUD ─────────────────────────────────────────────────────────────────────
@@ -213,6 +240,9 @@ async def goal_intelligence(
     goals = result.scalars().all()
     today = date.today()
 
+    # Get financial context for effective current computation and surplus info
+    fin_ctx = await build_financial_context(db, current_user.id)
+
     goal_cards = []
     total_target      = 0.0
     total_saved       = 0.0
@@ -221,7 +251,7 @@ async def goal_intelligence(
 
     for g in sorted(goals, key=lambda x: (x.priority != "HIGH", x.target_date or date(2099, 1, 1))):
         target  = float(g.target_amount or 0)
-        current = float(g.current_amount or 0)
+        current = _effective_current(g, fin_ctx)
         monthly = float(g.monthly_contribution or 0)
         remaining = max(0, target - current)
         pct_done  = min(100, round(current / target * 100, 1)) if target > 0 else 0
@@ -269,7 +299,7 @@ async def goal_intelligence(
         })
 
     overall_pct = round(total_saved / total_target * 100, 1) if total_target > 0 else 0
-    insights    = _goal_insights(goals)
+    insights    = _goal_insights(goals, fin_ctx)
 
     return {
         "total_target":      round(total_target, 2),
@@ -280,4 +310,6 @@ async def goal_intelligence(
         "achieved_count":    achieved_count,
         "goal_cards":        goal_cards,
         "insights":          insights,
+        "monthly_surplus":   fin_ctx["monthly_surplus"],
+        "monthly_income":    fin_ctx["monthly_net"],
     }

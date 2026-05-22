@@ -222,7 +222,12 @@ async def insurance_intelligence(
     # ── Policy cards ──────────────────────────────────────────────────────────
     policy_cards = []
     for ins in sorted(insurances, key=lambda x: x.renewal_date or date(2099, 1, 1)):
-        days_to_renewal = (ins.renewal_date - today).days if ins.renewal_date else None
+        # Use renewal_date first, fall back to end_date for SINGLE/short-term policies
+        ref_date = ins.renewal_date or (
+            ins.end_date if ins.end_date and (ins.end_date - today).days <= 365 else None
+        )
+        days_to_renewal = (ref_date - today).days if ref_date and ref_date >= today else None
+        is_expired = ref_date is not None and ref_date < today
         policy_cards.append({
             "id":               str(ins.id),
             "insurance_type":   str(ins.insurance_type),
@@ -238,6 +243,8 @@ async def insurance_intelligence(
             "cover_amount":     float(ins.cover_amount or 0),
             "renewal_date":     str(ins.renewal_date) if ins.renewal_date else None,
             "days_to_renewal":  days_to_renewal,
+            "is_expired":       is_expired,
+            "renewal_type":     "annual_premium" if ins.renewal_date else "policy_end",
             "beneficiary":      ins.beneficiary,
             "is_active":        ins.is_active,
             "notes":            ins.notes,

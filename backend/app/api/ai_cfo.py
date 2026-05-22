@@ -25,14 +25,7 @@ from app.database import get_db
 from app.utils.deps import get_current_user
 from app.models.user import User
 from app.models.ai_conversation import AIConversation
-from app.models.bank_account import BankAccount
-from app.models.investment import Investment
-from app.models.loan import Loan
-from app.models.asset import Asset
-from app.models.income import IncomeSource
-from app.models.insurance import Insurance
-from app.models.goal import Goal
-from app.models.emi import EMI
+from app.services.financial_context import build_financial_context
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -61,115 +54,6 @@ class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
     model: Optional[str] = None  # Override model
-
-
-# ─── Context builder ──────────────────────────────────────────────────────────
-
-async def _build_context(db: AsyncSession, user: User) -> dict:
-    """Pull a compact financial snapshot from all modules."""
-    uid = user.id
-
-    # Bank accounts
-    ba_res = await db.execute(select(BankAccount).where(BankAccount.user_id == uid, BankAccount.is_active == True))
-    accounts = ba_res.scalars().all()
-    total_bank = sum(float(a.current_balance or 0) for a in accounts)
-
-    # Investments
-    inv_res = await db.execute(select(Investment).where(Investment.user_id == uid))
-    investments = inv_res.scalars().all()
-    total_invested = sum(float(i.invested_amount or 0) for i in investments)
-    total_inv_val  = sum(float(i.current_value or 0) for i in investments)
-    inv_pnl        = total_inv_val - total_invested
-    sip_monthly    = sum(float(i.sip_amount or 0) for i in investments if i.is_sip and str(i.sip_status) == "ACTIVE")
-
-    # Loans
-    loan_res = await db.execute(select(Loan).where(Loan.user_id == uid, Loan.status == "ACTIVE"))
-    loans    = loan_res.scalars().all()
-    total_loan     = sum(float(l.outstanding_balance or 0) for l in loans)
-    monthly_emi    = sum(float(l.emi_amount or 0) for l in loans)
-
-    # Assets
-    asset_res = await db.execute(select(Asset).where(Asset.user_id == uid))
-    assets    = asset_res.scalars().all()
-    total_asset_val = sum(float(a.current_value or 0) for a in assets)
-
-    # Income sources
-    inc_res = await db.execute(select(IncomeSource).where(IncomeSource.user_id == uid, IncomeSource.is_active == True))
-    income_sources = inc_res.scalars().all()
-    monthly_income = sum(float(s.monthly_amount or 0) for s in income_sources)
-    monthly_net    = sum(
-        float(s.monthly_amount or 0) * (1 - float(s.tax_deducted_pct or 0) / 100)
-        for s in income_sources
-    )
-
-    # Insurance
-    ins_res = await db.execute(select(Insurance).where(Insurance.user_id == uid, Insurance.is_active == True))
-    insurances = ins_res.scalars().all()
-    has_health = any(str(i.insurance_type) == "HEALTH" for i in insurances)
-    has_term   = any(str(i.insurance_type) in ("TERM", "LIFE") for i in insurances)
-
-    # EMIs
-    emi_res = await db.execute(select(EMI).where(EMI.user_id == uid, EMI.status == "ACTIVE"))
-    emis     = emi_res.scalars().all()
-    cc_emi_monthly = sum(float(e.monthly_emi or 0) for e in emis)
-
-    # Goals
-    goal_res = await db.execute(select(Goal).where(Goal.user_id == uid, Goal.status == "ACTIVE"))
-    goals    = goal_res.scalars().all()
-
-    # Derived metrics
-    total_liabilities = total_loan
-    total_assets_all  = total_bank + total_inv_val + total_asset_val
-    net_worth         = total_assets_all - total_liabilities
-    total_emi_burden  = monthly_emi + cc_emi_monthly + sip_monthly
-    emi_burden_pct    = round(total_emi_burden / monthly_net * 100, 1) if monthly_net > 0 else 0
-
-    return {
-        "net_worth":       round(net_worth, 2),
-        "total_assets":    round(total_assets_all, 2),
-        "total_liabilities": round(total_liabilities, 2),
-        "banking": {
-            "total_balance": round(total_bank, 2),
-            "accounts": len(accounts),
-        },
-        "income": {
-            "monthly_gross": round(monthly_income, 2),
-            "monthly_net":   round(monthly_net, 2),
-            "sources": len(income_sources),
-            "source_names": [s.name for s in income_sources],
-        },
-        "investments": {
-            "total_invested":   round(total_invested, 2),
-            "current_value":    round(total_inv_val, 2),
-            "unrealised_pnl":   round(inv_pnl, 2),
-            "sip_monthly":      round(sip_monthly, 2),
-            "count":            len(investments),
-        },
-        "loans": {
-            "total_outstanding": round(total_loan, 2),
-            "monthly_emi":       round(monthly_emi, 2),
-            "count":             len(loans),
-            "lenders": [l.lender_name for l in loans],
-        },
-        "assets": {
-            "total_value": round(total_asset_val, 2),
-            "count":       len(assets),
-        },
-        "insurance": {
-            "has_health": has_health,
-            "has_term":   has_term,
-            "count":      len(insurances),
-        },
-        "goals": {
-            "active": len(goals),
-            "names": [g.name for g in goals],
-        },
-        "emi_burden": {
-            "total_monthly": round(total_emi_burden, 2),
-            "pct_of_income": emi_burden_pct,
-            "status": "CRITICAL" if emi_burden_pct > 50 else "WARNING" if emi_burden_pct > 35 else "HEALTHY",
-        },
-    }
 
 
 def _fmt_ctx(ctx: dict) -> str:
@@ -330,11 +214,11 @@ async def chat(
     session_id = uuid.UUID(req.session_id) if req.session_id else uuid.uuid4()
     model      = req.model or OLLAMA_MODEL
 
-    # Build financial context
-    ctx = await _build_context(db, current_user)
+    # Build financial context using shared service
+    ctx = await build_financial_context(db, current_user.id)
     ctx_text = _fmt_ctx(ctx)
 
-    # Retrieve last 10 messages of this session for history
+    # Retrieve last 20 messages of this session for history
     hist_result = await db.execute(
         select(AIConversation)
         .where(AIConversation.user_id == current_user.id,
@@ -360,11 +244,14 @@ async def chat(
         ai_response = _rule_based_response(req.message, ctx)
         used_model  = "rule-based"
 
+    # M-04: store context_snapshot only on first message of a session
+    is_first_message = len(history) == 0
+
     # Persist user message
     db.add(AIConversation(
         user_id=current_user.id, session_id=session_id,
         role="user",      content=req.message,
-        context_snapshot=ctx, model_used=used_model,
+        context_snapshot=ctx if is_first_message else {}, model_used=used_model,
     ))
     # Persist assistant response
     db.add(AIConversation(

@@ -6,6 +6,23 @@ export type ViewId =
   | 'cards' | 'transactions' | 'emis'
   | 'friends' | 'statements' | 'reports' | 'settings'
 
+const VALID_VIEWS = new Set<string>([
+  'dashboard', 'net-worth', 'banking', 'investments', 'loans', 'assets',
+  'income', 'insurance', 'goals', 'ai-cfo',
+  'cards', 'transactions', 'emis',
+  'friends', 'statements', 'reports', 'settings',
+])
+
+function getInitialView(): ViewId {
+  if (typeof window !== 'undefined') {
+    const hash = window.location.hash.slice(1)
+    if (hash && VALID_VIEWS.has(hash)) {
+      return hash as ViewId
+    }
+  }
+  return 'dashboard'
+}
+
 interface UIState {
   sidebarCollapsed: boolean
   toggleSidebar: () => void
@@ -15,7 +32,7 @@ interface UIState {
   activeModal: string | null
   openModal: (id: string) => void
   closeModal: () => void
-  // SPA view routing — changes content without touching the URL
+  // SPA view routing — synced with URL hash for deep linking
   currentView: ViewId
   setView: (v: ViewId) => void
 }
@@ -29,6 +46,11 @@ export const useUIStore = create<UIState>((set) => ({
   activeModal: null,
   openModal: (id) => set({ activeModal: id }),
   closeModal: () => set({ activeModal: null }),
-  currentView: 'dashboard',
-  setView: (v) => set({ currentView: v, mobileSidebarOpen: false }),
+  currentView: getInitialView(),
+  setView: (view) => {
+    set({ currentView: view, mobileSidebarOpen: false })
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', `#${view}`)
+    }
+  },
 }))

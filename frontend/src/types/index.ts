@@ -541,6 +541,8 @@ export interface GoalIntelligence {
   total_monthly_req: number; active_count: number; achieved_count: number
   goal_cards: GoalCard[]
   insights: GoalInsight[]
+  monthly_surplus?: number
+  monthly_income?: number
 }
 
 // ── AI CFO ────────────────────────────────────────────────────────────────

@@ -10,6 +10,50 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+// Auth token injection
+api.interceptors.request.use(
+  (config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token')
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
+    }
+    return config
+  },
+  (error) => Promise.reject(error)
+)
+
+// Auth refresh / redirect on 401
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true
+      try {
+        const refreshToken = localStorage.getItem('refresh_token')
+        if (refreshToken) {
+          const resp = await axios.post(`${BASE_URL}/api/v1/auth/refresh`, {
+            refresh_token: refreshToken,
+          })
+          const newToken = resp.data.access_token
+          localStorage.setItem('access_token', newToken)
+          originalRequest.headers.Authorization = `Bearer ${newToken}`
+          return api(originalRequest)
+        }
+      } catch {
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+      }
+      if (typeof window !== 'undefined') {
+        window.location.href = '/'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 // Typed API helpers
 export const cardsApi = {
   list: () => api.get('/cards'),

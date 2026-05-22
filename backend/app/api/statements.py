@@ -35,18 +35,24 @@ async def list_statements(
 @router.post("/upload", response_model=StatementUploadResponse, status_code=201)
 async def upload_statement(
     background_tasks: BackgroundTasks,
-    card_id: uuid.UUID = Form(...),
+    card_id: Optional[uuid.UUID] = Form(None),
+    bank_account_id: Optional[uuid.UUID] = Form(None),
     file: UploadFile = File(...),
     password: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Validate card belongs to user
-    card_result = await db.execute(
-        select(CreditCard).where(CreditCard.id == card_id, CreditCard.user_id == current_user.id)
-    )
-    if not card_result.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Card not found")
+    # Validate at least one source is provided
+    if not card_id and not bank_account_id:
+        raise HTTPException(status_code=400, detail="Either card_id or bank_account_id must be provided")
+
+    # Validate card belongs to user (only if provided)
+    if card_id:
+        card_result = await db.execute(
+            select(CreditCard).where(CreditCard.id == card_id, CreditCard.user_id == current_user.id)
+        )
+        if not card_result.scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Card not found")
 
     fname_lower = (file.filename or "").lower()
     if not fname_lower.endswith(".pdf") and not is_image_file(fname_lower):
@@ -70,15 +76,22 @@ async def upload_statement(
                 raise HTTPException(status_code=413, detail="File too large")
             await f.write(chunk)
 
-    statement = Statement(
+    # Build statement — card_id may be None if bank statement
+    stmt_kwargs: dict = dict(
         user_id=current_user.id,
-        card_id=card_id,
         filename=file.filename,
         file_path=file_path,
         file_size=file_size,
         is_password_protected=bool(password),
         status=StatementStatus.PENDING,
     )
+    if card_id:
+        stmt_kwargs["card_id"] = card_id
+    # bank_account_id stored in extra_data if model doesn't have the column
+    if bank_account_id:
+        stmt_kwargs["extra_data"] = {"bank_account_id": str(bank_account_id)}
+
+    statement = Statement(**stmt_kwargs)
     db.add(statement)
     await db.flush()
 

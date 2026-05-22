@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.schedules import crontab
 from app.config import settings
 
 celery_app = Celery(
@@ -30,6 +31,14 @@ celery_app.conf.update(
         "update-friend-totals": {
             "task": "app.workers.tasks.update_all_friend_totals",
             "schedule": 3600.0,
+        },
+        "daily-net-worth-snapshot": {
+            "task": "app.workers.tasks.take_daily_net_worth_snapshots",
+            "schedule": crontab(hour=0, minute=15),  # 12:15 AM IST daily
+        },
+        "check-loan-overdues": {
+            "task": "app.workers.tasks.check_loan_overdue_notifications",
+            "schedule": crontab(hour=9, minute=0),   # 9 AM IST daily
         },
     },
 )
