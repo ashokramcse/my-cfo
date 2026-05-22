@@ -2,7 +2,7 @@
 
 <h1>
   <img src="https://raw.githubusercontent.com/twitter/twemoji/master/assets/svg/1f4b3.svg" width="40" height="40" alt="card" />
-  &nbsp;CC-Bill
+  &nbsp;My CFO
 </h1>
 
 <p><strong>Personal Credit Card &amp; EMI Financial Intelligence Platform</strong></p>
@@ -43,7 +43,7 @@
 
 ## Overview
 
-CC-Bill is a **self-hosted** alternative to apps like CRED, Walnut, and MoneyView — built for users who want complete data ownership. Upload PDF statements or Cred screenshots, track every rupee across multiple cards, manage EMIs including those purchased for friends, and get intelligent financial alerts — all running on your own server.
+My CFO is a **self-hosted** alternative to apps like CRED, Walnut, and MoneyView — built for users who want complete data ownership. Upload PDF statements or Cred screenshots, track every rupee across multiple cards, manage EMIs including those purchased for friends, and get intelligent financial alerts — all running on your own server.
 
 > **Why self-hosted?** Your financial data stays on your machine. No telemetry, no third-party access, no cloud lock-in.
 
@@ -53,8 +53,8 @@ CC-Bill is a **self-hosted** alternative to apps like CRED, Walnut, and MoneyVie
 
 ```bash
 # 1. Clone the repository
-git clone git@github.com:ashokramcse/cc-bill.git
-cd cc-bill
+git clone git@github.com:ashokramcse/my-cfo.git
+cd my-cfo
 
 # 2. Create your environment file
 cp .env.example .env

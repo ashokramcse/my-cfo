@@ -18,9 +18,9 @@ const dmMono = DM_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'CC-Bill | Personal Finance Intelligence',
+  title: 'My CFO | Personal Finance Intelligence',
   description: 'Personal Credit Card & EMI Financial Intelligence Platform',
-  applicationName: 'CC-Bill',
+  applicationName: 'My CFO',
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',

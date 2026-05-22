@@ -6,7 +6,7 @@ import sys
 
 class Settings(BaseSettings):
     # App
-    app_name: str = "CC-Bill"
+    app_name: str = "My CFO"
     environment: str = "production"
     debug: bool = False
 

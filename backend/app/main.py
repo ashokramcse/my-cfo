@@ -14,7 +14,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="CC-Bill API",
+    title="My CFO API",
     description="Personal Credit Card & EMI Financial Intelligence Platform",
     version="1.0.0",
     lifespan=lifespan,

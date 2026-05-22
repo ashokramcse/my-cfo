@@ -1,5 +1,5 @@
 """
-Comprehensive test suite for cc-bill backend.
+Comprehensive test suite for my-cfo backend.
 Tests: security, encryption, parsers, categorizer, schema imports.
 """
 import sys, os

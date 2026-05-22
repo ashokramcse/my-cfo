@@ -305,7 +305,7 @@ export function SettingsView() {
         </div>
 
         <div className="flex items-center justify-between px-2 py-1">
-          <p className="text-xs" style={{ color: '#A09890' }}>CC-Bill · Personal Finance Intelligence</p>
+          <p className="text-xs" style={{ color: '#A09890' }}>My CFO · Personal Finance Intelligence</p>
           <p className="text-xs font-mono" style={{ color: '#C8C2BB' }}>Built with ❤️ using FastAPI + Next.js</p>
         </div>
 

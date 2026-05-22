@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to CC-Bill are documented here.  
+All notable changes to My CFO are documented here.  
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---

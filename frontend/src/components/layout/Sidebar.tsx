@@ -113,7 +113,7 @@ export function Sidebar() {
           <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
         </div>
         <div className="ml-2.5 flex-1 min-w-0">
-          <div className="font-bold text-white text-sm leading-none tracking-tight">CC-Bill</div>
+          <div className="font-bold text-white text-sm leading-none tracking-tight">My CFO</div>
           <div className="text-[10px] mt-0.5 leading-none" style={{ color: 'rgba(255,255,255,0.3)' }}>Personal Finance</div>
         </div>
         {isMobile ? (

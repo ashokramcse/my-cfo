@@ -2,11 +2,11 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "cc-bill-frontend",
+      "name": "my-cfo-frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--", "-p", "3001"],
       "port": 3001,
-      "cwd": "/Users/ashokram/Ashok/cc-bill/frontend"
+      "cwd": "/Users/ashokram/Ashok/my-cfo/frontend"
     }
   ]
 }
