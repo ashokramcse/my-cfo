@@ -109,11 +109,9 @@ export default function SignupPage() {
           style={{ background: 'radial-gradient(circle, #F97316 0%, transparent 70%)', filter: 'blur(60px)' }} />
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      <div
         className="w-full max-w-md"
+        style={{ animation: 'fadeSlideIn 0.45s cubic-bezier(0.22,1,0.36,1) both' }}
       >
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4"
@@ -314,7 +312,7 @@ export default function SignupPage() {
             </p>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }

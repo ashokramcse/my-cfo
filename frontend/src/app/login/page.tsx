@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
 import { Eye, EyeOff, Wallet, ArrowRight, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useAuthStore } from '@/store/auth'
@@ -45,11 +44,9 @@ export default function LoginPage() {
           style={{ background: 'radial-gradient(circle, #7C3AED 0%, transparent 70%)', filter: 'blur(60px)' }} />
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      <div
         className="w-full max-w-md"
+        style={{ animation: 'fadeSlideIn 0.45s cubic-bezier(0.22,1,0.36,1) both' }}
       >
         {/* Logo */}
         <div className="text-center mb-8">
@@ -129,15 +126,13 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
+              <div
                 className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm"
-                style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}
+                style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)', animation: 'fadeSlideIn 0.2s ease both' }}
               >
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 {error}
-              </motion.div>
+              </div>
             )}
 
             <button
@@ -172,7 +167,7 @@ export default function LoginPage() {
         <p className="text-center text-xs mt-6" style={{ color: 'rgba(255,255,255,0.2)' }}>
           Your data stays on your server. Always.
         </p>
-      </motion.div>
+      </div>
     </div>
   )
 }

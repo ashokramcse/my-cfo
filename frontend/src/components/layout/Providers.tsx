@@ -4,10 +4,14 @@ import { Toaster } from 'react-hot-toast'
 import { useState, useEffect } from 'react'
 import { cardsApi, transactionsApi, emisApi, friendsApi, reportsApi, insightsApi, statementsApi, netWorthApi, bankAccountsApi, investmentsApi, loansApi, assetsApi } from '@/lib/api'
 
-// Prefetch all pages' primary data as soon as the app loads so every
-// navigation feels instant — no skeleton flash on first visit.
+// Prefetch all pages' primary data — but only when authenticated.
+// Without this guard every page load (including /login and /signup)
+// fires authenticated API calls and floods logs with 401s.
 function DataPrefetcher({ queryClient }: { queryClient: QueryClient }) {
   useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+    if (!token) return   // not logged in — skip prefetch entirely
+
     // Keys must exactly match what each view's useQuery uses
     queryClient.prefetchQuery({ queryKey: ['dashboard'],                              queryFn: () => reportsApi.dashboard().then(r => r.data) })
     queryClient.prefetchQuery({ queryKey: ['cards'],                                  queryFn: () => cardsApi.list().then(r => r.data.items) })
