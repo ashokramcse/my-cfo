@@ -179,9 +179,14 @@ async def create_investment(
     payload = data.model_dump()
     units = payload.get("units") or Decimal("0")
     current_price = payload.get("current_price") or Decimal("0")
-    payload["current_value"] = units * current_price
-    if payload["current_value"] == 0 and payload.get("invested_amount"):
-        payload["current_value"] = payload["invested_amount"]
+    # Only derive current_value from units×price when units and price are explicitly set;
+    # otherwise honour the current_value sent by the client (manual valuation).
+    explicitly_priced = units > 0 and current_price > 0
+    if explicitly_priced:
+        payload["current_value"] = units * current_price
+    elif not payload.get("current_value"):
+        # No price info and no explicit current_value → default to invested_amount
+        payload["current_value"] = payload.get("invested_amount", Decimal("0"))
 
     investment = Investment(user_id=current_user.id, **payload)
     investment.unrealized_pnl = (investment.current_value or 0) - (investment.invested_amount or 0)

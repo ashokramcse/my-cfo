@@ -8,6 +8,7 @@ import uuid
 
 from app.database import get_db
 from app.utils.deps import get_current_user
+from app.utils.enum_utils import ev
 from app.models.user import User
 from app.models.income import IncomeSource, IncomeEntry, IncomeType
 from pydantic import BaseModel
@@ -288,7 +289,7 @@ async def income_intelligence(
     # ── By type breakdown ─────────────────────────────────────────────────────
     by_type: dict = {}
     for s in active:
-        t = str(s.income_type)
+        t = ev(s.income_type)
         if t not in by_type:
             by_type[t] = {
                 "type": t, "label": TYPE_LABELS.get(t, t),
@@ -316,9 +317,9 @@ async def income_intelligence(
         {
             "id":            str(s.id),
             "name":          s.name,
-            "income_type":   str(s.income_type),
-            "label":         TYPE_LABELS.get(str(s.income_type), ""),
-            "color":         TYPE_COLORS.get(str(s.income_type), "#6B7280"),
+            "income_type":   ev(s.income_type),
+            "label":         TYPE_LABELS.get(ev(s.income_type), ""),
+            "color":         TYPE_COLORS.get(ev(s.income_type), "#6B7280"),
             "employer":      s.employer or "",
             "monthly":       float(s.monthly_amount or 0),
             "tds_pct":       float(s.tax_deducted_pct or 0),

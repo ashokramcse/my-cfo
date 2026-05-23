@@ -13,6 +13,7 @@ class CardCreate(BaseModel):
     last_four: str
     network: CardNetwork = CardNetwork.VISA
     credit_limit: Decimal = Decimal(0)
+    current_outstanding: Decimal = Decimal(0)   # outstanding balance at time of adding card
     interest_rate: Decimal = Decimal(0)
     billing_cycle_day: int = 1
     due_date_day: int = 25

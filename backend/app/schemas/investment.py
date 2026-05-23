@@ -14,6 +14,8 @@ class InvestmentCreate(BaseModel):
     avg_buy_price: Decimal = Decimal("0")
     current_price: Decimal = Decimal("0")
     invested_amount: Decimal = Decimal("0")
+    current_value: Optional[Decimal] = None      # explicit current valuation (optional)
+    is_locked: bool = False                       # lock-in period flag
     is_sip: bool = False
     sip_amount: Optional[Decimal] = None
     sip_date: Optional[int] = None
