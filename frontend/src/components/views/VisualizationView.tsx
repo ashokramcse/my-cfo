@@ -196,9 +196,9 @@ function D3ForceGraph({ nodes: rawNodes, links: rawLinks }: { nodes: D3Node[]; l
     const cx = width / 2, cy = height / 2
     const minDim = Math.min(width, height)
 
-    // Radii for each ring
-    const r1 = minDim * 0.20   // hub ring
-    const r2 = minDim * 0.42   // item ring
+    // Radii for each ring — use more of the available canvas
+    const r1 = minDim * 0.24   // hub ring
+    const r2 = minDim * 0.46   // item ring
 
     // Node radius scale per level
     const maxL1 = d3.max(rawNodes.filter(n => n.level === 1), d => d.value) ?? 1
@@ -402,7 +402,7 @@ function D3ForceGraph({ nodes: rawNodes, links: rawLinks }: { nodes: D3Node[]; l
   useEffect(() => { draw(); return () => { simRef.current?.stop() } }, [draw])
 
   return (
-    <div ref={containerRef} className="relative w-full h-full" style={{ minHeight: 480 }}>
+    <div ref={containerRef} className="relative w-full h-full">
       <svg ref={svgRef} width="100%" height="100%" style={{ background: 'transparent', borderRadius: 12 }} />
       <div
         ref={tooltipRef}
@@ -596,17 +596,19 @@ export function VisualizationView() {
                     3 levels: Net Worth → Categories → Accounts · Drag items · Scroll to zoom
                   </p>
                 </div>
-                <div className="flex-1 p-3">
-                  {nwLoading
-                    ? <GraphSkeleton />
-                    : d3Nodes.length > 0
-                      ? <D3ForceGraph nodes={d3Nodes} links={d3Links} />
-                      : (
-                        <div className="h-full flex items-center justify-center" style={{ color: '#A09890', fontSize: 14 }}>
-                          Add banks, cards, loans or investments to see your financial universe.
-                        </div>
-                      )
-                  }
+                <div className="flex-1 relative" style={{ minHeight: 0 }}>
+                  <div className="absolute inset-0 p-3">
+                    {nwLoading
+                      ? <GraphSkeleton />
+                      : d3Nodes.length > 0
+                        ? <D3ForceGraph nodes={d3Nodes} links={d3Links} />
+                        : (
+                          <div className="h-full flex items-center justify-center" style={{ color: '#A09890', fontSize: 14 }}>
+                            Add banks, cards, loans or investments to see your financial universe.
+                          </div>
+                        )
+                    }
+                  </div>
                 </div>
               </div>
             </motion.div>
