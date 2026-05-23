@@ -10,15 +10,15 @@ class Settings(BaseSettings):
     environment: str = "production"
     debug: bool = False
 
-    # Database
-    database_url: str = "postgresql+asyncpg://ccbill:CHANGE_ME_postgres_password@postgres:5432/ccbill"
-    sync_database_url: str = "postgresql://ccbill:CHANGE_ME_postgres_password@postgres:5432/ccbill"
+    # Database — set via DATABASE_URL env var (required; no hardcoded default)
+    database_url: str = "postgresql+asyncpg://CHANGE_ME:CHANGE_ME@postgres:5432/mycfo"
+    sync_database_url: str = "postgresql://CHANGE_ME:CHANGE_ME@postgres:5432/mycfo"
 
-    # Redis
-    redis_url: str = "redis://:CHANGE_ME_redis_password@redis:6379/0"
+    # Redis — set via REDIS_URL env var (required; no hardcoded default)
+    redis_url: str = "redis://:CHANGE_ME@redis:6379/0"
 
-    # Security
-    secret_key: str = "change_me_in_production"
+    # Security — set via SECRET_KEY / ENCRYPTION_KEY env vars (required)
+    secret_key: str = "CHANGE_ME_generate_with_openssl_rand_hex_32"
     encryption_key: str = "CHANGE_ME_must_be_32bytes_exactly"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
@@ -54,7 +54,8 @@ def get_settings() -> Settings:
 
 def validate_settings(s: Settings) -> None:
     errors = []
-    if s.secret_key in ("change_me_in_production", "change_me_generate_with_openssl_rand_hex_32"):
+    if s.secret_key in ("change_me_in_production", "change_me_generate_with_openssl_rand_hex_32",
+                        "CHANGE_ME_generate_with_openssl_rand_hex_32"):
         errors.append("SECRET_KEY must be changed from the default value")
     enc_bytes = s.encryption_key.encode("utf-8")
     if len(enc_bytes) != 32:

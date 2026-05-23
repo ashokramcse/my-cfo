@@ -245,7 +245,7 @@ All configuration is via `.env`. Copy `.env.example` to get started.
 | `ENCRYPTION_KEY` | ✅ | — | AES-256 key (`openssl rand -hex 32`) |
 | `POSTGRES_PASSWORD` | ✅ | — | Database password |
 | `POSTGRES_DB` | — | `ccbill` | Database name |
-| `REDIS_PASSWORD` | — | `CHANGE_ME_redis_password` | Redis auth password |
+| `REDIS_PASSWORD` | ✅ | — | Redis auth password |
 | `UPLOAD_DIR` | — | `/app/uploads` | File storage path inside container |
 | `OLLAMA_BASE_URL` | — | — | Enable local LLM insights (optional) |
 
