@@ -107,7 +107,14 @@ const VIEW_PREFETCH: Record<ViewId, (qc: ReturnType<typeof useQueryClient>) => v
     qc.prefetchQuery({ queryKey: ['emi-forecast'],   queryFn: () => emisApi.forecast(6).then(r => r.data) })
   },
   friends:      (qc) => qc.prefetchQuery({ queryKey: ['friends'],    queryFn: () => friendsApi.list().then(r => r.data) }),
-  visualize:    (qc) => qc.prefetchQuery({ queryKey: ['financial-graph'], queryFn: () => api.get('/reports/financial-graph').then(r => r.data) }),
+  visualize:    (qc) => {
+    qc.prefetchQuery({ queryKey: ['net-worth'],       queryFn: () => api.get('/net-worth/current').then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['net-worth-history'],queryFn: () => api.get('/net-worth/history').then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['bank-accounts'],   queryFn: () => api.get('/bank-accounts').then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['loans'],           queryFn: () => api.get('/loans').then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['investments'],     queryFn: () => api.get('/investments').then(r => r.data) })
+    qc.prefetchQuery({ queryKey: ['assets'],          queryFn: () => api.get('/assets').then(r => r.data) })
+  },
   statements:   (qc) => qc.prefetchQuery({ queryKey: ['statements'], queryFn: () => statementsApi.list({}).then(r => r.data) }),
   reports:      (qc) => {
     qc.prefetchQuery({ queryKey: ['spending'],  queryFn: () => reportsApi.spending().then(r => r.data) })
