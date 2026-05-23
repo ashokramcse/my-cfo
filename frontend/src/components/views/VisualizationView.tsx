@@ -292,9 +292,22 @@ export function VisualizationView() {
     Utilities: '#06B6D4', Savings: '#F59E0B',
   }
 
+  const hasSankeyData = Boolean(
+    graphData?.sankey?.nodes?.length &&
+    graphData?.sankey?.links?.length
+  )
+
   const getSankeyOption = () => {
-    if (!graphData?.sankey) return {}
-    const coloredNodes = (graphData.sankey.nodes ?? []).map(n => ({
+    if (!hasSankeyData) return {}
+    const nodes = graphData!.sankey.nodes ?? []
+    const links = graphData!.sankey.links ?? []
+    // Only keep nodes that appear in at least one link
+    const usedNames = new Set<string>()
+    links.forEach(l => { usedNames.add(String(l.source)); usedNames.add(String(l.target)) })
+    const filteredNodes = nodes.filter(n => usedNames.has(n.name))
+    if (!filteredNodes.length || !links.length) return {}
+
+    const coloredNodes = filteredNodes.map(n => ({
       name: n.name,
       itemStyle: { color: sankeyNodeColors[n.name] ?? '#A09890' },
     }))
@@ -310,7 +323,7 @@ export function VisualizationView() {
         layout: 'none',
         emphasis: { focus: 'adjacency' },
         data: coloredNodes,
-        links: graphData.sankey.links ?? [],
+        links,
         lineStyle: { color: 'gradient', opacity: 0.4, curveness: 0.5 },
         itemStyle: { borderRadius: 6 },
         label: {
