@@ -4,13 +4,13 @@ export type ViewId =
   | 'dashboard' | 'net-worth' | 'banking' | 'investments' | 'loans' | 'assets'
   | 'income' | 'insurance' | 'goals'
   | 'cards' | 'transactions' | 'emis' | 'recurring'
-  | 'friends' | 'statements' | 'reports' | 'settings' | 'sharing'
+  | 'friends' | 'statements' | 'reports' | 'visualize' | 'settings' | 'sharing'
 
 const VALID_VIEWS = new Set<string>([
   'dashboard', 'net-worth', 'banking', 'investments', 'loans', 'assets',
   'income', 'insurance', 'goals',
   'cards', 'transactions', 'emis', 'recurring',
-  'friends', 'statements', 'reports', 'settings', 'sharing',
+  'friends', 'statements', 'reports', 'visualize', 'settings', 'sharing',
 ])
 
 function getInitialView(): ViewId {

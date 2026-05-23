@@ -5,7 +5,7 @@ import {
   LayoutDashboard, CreditCard, ArrowLeftRight, Calendar, Users, FileText,
   BarChart3, Settings, ChevronLeft, Zap, X, TrendingUp, Landmark,
   Building2, Wallet, DollarSign, Shield, Target, Share2, LogOut,
-  RefreshCw, PieChart,
+  RefreshCw, PieChart, Telescope,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore, ViewId } from '@/store/ui'
@@ -61,8 +61,9 @@ const NAV_GROUPS: NavGroup[] = [
   {
     group: 'Reports & Data',
     items: [
-      { view: 'statements', icon: FileText, label: 'Statements', emoji: '📄' },
-      { view: 'reports',    icon: BarChart3, label: 'Reports',   emoji: '📊' },
+      { view: 'visualize',  icon: Telescope, label: 'Visualize', emoji: '🔭' },
+      { view: 'statements', icon: FileText,   label: 'Statements', emoji: '📄' },
+      { view: 'reports',    icon: BarChart3,  label: 'Reports',    emoji: '📊' },
     ],
   },
   {
@@ -106,6 +107,7 @@ const VIEW_PREFETCH: Record<ViewId, (qc: ReturnType<typeof useQueryClient>) => v
     qc.prefetchQuery({ queryKey: ['emi-forecast'],   queryFn: () => emisApi.forecast(6).then(r => r.data) })
   },
   friends:      (qc) => qc.prefetchQuery({ queryKey: ['friends'],    queryFn: () => friendsApi.list().then(r => r.data) }),
+  visualize:    (qc) => qc.prefetchQuery({ queryKey: ['financial-graph'], queryFn: () => api.get('/reports/financial-graph').then(r => r.data) }),
   statements:   (qc) => qc.prefetchQuery({ queryKey: ['statements'], queryFn: () => statementsApi.list({}).then(r => r.data) }),
   reports:      (qc) => {
     qc.prefetchQuery({ queryKey: ['spending'],  queryFn: () => reportsApi.spending().then(r => r.data) })

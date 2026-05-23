@@ -17,7 +17,8 @@ import { AssetsView }      from './AssetsView'
 import { IncomeView }      from './IncomeView'
 import { InsuranceView }   from './InsuranceView'
 import { GoalsView }       from './GoalsView'
-import { SharingView }     from './SharingView'
+import { SharingView }        from './SharingView'
+import { VisualizationView }  from './VisualizationView'
 
 export function ViewRouter() {
   const { currentView } = useUIStore()
@@ -39,6 +40,7 @@ export function ViewRouter() {
     case 'friends':      return <FriendsView />
     case 'statements':   return <StatementsView />
     case 'reports':      return <ReportsView />
+    case 'visualize':    return <VisualizationView />
     case 'settings':     return <SettingsView />
     case 'sharing':      return <SharingView />
     default:             return <DashboardView />
