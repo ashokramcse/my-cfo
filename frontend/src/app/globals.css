@@ -76,7 +76,9 @@
   ::-webkit-scrollbar-thumb { background: #C8C3BC; border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: #A09890; }
 
-  input, textarea {
+  /* Dashboard inputs — white background, dark text.
+     Auth pages (login/signup) opt-out via `.auth-input` class on their inputs. */
+  input:not(.auth-input), textarea:not(.auth-input) {
     display: block;
     width: 100%;
     background: #FFFFFF;
@@ -91,8 +93,10 @@
     font-family: var(--font-sans), system-ui, sans-serif;
     letter-spacing: -0.008em;
   }
-  input::placeholder, textarea::placeholder { color: var(--fg-subtle); }
-  input:focus, textarea:focus {
+  input:not(.auth-input)::placeholder,
+  textarea:not(.auth-input)::placeholder { color: var(--fg-subtle); }
+  input:not(.auth-input):focus,
+  textarea:not(.auth-input):focus {
     border-color: var(--orange);
     box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
   }

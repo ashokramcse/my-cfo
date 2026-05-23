@@ -85,7 +85,7 @@ export default function LoginPage() {
                 onChange={e => setIdentifier(e.target.value)}
                 placeholder="you@example.com or username"
                 required
-                className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all"
+                className="auth-input w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all"
                 style={{
                   background: 'rgba(255,255,255,0.07)',
                   border: '1px solid rgba(255,255,255,0.12)',
@@ -106,7 +106,7 @@ export default function LoginPage() {
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 outline-none pr-11 transition-all"
+                  className="auth-input w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 outline-none pr-11 transition-all"
                   style={{
                     background: 'rgba(255,255,255,0.07)',
                     border: '1px solid rgba(255,255,255,0.12)',

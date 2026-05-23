@@ -98,7 +98,7 @@ export default function SignupPage() {
     background: 'rgba(255,255,255,0.07)',
     border: '1px solid rgba(255,255,255,0.12)',
   }
-  const inputClass = 'w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all'
+  const inputClass = 'auth-input w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all'
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12"
