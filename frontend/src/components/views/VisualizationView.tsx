@@ -621,29 +621,31 @@ export function VisualizationView() {
                   <h2 className="text-[14px] font-bold" style={{ color: '#18120E' }}>Monthly Cash Flow</h2>
                   <p className="text-[12px] mt-0.5" style={{ color: '#A09890' }}>How money flows through your financial life</p>
                 </div>
-                <div className="flex-1 p-4 flex flex-col">
-                  <div className="flex-1">
+                {/* KPI strip — fixed height at bottom */}
+                {totalOut > 0 && (
+                  <div className="grid grid-cols-3 gap-3 px-4 pb-4 flex-shrink-0">
+                    {[
+                      { label: 'Est. Monthly Income', value: estIncome, color: '#22C55E' },
+                      { label: 'Monthly Outflow',     value: totalOut,  color: '#EF4444' },
+                      { label: 'Net Flow',             value: netFlow,   color: netFlow >= 0 ? '#22C55E' : '#EF4444' },
+                    ].map(s => (
+                      <div key={s.label} className="rounded-xl text-center" style={{ padding: '12px', background: '#FAF7F4', border: '1px solid #EDE8E2' }}>
+                        <div className="text-[11px] font-semibold mb-0.5" style={{ color: '#A09890' }}>{s.label}</div>
+                        <div className="text-[15px] font-extrabold" style={{ color: s.color }}>{formatCurrencyCompact(s.value)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Chart fills all remaining space using absolute positioning */}
+                <div className="flex-1 relative" style={{ minHeight: 0 }}>
+                  <div className="absolute inset-0 p-4 pt-2">
                     {sankeyOption
-                      ? <ReactECharts key="sankey" option={sankeyOption} notMerge style={{ height: '100%', minHeight: 320 }} />
-                      : <div className="h-full flex items-center justify-center" style={{ color: '#A09890', fontSize: 14, minHeight: 320 }}>
+                      ? <ReactECharts key="sankey" option={sankeyOption} notMerge style={{ height: '100%' }} />
+                      : <div className="h-full flex items-center justify-center" style={{ color: '#A09890', fontSize: 14 }}>
                           Add loans, SIPs or credit cards to see cash flow.
                         </div>
                     }
                   </div>
-                  {totalOut > 0 && (
-                    <div className="grid grid-cols-3 gap-3 mt-4 flex-shrink-0">
-                      {[
-                        { label: 'Est. Monthly Income', value: estIncome, color: '#22C55E' },
-                        { label: 'Monthly Outflow',     value: totalOut,  color: '#EF4444' },
-                        { label: 'Net Flow',             value: netFlow,   color: netFlow >= 0 ? '#22C55E' : '#EF4444' },
-                      ].map(s => (
-                        <div key={s.label} className="rounded-xl text-center" style={{ padding: '14px 12px', background: '#FAF7F4', border: '1px solid #EDE8E2' }}>
-                          <div className="text-[11px] font-semibold mb-1" style={{ color: '#A09890' }}>{s.label}</div>
-                          <div className="text-[16px] font-extrabold" style={{ color: s.color }}>{formatCurrencyCompact(s.value)}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             </motion.div>
@@ -658,17 +660,19 @@ export function VisualizationView() {
                   <h2 className="text-[14px] font-bold" style={{ color: '#18120E' }}>Asset Allocation</h2>
                   <p className="text-[12px] mt-0.5" style={{ color: '#A09890' }}>Breakdown of your wealth distribution</p>
                 </div>
-                <div className="flex-1 flex flex-col md:flex-row gap-0 overflow-hidden">
-                  {/* Chart fills remaining space */}
-                  <div className="flex-1 min-w-0 p-4">
-                    {nwData?.allocation?.length
-                      ? <ReactECharts key="sunburst" option={getSunburstOption()} notMerge style={{ height: '100%', minHeight: 340 }} />
-                      : <div className="h-full flex items-center justify-center" style={{ color: '#A09890', minHeight: 340 }}>No allocation data.</div>
-                    }
+                <div className="flex-1 flex flex-col md:flex-row overflow-hidden" style={{ minHeight: 0 }}>
+                  {/* Chart — absolute fill */}
+                  <div className="flex-1 relative" style={{ minHeight: 0 }}>
+                    <div className="absolute inset-0 p-4">
+                      {nwData?.allocation?.length
+                        ? <ReactECharts key="sunburst" option={getSunburstOption()} notMerge style={{ height: '100%' }} />
+                        : <div className="h-full flex items-center justify-center" style={{ color: '#A09890' }}>No allocation data.</div>
+                      }
+                    </div>
                   </div>
                   {/* Legend sidebar */}
                   {nwData?.allocation?.length ? (
-                    <div className="md:w-56 flex flex-col gap-1.5 p-4 overflow-y-auto" style={{ borderLeft: '1px solid #F0EBE4' }}>
+                    <div className="md:w-56 flex flex-col gap-1.5 p-4 overflow-y-auto flex-shrink-0" style={{ borderLeft: '1px solid #F0EBE4' }}>
                       <div className="text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: '#A09890' }}>Breakdown</div>
                       {(nwData.allocation as AllocationItem[]).map((item, i) => (
                         <div key={item.label} className="flex items-center gap-2.5 py-2 px-3 rounded-xl" style={{ background: '#FAF7F4' }}>
@@ -698,11 +702,13 @@ export function VisualizationView() {
                   <h2 className="text-[14px] font-bold" style={{ color: '#18120E' }}>Net Worth Timeline</h2>
                   <p className="text-[12px] mt-0.5" style={{ color: '#A09890' }}>Your wealth journey over time</p>
                 </div>
-                <div className="flex-1 p-4">
-                  {history.length
-                    ? <ReactECharts key="timeline" option={getTimelineOption()} notMerge style={{ height: '100%', minHeight: 340 }} />
-                    : <div className="h-full flex items-center justify-center" style={{ color: '#A09890', minHeight: 340 }}>No history yet.</div>
-                  }
+                <div className="flex-1 relative" style={{ minHeight: 0 }}>
+                  <div className="absolute inset-0 p-4">
+                    {history.length
+                      ? <ReactECharts key="timeline" option={getTimelineOption()} notMerge style={{ height: '100%' }} />
+                      : <div className="h-full flex items-center justify-center" style={{ color: '#A09890' }}>No history yet.</div>
+                    }
+                  </div>
                 </div>
               </div>
             </motion.div>
