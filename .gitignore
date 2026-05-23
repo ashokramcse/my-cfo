@@ -1,3 +1,10 @@
 .claude/worktrees/
 *.pyc
 __pycache__/
+
+# Secrets — NEVER commit these
+.env
+.env.local
+.env.production
+*.pem
+*.key
