@@ -91,7 +91,7 @@ class BankTransaction(Base):
     linked_account_id         = Column(UUID(as_uuid=True), ForeignKey("bank_accounts.id", ondelete="SET NULL"))
     linked_investment_tx_id   = Column(UUID(as_uuid=True), nullable=True)   # → investment_transactions.id
     linked_loan_id            = Column(UUID(as_uuid=True), ForeignKey("loans.id", ondelete="SET NULL"), nullable=True)
-    linked_card_id            = Column(UUID(as_uuid=True), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True)
+    linked_card_id            = Column(UUID(as_uuid=True), ForeignKey("credit_cards.id", ondelete="SET NULL"), nullable=True)
 
     # Quality flags
     is_duplicate      = Column(Boolean, default=False)

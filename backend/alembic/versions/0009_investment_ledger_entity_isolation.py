@@ -92,7 +92,7 @@ def upgrade() -> None:
     conn.execute(text("ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS tds_section VARCHAR(20)"))
     conn.execute(text("ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS linked_investment_tx_id UUID"))
     conn.execute(text("ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS linked_loan_id UUID REFERENCES loans(id) ON DELETE SET NULL"))
-    conn.execute(text("ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS linked_card_id UUID REFERENCES cards(id) ON DELETE SET NULL"))
+    conn.execute(text("ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS linked_card_id UUID REFERENCES credit_cards(id) ON DELETE SET NULL"))
 
     # ── 4. investments — new columns ─────────────────────────────────────────
     conn.execute(text("ALTER TABLE investments ADD COLUMN IF NOT EXISTS maturity_date DATE"))
