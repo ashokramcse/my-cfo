@@ -8,17 +8,18 @@ import { useAuthStore } from '@/store/auth'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login, isLoading, user, _hydrated } = useAuthStore()
+  const { login, isLoading } = useAuthStore()
 
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword]     = useState('')
   const [showPwd, setShowPwd]       = useState(false)
   const [error, setError]           = useState('')
 
-  // Only redirect if hydration is complete AND user is logged in
+  // Redirect if already logged in (check localStorage directly — no hydration race)
   useEffect(() => {
-    if (_hydrated && user) router.replace('/dashboard')
-  }, [_hydrated, user, router])
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+    if (token) router.replace('/dashboard')
+  }, [router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

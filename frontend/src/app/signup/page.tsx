@@ -39,7 +39,7 @@ function PasswordStrength({ password }: { password: string }) {
 
 export default function SignupPage() {
   const router = useRouter()
-  const { register, isLoading, user, _hydrated } = useAuthStore()
+  const { register, isLoading } = useAuthStore()
 
   const [step, setStep]         = useState(1)
   const [error, setError]       = useState('')
@@ -51,8 +51,9 @@ export default function SignupPage() {
   })
 
   useEffect(() => {
-    if (_hydrated && user) router.replace('/dashboard')
-  }, [_hydrated, user, router])
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+    if (token) router.replace('/dashboard')
+  }, [router])
 
   function set(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }))

@@ -29,7 +29,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
-    if (error.response?.status === 401 && !originalRequest._retry) {
+
+    // Don't intercept auth endpoints themselves — let AuthGate/login handle them
+    const url: string = originalRequest?.url ?? ''
+    const isAuthEndpoint = url.includes('/auth/')
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true
       try {
         const refreshToken = localStorage.getItem('refresh_token')
@@ -43,11 +48,17 @@ api.interceptors.response.use(
           return api(originalRequest)
         }
       } catch {
+        // Refresh failed — clear tokens and redirect to login
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login'
+        }
+        return Promise.reject(error)
       }
+      // No refresh token — go to login
       if (typeof window !== 'undefined') {
-        window.location.href = '/'
+        window.location.href = '/login'
       }
     }
     return Promise.reject(error)

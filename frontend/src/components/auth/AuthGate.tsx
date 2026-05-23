@@ -6,34 +6,39 @@ import { Wallet } from 'lucide-react'
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const { user, accessToken, _hydrated, loadUser } = useAuthStore()
   const [ready, setReady] = useState(false)
-  const checked = useRef(false)
+  const ran = useRef(false)
 
   useEffect(() => {
-    // Don't run until persist has rehydrated from localStorage
-    if (!_hydrated) return
-    // Only run once
-    if (checked.current) return
-    checked.current = true
+    if (ran.current) return
+    ran.current = true
 
     async function check() {
-      const { accessToken: tok } = useAuthStore.getState()
+      // ── Step 1: read token directly from localStorage (synchronous, always works) ──
+      const token =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('access_token')
+          : null
 
-      if (!tok) {
+      if (!token) {
         router.replace('/login')
         return
       }
 
-      // We have a token — ensure user profile is loaded
-      const { user: u } = useAuthStore.getState()
-      if (!u) {
-        await loadUser()
+      // ── Step 2: sync token into the store if not already there ──
+      const store = useAuthStore.getState()
+      if (!store.accessToken) {
+        store.setTokens(token, localStorage.getItem('refresh_token') ?? '')
       }
 
-      // Final state check after loadUser
-      const { user: u2, accessToken: tok2 } = useAuthStore.getState()
-      if (!u2 || !tok2) {
+      // ── Step 3: validate the token by fetching user profile ──
+      if (!useAuthStore.getState().user) {
+        await useAuthStore.getState().loadUser()
+      }
+
+      // ── Step 4: check result ──
+      const { user, accessToken } = useAuthStore.getState()
+      if (!user || !accessToken) {
         router.replace('/login')
         return
       }
@@ -42,14 +47,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     check()
-  }, [_hydrated, loadUser, router])
+  }, [router])
 
-  // Watch for mid-session auth loss (e.g. 401 clears tokens)
+  // Eject mid-session if token is cleared by a 401
+  const accessToken = useAuthStore((s) => s.accessToken)
   useEffect(() => {
-    if (ready && !accessToken) {
-      router.replace('/login')
-    }
-  }, [accessToken, ready, router])
+    if (ready && !accessToken) router.replace('/login')
+  }, [ready, accessToken, router])
 
   if (!ready) {
     return (
