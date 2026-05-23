@@ -146,9 +146,9 @@ export function ReportsView() {
                         transition={{ delay: i * 0.03 }}
                         style={{ borderBottom: '1px solid #F3EDE7' }}>
                         <td className="py-2 text-xs font-medium" style={{ color: '#A09890' }}>{i + 1}</td>
-                        <td className="py-2 font-medium" style={{ color: '#18120E' }}>{m.merchant_name || m.category || m.name || '—'}</td>
+                        <td className="py-2 font-medium" style={{ color: '#18120E' }}>{m.merchant || m.merchant_name || m.category || m.name || '—'}</td>
                         <td className="py-2 text-right font-mono font-semibold" style={{ color: '#18120E' }}>
-                          {formatCurrencyCompact(m.total_spend || m.amount || m.value || 0)}
+                          {formatCurrencyCompact(m.total || m.total_spend || m.amount || m.value || 0)}
                         </td>
                       </motion.tr>
                     ))}

@@ -226,6 +226,22 @@ async def update_me(
     return current_user
 
 
+@router.patch("/profile")
+async def update_profile(
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update mutable profile fields: full_name, email."""
+    allowed = {"full_name", "email"}
+    for field, value in payload.items():
+        if field in allowed and value is not None:
+            setattr(current_user, field, value.strip())
+    await db.commit()
+    await db.refresh(current_user)
+    return current_user
+
+
 @router.post("/change-password", status_code=204)
 async def change_password(
     payload: ChangePasswordRequest,
@@ -243,12 +259,29 @@ async def list_sessions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    now = datetime.now(timezone.utc)
     result = await db.execute(
-        select(UserSession).where(
-            and_(UserSession.user_id == current_user.id, UserSession.is_active.is_(True))
+        select(UserSession)
+        .where(
+            and_(
+                UserSession.user_id == current_user.id,
+                UserSession.is_active.is_(True),
+                UserSession.expires_at > now,
+            )
         )
+        .order_by(UserSession.last_used_at.desc())
+        .limit(10)
     )
-    return result.scalars().all()
+    sessions = result.scalars().all()
+    # Deduplicate: keep only latest per (device_name, ip_address) pair
+    seen: set = set()
+    unique = []
+    for s in sessions:
+        key = (s.device_name or 'Unknown', s.ip_address or '')
+        if key not in seen:
+            seen.add(key)
+            unique.append(s)
+    return unique
 
 
 @router.delete("/sessions/{session_id}", status_code=204)
