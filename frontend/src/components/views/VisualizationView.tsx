@@ -485,7 +485,7 @@ export function VisualizationView() {
                     <div style={{ height: 420, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <div style={{ color: '#A09890' }}>Loading…</div>
                     </div>
-                  ) : graphData?.sankey?.nodes?.length ? (
+                  ) : hasSankeyData ? (
                     <ReactECharts option={getSankeyOption()} style={{ height: '420px' }} />
                   ) : (
                     <div style={{ height: 420, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A09890', fontSize: 14 }}>
