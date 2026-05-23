@@ -3,6 +3,10 @@ Canonical Financial Context Service
 Single source of truth for net worth and financial snapshot computation.
 Consumed by: Net Worth API, AI CFO, Goals Intelligence, Loans Intelligence.
 """
+
+def _ev(enum_val) -> str:
+    """Return the string value of an enum (handles both StrEnum and repr-style enums)."""
+    return getattr(enum_val, 'value', str(enum_val)).upper()
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import date, datetime, timedelta
@@ -68,21 +72,21 @@ async def build_financial_context(db: AsyncSession, user_id) -> dict:
     investment_value = sum(float(i.current_value or 0) for i in investments)
     investment_pnl   = investment_value - total_invested
     sip_monthly      = sum(float(i.sip_amount or 0) for i in investments
-                           if i.is_sip and str(i.sip_status) == "ACTIVE")
+                           if i.is_sip and _ev(i.sip_status) == "ACTIVE")
     liquid_investments = sum(float(i.current_value or 0) for i in investments
-                             if str(i.investment_type) in LIQUID_INV_TYPES and not i.is_locked)
+                             if _ev(i.investment_type) in LIQUID_INV_TYPES and not i.is_locked)
     pf_nps           = sum(float(i.current_value or 0) for i in investments
-                           if str(i.investment_type) in ("PPF", "EPF", "NPS"))
+                           if _ev(i.investment_type) in ("PPF", "EPF", "NPS"))
     mutual_funds     = sum(float(i.current_value or 0) for i in investments
-                           if str(i.investment_type) == "MUTUAL_FUND")
+                           if _ev(i.investment_type) == "MUTUAL_FUND")
 
     # ── Physical assets ───────────────────────────────────────────────────────
     asset_res = await db.execute(select(Asset).where(Asset.user_id == user_id))
     assets = asset_res.scalars().all()
-    real_estate_val = sum(float(a.current_value or 0) for a in assets if str(a.asset_type) == "REAL_ESTATE")
-    vehicle_val     = sum(float(a.current_value or 0) for a in assets if str(a.asset_type) == "VEHICLE")
+    real_estate_val = sum(float(a.current_value or 0) for a in assets if _ev(a.asset_type) == "REAL_ESTATE")
+    vehicle_val     = sum(float(a.current_value or 0) for a in assets if _ev(a.asset_type) == "VEHICLE")
     physical_val    = sum(float(a.current_value or 0) for a in assets
-                          if str(a.asset_type) not in ("REAL_ESTATE", "VEHICLE"))
+                          if _ev(a.asset_type) not in ("REAL_ESTATE", "VEHICLE"))
     asset_value     = real_estate_val + vehicle_val + physical_val
 
     # ── Loans ─────────────────────────────────────────────────────────────────
@@ -125,8 +129,8 @@ async def build_financial_context(db: AsyncSession, user_id) -> dict:
         select(Insurance).where(Insurance.user_id == user_id, Insurance.is_active == True)
     )
     insurances = ins_res.scalars().all()
-    has_health = any(str(i.insurance_type) == "HEALTH" for i in insurances)
-    has_term   = any(str(i.insurance_type) in ("TERM", "LIFE") for i in insurances)
+    has_health = any(getattr(i.insurance_type, 'value', str(i.insurance_type)).upper() == "HEALTH" for i in insurances)
+    has_term   = any(getattr(i.insurance_type, 'value', str(i.insurance_type)).upper() in ("TERM", "LIFE") for i in insurances)
     monthly_insurance = sum(
         float(i.premium_amount or 0) * FREQ_MULTIPLIER.get(str(i.premium_frequency), 1) / 12
         for i in insurances

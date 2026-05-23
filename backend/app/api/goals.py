@@ -91,9 +91,9 @@ def _effective_current(goal, fin_ctx: dict) -> float:
 
 def _goal_insights(goals: list, fin_ctx: Optional[dict] = None) -> list:
     insights = []
-    active = [g for g in goals if str(g.status) == "ACTIVE"]
+    active = [g for g in goals if getattr(g.status, 'value', str(g.status)).upper() == "ACTIVE"]
 
-    has_emergency = any(str(g.goal_type) == "EMERGENCY_FUND" for g in active)
+    has_emergency = any(getattr(g.goal_type, 'value', str(g.goal_type)).upper() == "EMERGENCY_FUND" for g in active)
     if not has_emergency:
         insights.append({
             "severity": "WARNING",
@@ -309,7 +309,7 @@ async def goal_intelligence(
         "total_saved":       round(total_saved, 2),
         "overall_pct":       overall_pct,
         "total_monthly_req": round(total_monthly_req, 2),
-        "active_count":      len([g for g in goals if str(g.status) == "ACTIVE"]),
+        "active_count":      len([g for g in goals if getattr(g.status, 'value', str(g.status)).upper() == "ACTIVE"]),
         "achieved_count":    achieved_count,
         "goal_cards":        goal_cards,
         "insights":          insights,

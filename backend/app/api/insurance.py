@@ -70,7 +70,7 @@ def _insurance_insights(insurances: list, today: date) -> list:
     active = [i for i in insurances if i.is_active]
 
     # Check health insurance
-    has_health = any(str(i.insurance_type) == "HEALTH" for i in active)
+    has_health = any(getattr(i.insurance_type, 'value', str(i.insurance_type)).upper() == "HEALTH" for i in active)
     if not has_health:
         insights.append({
             "severity": "CRITICAL",
@@ -81,7 +81,7 @@ def _insurance_insights(insurances: list, today: date) -> list:
         })
 
     # Check term life
-    has_term = any(str(i.insurance_type) in ("TERM", "LIFE") for i in active)
+    has_term = any(getattr(i.insurance_type, 'value', str(i.insurance_type)).upper() in ("TERM", "LIFE") for i in active)
     if not has_term:
         insights.append({
             "severity": "WARNING",
@@ -208,7 +208,7 @@ async def insurance_intelligence(
     # ── By type ───────────────────────────────────────────────────────────────
     by_type: dict = {}
     for ins in active:
-        t = str(ins.insurance_type)
+        t = getattr(ins.insurance_type, 'value', str(ins.insurance_type)).upper()
         if t not in by_type:
             by_type[t] = {
                 "type": t, "label": TYPE_LABELS.get(t, t),
@@ -228,16 +228,17 @@ async def insurance_intelligence(
         )
         days_to_renewal = (ref_date - today).days if ref_date and ref_date >= today else None
         is_expired = ref_date is not None and ref_date < today
+        ins_type_val = getattr(ins.insurance_type, 'value', str(ins.insurance_type)).upper()
         policy_cards.append({
             "id":               str(ins.id),
-            "insurance_type":   str(ins.insurance_type),
-            "label":            TYPE_LABELS.get(str(ins.insurance_type), ""),
-            "color":            TYPE_COLORS.get(str(ins.insurance_type), "#6B7280"),
+            "insurance_type":   ins_type_val,
+            "label":            TYPE_LABELS.get(ins_type_val, ins_type_val),
+            "color":            TYPE_COLORS.get(ins_type_val, "#6B7280"),
             "policy_name":      ins.policy_name,
             "insurer":          ins.insurer,
             "policy_number":    ins.policy_number,
             "premium_amount":   float(ins.premium_amount or 0),
-            "premium_frequency":str(ins.premium_frequency),
+            "premium_frequency": getattr(ins.premium_frequency, 'value', str(ins.premium_frequency)),
             "annual_premium":   round(annual_premium(ins), 2),
             "sum_assured":      float(ins.sum_assured or 0),
             "cover_amount":     float(ins.cover_amount or 0),
@@ -251,16 +252,30 @@ async def insurance_intelligence(
         })
 
     # Coverage gaps
-    type_set = {str(i.insurance_type) for i in active}
+    type_set = {getattr(i.insurance_type, 'value', str(i.insurance_type)).upper() for i in active}
+    has_health_cover = "HEALTH" in type_set
+    has_term_cover   = "TERM" in type_set or "LIFE" in type_set
     coverage_gaps = []
-    for t, lbl in [("HEALTH", "Health Insurance"), ("TERM", "Term Life Insurance")]:
-        if t not in type_set:
-            coverage_gaps.append(lbl)
+    if not has_health_cover:
+        coverage_gaps.append("Health Insurance")
+    if not has_term_cover:
+        coverage_gaps.append("Term Life Insurance")
 
     insights = _insurance_insights(insurances, today)
 
+    # Per-type totals for UI convenience
+    total_health_cover = sum(
+        float(i.cover_amount or i.sum_assured or 0) for i in active
+        if getattr(i.insurance_type, 'value', str(i.insurance_type)).upper() == "HEALTH"
+    )
+    term_cover = sum(
+        float(i.sum_assured or 0) for i in active
+        if getattr(i.insurance_type, 'value', str(i.insurance_type)).upper() in ("TERM", "LIFE")
+    )
+    annual_premium_total = round(total_annual_premium, 2)
+
     return {
-        "total_annual_premium":  round(total_annual_premium, 2),
+        "total_annual_premium":  annual_premium_total,
         "total_monthly_premium": round(total_monthly_premium, 2),
         "total_cover":           round(total_cover, 2),
         "total_sum_assured":     round(total_sum_assured, 2),
@@ -268,5 +283,10 @@ async def insurance_intelligence(
         "by_type":               list(by_type.values()),
         "policy_cards":          policy_cards,
         "coverage_gaps":         coverage_gaps,
+        "has_health_cover":      has_health_cover,
+        "has_term_cover":        has_term_cover,
+        "total_health_cover":    round(total_health_cover, 2),
+        "term_cover":            round(term_cover, 2),
+        "annual_premium_total":  annual_premium_total,
         "insights":              insights,
     }
