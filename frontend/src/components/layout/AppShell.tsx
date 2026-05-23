@@ -1,6 +1,7 @@
 'use client'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sidebar } from './Sidebar'
+import { MobileBottomNav } from './MobileBottomNav'
 import { useUIStore } from '@/store/ui'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
@@ -22,6 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         animate={{ marginLeft: isMobile ? 0 : (sidebarCollapsed ? 64 : 232) }}
         transition={{ duration: 0.22, ease: 'easeInOut' }}
         className="flex-1 min-h-screen min-w-0"
+        style={{ paddingBottom: isMobile ? 56 : 0 }}
       >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
@@ -37,6 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </motion.div>
         </AnimatePresence>
       </motion.main>
+      <MobileBottomNav />
     </div>
   )
 }

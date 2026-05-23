@@ -1,8 +1,12 @@
 'use client'
 import { AppShell } from '@/components/layout/AppShell'
 import { ViewRouter } from '@/components/views/ViewRouter'
+import { AuthGate } from '@/components/auth/AuthGate'
 
-// SPA entry point — all navigation happens via Zustand state (no URL changes)
 export default function DashboardPage() {
-  return <AppShell><ViewRouter /></AppShell>
+  return (
+    <AuthGate>
+      <AppShell><ViewRouter /></AppShell>
+    </AuthGate>
+  )
 }

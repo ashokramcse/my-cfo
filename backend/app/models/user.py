@@ -14,9 +14,14 @@ class User(Base):
     username = Column(String(100), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255))
+    phone = Column(String(20))
+    country = Column(String(3), default="IN")
+    profile_bio = Column(Text)
     avatar_url = Column(Text)
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
+    # Whether this account has completed email verification
+    is_verified = Column(Boolean, default=True)
     currency = Column(String(3), default="INR")
     timezone = Column(String(50), default="Asia/Kolkata")
     monthly_budget = Column(String(20))  # encrypted
@@ -41,3 +46,13 @@ class User(Base):
     insurances          = relationship("Insurance", back_populates="user", cascade="all, delete-orphan")
     goals               = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
     ai_conversations    = relationship("AIConversation", back_populates="user", cascade="all, delete-orphan")
+    sessions            = relationship("UserSession", cascade="all, delete-orphan",
+                                       foreign_keys="UserSession.user_id")
+    relationships_owned = relationship("UserRelationship", cascade="all, delete-orphan",
+                                       foreign_keys="UserRelationship.owner_id")
+    share_permissions_given    = relationship("SharePermission", cascade="all, delete-orphan",
+                                              foreign_keys="SharePermission.owner_id")
+    share_permissions_received = relationship("SharePermission", cascade="all, delete-orphan",
+                                              foreign_keys="SharePermission.grantee_id")
+    invitations_sent     = relationship("ShareInvitation", cascade="all, delete-orphan",
+                                        foreign_keys="ShareInvitation.inviter_id")

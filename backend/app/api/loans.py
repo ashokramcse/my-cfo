@@ -240,13 +240,39 @@ async def loan_summary(
     )
     loans = result.scalars().all()
     active = [l for l in loans if l.status == "ACTIVE"]
+    total_monthly_emi = sum(float(l.emi_amount or 0) for l in active)
+
+    # DTI calculation — pull monthly income from income sources
+    from app.models.income import IncomeSource
+    inc_res = await db.execute(
+        select(IncomeSource).where(
+            IncomeSource.user_id == current_user.id,
+            IncomeSource.is_active.is_(True),
+        )
+    )
+    sources = inc_res.scalars().all()
+    monthly_income = sum(float(s.monthly_amount or 0) for s in sources)
+    dti_pct = (total_monthly_emi / monthly_income * 100) if monthly_income > 0 else None
+    if dti_pct is not None:
+        if dti_pct < 35:
+            dti_status = "healthy"
+        elif dti_pct < 50:
+            dti_status = "warning"
+        else:
+            dti_status = "critical"
+    else:
+        dti_status = "unknown"
+
     return {
         "total_outstanding":  sum(float(l.outstanding_balance or 0) for l in active),
-        "total_monthly_emi":  sum(float(l.emi_amount or 0) for l in active),
+        "total_monthly_emi":  total_monthly_emi,
         "total_principal":    sum(float(l.principal_amount or 0) for l in loans),
         "total_paid":         sum(float(l.total_paid or 0) for l in loans),
         "active_count":       len(active),
         "total_count":        len(loans),
+        "monthly_income":     monthly_income,
+        "dti_pct":            round(dti_pct, 1) if dti_pct is not None else None,
+        "dti_status":         dti_status,
     }
 
 

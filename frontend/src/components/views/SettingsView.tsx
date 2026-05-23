@@ -1,13 +1,15 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/PageHeader'
 import {
   Settings, User, Database, Zap, Shield, Bell,
   Building2, CheckCircle2, Lock, Cpu, GitBranch,
-  Save, TestTube2, Download, Trash2, Server,
+  Save, TestTube2, Download, Trash2, Server, Eye, EyeOff, LogOut, Monitor,
 } from 'lucide-react'
 import { api } from '@/lib/api'
+import { useAuthStore } from '@/store/auth'
+import { useRouter } from 'next/navigation'
 
 const OLLAMA_MODELS = ['llama3', 'qwen2.5', 'mistral', 'gemma2', 'llama3.2']
 
@@ -49,10 +51,59 @@ const TECH_STACK = [
 ]
 
 export function SettingsView() {
+  const qc = useQueryClient()
+  const { logout } = useAuthStore()
+  const router = useRouter()
+
   // Profile from /auth/me
   const { data: profile } = useQuery({
     queryKey: ['auth-me'],
     queryFn: async () => (await api.get('/auth/me')).data,
+  })
+
+  // Sessions
+  const { data: sessions } = useQuery({
+    queryKey: ['auth-sessions'],
+    queryFn: async () => (await api.get('/auth/sessions')).data,
+  })
+
+  // Password change state
+  const [pwOld, setPwOld] = useState('')
+  const [pwNew, setPwNew] = useState('')
+  const [pwConfirm, setPwConfirm] = useState('')
+  const [pwShowOld, setPwShowOld] = useState(false)
+  const [pwShowNew, setPwShowNew] = useState(false)
+  const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const changePassword = useMutation({
+    mutationFn: async () => {
+      if (pwNew !== pwConfirm) throw new Error('Passwords do not match')
+      if (pwNew.length < 8) throw new Error('Password must be at least 8 characters')
+      await api.post('/auth/change-password', { old_password: pwOld, new_password: pwNew })
+    },
+    onSuccess: () => {
+      setPwMsg({ ok: true, text: 'Password changed successfully' })
+      setPwOld(''); setPwNew(''); setPwConfirm('')
+      setTimeout(() => setPwMsg(null), 3000)
+    },
+    onError: (e: any) => {
+      setPwMsg({ ok: false, text: e?.response?.data?.detail || e.message || 'Failed to change password' })
+    },
+  })
+
+  const revokeSession = useMutation({
+    mutationFn: async (sessionId: string) => {
+      await api.delete(`/auth/sessions/${sessionId}`)
+      qc.invalidateQueries({ queryKey: ['auth-sessions'] })
+    },
+  })
+
+  const revokeAll = useMutation({
+    mutationFn: async () => {
+      await api.post('/auth/logout-all')
+      await logout()
+      router.replace('/login')
+    },
   })
 
   // AI CFO settings from localStorage
@@ -235,6 +286,125 @@ export function SettingsView() {
                 </button>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* ── Security ── */}
+        <div className="card p-6">
+          <SectionHeader
+            icon={Lock}
+            iconBg="linear-gradient(135deg, #FEF2F2, #FEE2E2)"
+            iconBorder="#FECACA" iconColor="#DC2626"
+            title="Security" subtitle="Password and active sessions"
+          />
+
+          {/* Change Password */}
+          <div className="mb-6">
+            <p className="text-sm font-bold mb-3" style={{ color: '#18120E' }}>Change Password</p>
+            <div className="space-y-3">
+              <div className="relative">
+                <input
+                  type={pwShowOld ? 'text' : 'password'}
+                  value={pwOld}
+                  onChange={(e) => setPwOld(e.target.value)}
+                  placeholder="Current password"
+                  className="w-full rounded-xl px-3 py-2.5 text-sm pr-10 focus:outline-none"
+                  style={{ background: '#FAF7F4', border: '1.5px solid #EDE8E2', color: '#18120E' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setPwShowOld(!pwShowOld)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: '#A09890' }}
+                >
+                  {pwShowOld ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={pwShowNew ? 'text' : 'password'}
+                  value={pwNew}
+                  onChange={(e) => setPwNew(e.target.value)}
+                  placeholder="New password (min 8 chars)"
+                  className="w-full rounded-xl px-3 py-2.5 text-sm pr-10 focus:outline-none"
+                  style={{ background: '#FAF7F4', border: '1.5px solid #EDE8E2', color: '#18120E' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setPwShowNew(!pwShowNew)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: '#A09890' }}
+                >
+                  {pwShowNew ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <input
+                type="password"
+                value={pwConfirm}
+                onChange={(e) => setPwConfirm(e.target.value)}
+                placeholder="Confirm new password"
+                className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                style={{ background: '#FAF7F4', border: '1.5px solid #EDE8E2', color: '#18120E' }}
+              />
+              {pwMsg && (
+                <div className="text-xs font-medium px-3 py-2 rounded-lg"
+                  style={{ background: pwMsg.ok ? '#ECFDF5' : '#FEF2F2', color: pwMsg.ok ? '#059669' : '#DC2626' }}>
+                  {pwMsg.text}
+                </div>
+              )}
+              <button
+                onClick={() => changePassword.mutate()}
+                disabled={!pwOld || !pwNew || !pwConfirm || changePassword.isPending}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-80 disabled:opacity-40"
+                style={{ background: '#F97316' }}
+              >
+                <Lock size={14} />
+                {changePassword.isPending ? 'Changing…' : 'Change Password'}
+              </button>
+            </div>
+          </div>
+
+          {/* Active Sessions */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-bold" style={{ color: '#18120E' }}>Active Sessions</p>
+              <button
+                onClick={() => revokeAll.mutate()}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors hover:opacity-80"
+                style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}
+              >
+                Sign out all devices
+              </button>
+            </div>
+            <div className="space-y-2">
+              {(sessions || []).map((session: any) => (
+                <div
+                  key={session.id}
+                  className="flex items-center gap-3 p-3 rounded-xl"
+                  style={{ background: '#FAF7F4', border: '1.5px solid #EDE8E2' }}
+                >
+                  <Monitor size={16} style={{ color: '#F97316', flexShrink: 0 }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold truncate" style={{ color: '#18120E' }}>
+                      {session.device_name || 'Unknown Device'}
+                    </p>
+                    <p className="text-[10px] truncate" style={{ color: '#A09890' }}>
+                      {session.ip_address || 'Unknown IP'} · Last active {session.last_used_at ? new Date(session.last_used_at).toLocaleDateString() : '—'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => revokeSession.mutate(session.id)}
+                    className="text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors hover:opacity-80"
+                    style={{ background: '#FEF2F2', color: '#DC2626' }}
+                  >
+                    Revoke
+                  </button>
+                </div>
+              ))}
+              {(!sessions || sessions.length === 0) && (
+                <p className="text-xs text-center py-4" style={{ color: '#A09890' }}>No active sessions found</p>
+              )}
+            </div>
           </div>
         </div>
 

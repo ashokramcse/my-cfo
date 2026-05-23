@@ -1,13 +1,14 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { StatCard } from '@/components/ui/StatCard'
 import { StatCardSkeleton } from '@/components/ui/Skeleton'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SpendingChart } from '@/components/charts/SpendingChart'
 import { EMIForecastChart } from '@/components/charts/EMIForecastChart'
-import { reportsApi, emisApi, insightsApi, netWorthApi, incomeApi, goalsApi } from '@/lib/api'
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
+import { reportsApi, emisApi, insightsApi, netWorthApi, incomeApi, goalsApi, loansApi } from '@/lib/api'
 import { formatCurrencyCompact, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import {
@@ -66,6 +67,16 @@ export function DashboardView() {
   const { setView } = useUIStore()
   const [time, setTime] = useState('')
   const [completenessHidden, setCompletenessHidden] = useState(false)
+  const [onboardingDismissed, setOnboardingDismissed] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('onboarding_dismissed') === '1'
+    return false
+  })
+
+  function dismissOnboarding() {
+    localStorage.setItem('onboarding_dismissed', '1')
+    setOnboardingDismissed(true)
+  }
+
   useEffect(() => {
     const fmt = () => setTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }))
     fmt()
@@ -104,6 +115,11 @@ export function DashboardView() {
     queryFn: async () => (await goalsApi.intelligence()).data,
   })
 
+  const { data: loanSummary } = useQuery({
+    queryKey: ['loans-summary'],
+    queryFn: async () => (await loansApi.summary()).data,
+  })
+
   const completeness = (netWorth as any)?.profile_completeness
   const showSkeletons = isLoading || !stats
 
@@ -116,8 +132,21 @@ export function DashboardView() {
   const activeGoals   = goalIntel?.active_count ?? 0
   const goalsPct      = goalIntel?.overall_pct ?? 0
 
+  // DTI
+  const dtiPct    = (loanSummary as any)?.dti_pct ?? null
+  const dtiStatus = (loanSummary as any)?.dti_status ?? 'unknown'
+  const dtiColor  = dtiStatus === 'critical' ? '#EF4444' : dtiStatus === 'warning' ? '#F59E0B' : '#10B981'
+
+  // Onboarding: show if user has no completeness data and wizard not dismissed
+  const showOnboarding = !onboardingDismissed && netWorth && (completeness?.score ?? 100) < 30
+
   return (
     <>
+      <AnimatePresence>
+        {showOnboarding && (
+          <OnboardingWizard onDismiss={dismissOnboarding} />
+        )}
+      </AnimatePresence>
       <PageHeader
         icon={LayoutDashboard}
         title="Financial Command Center"
@@ -202,6 +231,52 @@ export function DashboardView() {
             </div>
           </div>
         </motion.div>
+
+        {/* ── DTI Widget ── */}
+        {dtiPct !== null && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl p-4 flex items-center gap-4"
+            style={{
+              background: 'white',
+              border: `1.5px solid ${dtiColor}33`,
+            }}
+          >
+            <div
+              className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: dtiColor + '18' }}
+            >
+              <TrendingDown className="w-5 h-5" style={{ color: dtiColor }} strokeWidth={1.8} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-bold" style={{ color: '#18120E' }}>Debt-to-Income Ratio</span>
+                <span
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: dtiColor + '20', color: dtiColor }}
+                >
+                  {dtiStatus.toUpperCase()}
+                </span>
+              </div>
+              <div className="w-full rounded-full h-2 mb-1" style={{ background: '#F3EDE8' }}>
+                <div
+                  className="h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(dtiPct, 100)}%`, background: dtiColor }}
+                />
+              </div>
+              <p className="text-xs" style={{ color: '#6B6460' }}>
+                <span className="font-bold" style={{ color: dtiColor }}>{dtiPct}%</span> of income goes to EMIs
+                {dtiStatus === 'critical' && ' — danger zone, consider debt consolidation'}
+                {dtiStatus === 'warning' && ' — approaching limit, avoid new loans'}
+                {dtiStatus === 'healthy' && ' — healthy, below 35% threshold'}
+              </p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <div className="text-lg font-bold" style={{ color: dtiColor }}>{dtiPct}%</div>
+              <div className="text-[10px]" style={{ color: '#A09890' }}>DTI</div>
+            </div>
+          </motion.div>
+        )}
 
         {/* ── Quick action modules (D-16: data-aware) ── */}
         <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">

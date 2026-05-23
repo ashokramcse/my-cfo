@@ -210,6 +210,18 @@ export function IncomeView() {
         {showAdd && <AddSourceModal onClose={() => setShowAdd(false)} onSave={d => createMut.mutate(d)} />}
       </AnimatePresence>
 
+      {/* How-it-works tip */}
+      <div className="mx-3 sm:mx-5 xl:mx-6 mt-3 px-4 py-3 rounded-xl flex items-start gap-2.5"
+        style={{ background: '#FFF8ED', border: '1.5px solid #FDC888' }}>
+        <span className="text-base flex-shrink-0">💡</span>
+        <p className="text-xs" style={{ color: '#6B6460' }}>
+          <strong style={{ color: '#18120E' }}>How income works:</strong>{' '}
+          Add <em>Income Sources</em> (your jobs/clients) — these are your ongoing income streams.
+          Monthly entries are auto-generated from active sources and visible in your Income Trend chart.
+          Use &quot;Add Source&quot; to set up, then let the system track your earnings automatically.
+        </p>
+      </div>
+
       {/* Hero */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
         className="rounded-2xl overflow-hidden relative"

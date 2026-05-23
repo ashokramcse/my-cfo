@@ -18,6 +18,10 @@ from app.models.insurance import Insurance
 from app.models.goal import Goal
 from app.models.ai_conversation import AIConversation
 from app.models.notification import Notification
+from app.models.user_session import UserSession
+from app.models.relationship import UserRelationship, RelationshipType
+from app.models.share_permission import SharePermission, AccessType
+from app.models.share_invitation import ShareInvitation, InvitationStatus
 
 __all__ = [
     "User", "CreditCard", "Statement", "Transaction",
@@ -30,4 +34,8 @@ __all__ = [
     "Goal",
     "AIConversation",
     "Notification",
+    "UserSession",
+    "UserRelationship", "RelationshipType",
+    "SharePermission", "AccessType",
+    "ShareInvitation", "InvitationStatus",
 ]

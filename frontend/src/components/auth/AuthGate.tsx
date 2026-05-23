@@ -1,0 +1,57 @@
+'use client'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/store/auth'
+import { Wallet } from 'lucide-react'
+
+export function AuthGate({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
+  const { user, accessToken, loadUser } = useAuthStore()
+  const [checking, setChecking] = useState(true)
+
+  useEffect(() => {
+    async function check() {
+      if (!accessToken) {
+        router.replace('/login')
+        return
+      }
+      if (!user) {
+        await loadUser()
+        // After loadUser, the store will have either set user or cleared auth
+        // Re-check after a tick
+        const { user: u, accessToken: tok } = useAuthStore.getState()
+        if (!u || !tok) {
+          router.replace('/login')
+          return
+        }
+      }
+      setChecking(false)
+    }
+    check()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Also watch for auth being cleared mid-session (e.g. 401 from API)
+  useEffect(() => {
+    if (!checking && !accessToken) {
+      router.replace('/login')
+    }
+  }, [accessToken, checking, router])
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center"
+        style={{ background: 'radial-gradient(ellipse at 60% 0%, #1a0a2e 0%, #0a0f1e 60%, #050810 100%)' }}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center animate-pulse"
+            style={{ background: 'linear-gradient(135deg, #F97316, #ea580c)' }}>
+            <Wallet className="w-6 h-6 text-white" />
+          </div>
+          <div className="w-6 h-6 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+        </div>
+      </div>
+    )
+  }
+
+  return <>{children}</>
+}

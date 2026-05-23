@@ -67,8 +67,8 @@ export function FriendsView() {
     <>
       <PageHeader
           icon={Users}
-          title="Friend EMIs"
-          subtitle={`${friends.length} contacts`}
+          title="Money Lent"
+          subtitle={`Track money lent to friends & family · ${friends.length} contacts`}
           actions={
             <button onClick={() => setShowForm(true)} className="btn-primary">
               <Plus className="w-4 h-4" /> Add Friend

@@ -96,8 +96,8 @@ export function EMIsView() {
     <>
       <PageHeader
           icon={Calendar}
-          title="EMI Tracker"
-          subtitle={`${activeEMIs.length} active EMIs`}
+          title="Card EMIs"
+          subtitle={`Credit card product EMIs · ${activeEMIs.length} active`}
           actions={
             <button onClick={() => setShowForm(true)} className="btn-primary">
               <Plus className="w-4 h-4" /> Add EMI
@@ -105,6 +105,17 @@ export function EMIsView() {
           }
         />
       <div className="p-3 sm:p-5 xl:p-6 max-w-[1200px] mx-auto">
+
+        {/* Clarification note */}
+        <div className="mb-4 px-4 py-3 rounded-xl flex items-start gap-2.5"
+          style={{ background: '#FFF8ED', border: '1.5px solid #FDC888' }}>
+          <span className="text-base flex-shrink-0">💳</span>
+          <p className="text-xs" style={{ color: '#6B6460' }}>
+            <strong style={{ color: '#18120E' }}>Card EMIs</strong> track products you bought on credit card EMI (e.g., iPhone on 12-month no-cost EMI).
+            For <strong style={{ color: '#18120E' }}>loan repayments</strong> (home loan, personal loan, vehicle loan), use the{' '}
+            <strong style={{ color: '#18120E' }}>Loans &amp; Debt</strong> module — loan EMIs are tracked there automatically.
+          </p>
+        </div>
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from app.api import auth, cards, transactions, emis, friends, statements, reports, insights
 from app.api import bank_accounts, investments, loans, assets, net_worth
-from app.api import income, insurance, goals, ai_cfo, notifications
+from app.api import income, insurance, goals, ai_cfo, notifications, sharing
 
 router = APIRouter()
 router.include_router(auth.router,          prefix="/auth",          tags=["Auth"])
@@ -22,3 +22,4 @@ router.include_router(insurance.router,     prefix="/insurance",     tags=["Insu
 router.include_router(goals.router,         prefix="/goals",         tags=["Goals"])
 router.include_router(ai_cfo.router,        prefix="/ai-cfo",        tags=["AI CFO"])
 router.include_router(notifications.router, prefix="/notifications",  tags=["Notifications"])
+router.include_router(sharing.router,       prefix="/sharing",         tags=["Sharing"])

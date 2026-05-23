@@ -1,10 +1,12 @@
 'use client'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutDashboard, CreditCard, ArrowLeftRight, Calendar, Users, FileText, BarChart3, Settings, ChevronLeft, Zap, X, TrendingUp, Landmark, Building2, Wallet, DollarSign, Shield, Target, Sparkles } from 'lucide-react'
+import { LayoutDashboard, CreditCard, ArrowLeftRight, Calendar, Users, FileText, BarChart3, Settings, ChevronLeft, Zap, X, TrendingUp, Landmark, Building2, Wallet, DollarSign, Shield, Target, Sparkles, Share2, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore, ViewId } from '@/store/ui'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { useAuthStore } from '@/store/auth'
+import { useRouter } from 'next/navigation'
 import { cardsApi, transactionsApi, emisApi, friendsApi, reportsApi, insightsApi, statementsApi, netWorthApi, bankAccountsApi, investmentsApi, loansApi, assetsApi, incomeApi, insuranceApi, goalsApi } from '@/lib/api'
 
 type NavGroup = { group: string; items: { view: ViewId; icon: React.ElementType; label: string }[] }
@@ -38,17 +40,18 @@ const NAV_GROUPS: NavGroup[] = [
   {
     group: 'Credit Cards',
     items: [
-      { view: 'cards',        icon: CreditCard,     label: 'Cards'        },
-      { view: 'transactions', icon: ArrowLeftRight, label: 'Transactions' },
-      { view: 'emis',         icon: Calendar,       label: 'EMI Tracker'  },
-      { view: 'friends',      icon: Users,          label: 'Friend EMIs'  },
-      { view: 'statements',   icon: FileText,       label: 'Statements'   },
-      { view: 'reports',      icon: BarChart3,      label: 'Reports'      },
+      { view: 'cards',        icon: CreditCard,     label: 'Cards'           },
+      { view: 'transactions', icon: ArrowLeftRight, label: 'Transactions'    },
+      { view: 'emis',         icon: Calendar,       label: 'Card EMIs'       },
+      { view: 'friends',      icon: Users,          label: 'Money Lent'      },
+      { view: 'statements',   icon: FileText,       label: 'Statements'      },
+      { view: 'reports',      icon: BarChart3,      label: 'Reports'         },
     ],
   },
   {
     group: '',
     items: [
+      { view: 'sharing',  icon: Share2,   label: 'Sharing'  },
       { view: 'settings', icon: Settings, label: 'Settings' },
     ],
   },
@@ -95,12 +98,25 @@ const VIEW_PREFETCH: Record<ViewId, (qc: ReturnType<typeof useQueryClient>) => v
     qc.prefetchQuery({ queryKey: ['dashboard'],    queryFn: () => reportsApi.dashboard().then(r => r.data) })
   },
   settings:     () => {/* static page, no prefetch needed */},
+  sharing:      () => {/* no prefetch needed */},
 }
 
 export function Sidebar() {
   const qc = useQueryClient()
   const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, closeMobileSidebar, currentView, setView } = useUIStore()
+  const { user, logout } = useAuthStore()
+  const router = useRouter()
   const isMobile = useIsMobile()
+
+  async function handleLogout() {
+    await logout()
+    router.replace('/login')
+  }
+
+  const userInitials = user
+    ? (user.full_name || user.username).slice(0, 2).toUpperCase()
+    : 'ME'
+  const userDisplayName = user?.full_name || user?.username || 'You'
 
   const W = sidebarCollapsed ? 64 : 232
 
@@ -167,16 +183,27 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Owner footer */}
+      {/* User footer */}
       <div className="p-2" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
         <div className={cn('flex items-center rounded-lg p-2 gap-2.5', (!isMobile && sidebarCollapsed) ? 'justify-center' : '')}>
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #F97316, #EA580C)' }}>O</div>
+            style={{ background: 'linear-gradient(135deg, #F97316, #EA580C)' }}>
+            {userInitials}
+          </div>
           {(isMobile || !sidebarCollapsed) && (
-            <div className="min-w-0">
-              <div className="text-xs font-semibold text-white leading-none">Owner</div>
-              <div className="text-[10px] mt-0.5 leading-none" style={{ color: 'rgba(255,255,255,0.3)' }}>Personal</div>
-            </div>
+            <>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold text-white leading-none truncate">{userDisplayName}</div>
+                <div className="text-[10px] mt-0.5 leading-none truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  {user?.email || 'Personal'}
+                </div>
+              </div>
+              <button onClick={handleLogout} title="Sign out"
+                className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-white/10 transition-colors flex-shrink-0"
+                style={{ color: 'rgba(255,255,255,0.35)' }}>
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </>
           )}
         </div>
       </div>

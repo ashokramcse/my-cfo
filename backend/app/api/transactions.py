@@ -7,7 +7,7 @@ from datetime import datetime
 from decimal import Decimal
 import uuid
 from app.database import get_db
-from app.utils.deps import get_current_user
+from app.utils.deps import get_current_user, require_write, DataAccessContext
 from app.models.user import User
 from app.models.transaction import Transaction, CategoryType, TransactionType
 from app.schemas.transaction import TransactionCreate, TransactionUpdate, TransactionOut, TransactionListOut
@@ -89,6 +89,7 @@ async def create_transaction(
     payload: TransactionCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    ctx: DataAccessContext = Depends(require_write),
 ):
     tx = Transaction(**payload.model_dump(), user_id=current_user.id, is_manual=True)
     db.add(tx)
