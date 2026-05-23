@@ -521,7 +521,16 @@ export function VisualizationView() {
       },
       legend: { top: 0, data: ['Assets', 'Liabilities', 'Net Worth'], textStyle: { color: '#6B6460' } },
       grid: { top: 40, bottom: 60, left: 70, right: 20 },
-      xAxis: { type: 'category', data: dates, axisLabel: { color: '#A09890', fontSize: 11 } },
+      xAxis: {
+        type: 'category', data: dates,
+        axisLabel: {
+          color: '#A09890', fontSize: 11,
+          formatter: (val: string) => {
+            const d = new Date(val)
+            return isNaN(d.getTime()) ? val : d.toLocaleString('en', { month: 'short', year: '2-digit' })
+          },
+        },
+      },
       yAxis: { type: 'value', axisLabel: { color: '#A09890', fontSize: 11, formatter: (v: number) => formatCurrencyCompact(v) } },
       dataZoom: [{ type: 'slider', bottom: 4, height: 22, borderColor: '#E8E2DA', fillerColor: 'rgba(249,115,22,0.12)', handleStyle: { color: '#F97316' } }],
       animationDuration: 1400,
@@ -605,59 +614,64 @@ export function VisualizationView() {
 
           {/* ── Cash Flow ───────────────────────────────────────────────── */}
           {tab === 'cashflow' && (
-            <motion.div key="cashflow" className="h-full overflow-y-auto"
+            <motion.div key="cashflow" className="h-full flex flex-col"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-              <div className="card mt-2" style={{ padding: 0, overflow: 'hidden' }}>
-                <div className="px-5 py-3" style={{ borderBottom: '1px solid #E8E2DA' }}>
+              <div className="card flex flex-col flex-1 mt-2" style={{ padding: 0, overflow: 'hidden' }}>
+                <div className="px-5 py-3 flex-shrink-0" style={{ borderBottom: '1px solid #E8E2DA' }}>
                   <h2 className="text-[14px] font-bold" style={{ color: '#18120E' }}>Monthly Cash Flow</h2>
                   <p className="text-[12px] mt-0.5" style={{ color: '#A09890' }}>How money flows through your financial life</p>
                 </div>
-                <div className="p-4">
-                  {sankeyOption
-                    ? <ReactECharts key="sankey" option={sankeyOption} notMerge style={{ height: '420px' }} />
-                    : <div style={{ height: 420, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A09890', fontSize: 14 }}>
-                        Add loans, SIPs or credit cards to see cash flow.
-                      </div>
-                  }
+                <div className="flex-1 p-4 flex flex-col">
+                  <div className="flex-1">
+                    {sankeyOption
+                      ? <ReactECharts key="sankey" option={sankeyOption} notMerge style={{ height: '100%', minHeight: 320 }} />
+                      : <div className="h-full flex items-center justify-center" style={{ color: '#A09890', fontSize: 14, minHeight: 320 }}>
+                          Add loans, SIPs or credit cards to see cash flow.
+                        </div>
+                    }
+                  </div>
+                  {totalOut > 0 && (
+                    <div className="grid grid-cols-3 gap-3 mt-4 flex-shrink-0">
+                      {[
+                        { label: 'Est. Monthly Income', value: estIncome, color: '#22C55E' },
+                        { label: 'Monthly Outflow',     value: totalOut,  color: '#EF4444' },
+                        { label: 'Net Flow',             value: netFlow,   color: netFlow >= 0 ? '#22C55E' : '#EF4444' },
+                      ].map(s => (
+                        <div key={s.label} className="rounded-xl text-center" style={{ padding: '14px 12px', background: '#FAF7F4', border: '1px solid #EDE8E2' }}>
+                          <div className="text-[11px] font-semibold mb-1" style={{ color: '#A09890' }}>{s.label}</div>
+                          <div className="text-[16px] font-extrabold" style={{ color: s.color }}>{formatCurrencyCompact(s.value)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-              {totalOut > 0 && (
-                <div className="grid grid-cols-3 gap-3 mt-3">
-                  {[
-                    { label: 'Est. Monthly Income', value: estIncome, color: '#22C55E' },
-                    { label: 'Monthly Outflow',     value: totalOut,  color: '#EF4444' },
-                    { label: 'Net Flow',             value: netFlow,   color: netFlow >= 0 ? '#22C55E' : '#EF4444' },
-                  ].map(s => (
-                    <div key={s.label} className="card text-center" style={{ padding: '16px 12px' }}>
-                      <div className="text-[11px] font-semibold mb-1" style={{ color: '#A09890' }}>{s.label}</div>
-                      <div className="text-[16px] font-extrabold" style={{ color: s.color }}>{formatCurrencyCompact(s.value)}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </motion.div>
           )}
 
           {/* ── Allocation ──────────────────────────────────────────────── */}
           {tab === 'allocation' && (
-            <motion.div key="allocation" className="h-full overflow-y-auto"
+            <motion.div key="allocation" className="h-full flex flex-col"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-              <div className="card mt-2" style={{ padding: 0, overflow: 'hidden' }}>
-                <div className="px-5 py-3" style={{ borderBottom: '1px solid #E8E2DA' }}>
+              <div className="card flex flex-col flex-1 mt-2" style={{ padding: 0, overflow: 'hidden' }}>
+                <div className="px-5 py-3 flex-shrink-0" style={{ borderBottom: '1px solid #E8E2DA' }}>
                   <h2 className="text-[14px] font-bold" style={{ color: '#18120E' }}>Asset Allocation</h2>
                   <p className="text-[12px] mt-0.5" style={{ color: '#A09890' }}>Breakdown of your wealth distribution</p>
                 </div>
-                <div className="flex flex-col md:flex-row gap-4 p-4">
-                  <div className="flex-1 min-w-0">
+                <div className="flex-1 flex flex-col md:flex-row gap-0 overflow-hidden">
+                  {/* Chart fills remaining space */}
+                  <div className="flex-1 min-w-0 p-4">
                     {nwData?.allocation?.length
-                      ? <ReactECharts key="sunburst" option={getSunburstOption()} notMerge style={{ height: '420px' }} />
-                      : <div style={{ height: 420, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A09890' }}>No allocation data.</div>
+                      ? <ReactECharts key="sunburst" option={getSunburstOption()} notMerge style={{ height: '100%', minHeight: 340 }} />
+                      : <div className="h-full flex items-center justify-center" style={{ color: '#A09890', minHeight: 340 }}>No allocation data.</div>
                     }
                   </div>
+                  {/* Legend sidebar */}
                   {nwData?.allocation?.length ? (
-                    <div className="md:w-52 flex flex-col gap-1.5 self-center">
+                    <div className="md:w-56 flex flex-col gap-1.5 p-4 overflow-y-auto" style={{ borderLeft: '1px solid #F0EBE4' }}>
+                      <div className="text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: '#A09890' }}>Breakdown</div>
                       {(nwData.allocation as AllocationItem[]).map((item, i) => (
-                        <div key={item.label} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg" style={{ background: '#FAF7F4' }}>
+                        <div key={item.label} className="flex items-center gap-2.5 py-2 px-3 rounded-xl" style={{ background: '#FAF7F4' }}>
                           <div style={{ width: 10, height: 10, borderRadius: 3, background: ALLOC_COLORS[i % ALLOC_COLORS.length], flexShrink: 0 }} />
                           <div className="flex-1 min-w-0">
                             <div className="text-[12px] font-semibold truncate" style={{ color: '#1C1410' }}>{item.label}</div>
@@ -677,17 +691,17 @@ export function VisualizationView() {
 
           {/* ── Timeline ────────────────────────────────────────────────── */}
           {tab === 'timeline' && (
-            <motion.div key="timeline" className="h-full overflow-y-auto"
+            <motion.div key="timeline" className="h-full flex flex-col"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-              <div className="card mt-2" style={{ padding: 0, overflow: 'hidden' }}>
-                <div className="px-5 py-3" style={{ borderBottom: '1px solid #E8E2DA' }}>
+              <div className="card flex flex-col flex-1 mt-2" style={{ padding: 0, overflow: 'hidden' }}>
+                <div className="px-5 py-3 flex-shrink-0" style={{ borderBottom: '1px solid #E8E2DA' }}>
                   <h2 className="text-[14px] font-bold" style={{ color: '#18120E' }}>Net Worth Timeline</h2>
                   <p className="text-[12px] mt-0.5" style={{ color: '#A09890' }}>Your wealth journey over time</p>
                 </div>
-                <div className="p-4">
+                <div className="flex-1 p-4">
                   {history.length
-                    ? <ReactECharts key="timeline" option={getTimelineOption()} notMerge style={{ height: '420px' }} />
-                    : <div style={{ height: 420, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A09890' }}>No history yet.</div>
+                    ? <ReactECharts key="timeline" option={getTimelineOption()} notMerge style={{ height: '100%', minHeight: 340 }} />
+                    : <div className="h-full flex items-center justify-center" style={{ color: '#A09890', minHeight: 340 }}>No history yet.</div>
                   }
                 </div>
               </div>
