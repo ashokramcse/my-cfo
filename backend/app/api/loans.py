@@ -10,6 +10,7 @@ from app.database import get_db
 from app.utils.deps import get_current_user
 from app.models.user import User
 from app.models.loan import Loan
+from app.utils.enum_utils import ev
 from app.schemas.loan import LoanCreate, LoanUpdate, LoanOut
 from app.services.financial_context import build_financial_context
 
@@ -87,7 +88,7 @@ def _loan_insights(loans: list, total_outstanding: float, total_emi: float,
     if high_int:
         hi_total = sum(float(l.outstanding_balance or 0) for l in high_int)
         names = ", ".join(
-            l.nickname or LOAN_TYPE_LABELS.get(str(l.loan_type), "Loan")
+            l.nickname or LOAN_TYPE_LABELS.get(ev(l.loan_type), "Loan")
             for l in sorted(high_int, key=lambda x: float(x.interest_rate), reverse=True)[:2]
         )
         insights.append({
@@ -149,7 +150,7 @@ def _loan_insights(loans: list, total_outstanding: float, total_emi: float,
         })
 
     # Informal debt reminder
-    informal = [l for l in active if str(l.loan_type) == "INFORMAL"]
+    informal = [l for l in active if ev(l.loan_type) == "INFORMAL"]
     if informal:
         inf_total = sum(float(l.outstanding_balance or 0) for l in informal)
         insights.append({
@@ -308,7 +309,7 @@ async def loan_intelligence(
     # ── By loan type ──────────────────────────────────────────────────────────
     by_type_map: dict = {}
     for loan in active:
-        t = str(loan.loan_type)
+        t = ev(loan.loan_type)
         if t not in by_type_map:
             by_type_map[t] = {
                 "type": t, "label": LOAN_TYPE_LABELS.get(t, t),
@@ -335,11 +336,11 @@ async def loan_intelligence(
 
         loan_cards.append({
             "id":             str(loan.id),
-            "name":           loan.nickname or LOAN_TYPE_LABELS.get(str(loan.loan_type), "Loan"),
+            "name":           loan.nickname or LOAN_TYPE_LABELS.get(ev(loan.loan_type), "Loan"),
             "lender":         loan.lender_name,
-            "type":           str(loan.loan_type),
-            "label":          LOAN_TYPE_LABELS.get(str(loan.loan_type), ""),
-            "color":          LOAN_TYPE_COLORS.get(str(loan.loan_type), "#6B7280"),
+            "type":           ev(loan.loan_type),
+            "label":          LOAN_TYPE_LABELS.get(ev(loan.loan_type), ""),
+            "color":          LOAN_TYPE_COLORS.get(ev(loan.loan_type), "#6B7280"),
             "principal":      principal,
             "outstanding":    outstanding,
             "paid":           paid,
@@ -361,7 +362,7 @@ async def loan_intelligence(
     # ── High interest loans ───────────────────────────────────────────────────
     high_interest = [
         {
-            "name":  l.nickname or LOAN_TYPE_LABELS.get(str(l.loan_type), "Loan"),
+            "name":  l.nickname or LOAN_TYPE_LABELS.get(ev(l.loan_type), "Loan"),
             "rate":  float(l.interest_rate or 0),
             "outstanding": float(l.outstanding_balance or 0),
         }

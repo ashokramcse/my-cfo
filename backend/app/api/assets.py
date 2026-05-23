@@ -9,6 +9,7 @@ from app.database import get_db
 from app.utils.deps import get_current_user
 from app.models.user import User
 from app.models.asset import Asset
+from app.utils.enum_utils import ev
 from app.schemas.asset import AssetCreate, AssetUpdate, AssetOut
 
 router = APIRouter()
@@ -119,7 +120,7 @@ def _asset_insights(assets: list, total_value: float, uninsured_value: float,
     # Depreciation alert (electronics/vehicles)
     depreciating = [
         a for a in assets
-        if str(a.asset_type) in ("VEHICLE", "ELECTRONICS")
+        if ev(a.asset_type) in ("VEHICLE", "ELECTRONICS")
         and float(a.depreciation_rate or 0) > 0
     ]
     if depreciating:
@@ -229,7 +230,7 @@ async def asset_intelligence(
     # ── By type ───────────────────────────────────────────────────────────────
     by_type_map: dict = {}
     for asset in assets:
-        t = str(asset.asset_type)
+        t = ev(asset.asset_type)
         if t not in by_type_map:
             by_type_map[t] = {
                 "type": t, "label": ASSET_TYPE_LABELS.get(t, t),
@@ -247,7 +248,7 @@ async def asset_intelligence(
     # ── By liquidity ─────────────────────────────────────────────────────────
     by_liquidity: dict[str, float] = {}
     for asset in assets:
-        liq = LIQUIDITY_MAP.get(str(asset.asset_type), "Other")
+        liq = LIQUIDITY_MAP.get(ev(asset.asset_type), "Other")
         by_liquidity[liq] = by_liquidity.get(liq, 0.0) + float(asset.current_value or 0)
 
     liquidity_breakdown = [
@@ -277,10 +278,10 @@ async def asset_intelligence(
         asset_cards.append({
             "id":              str(asset.id),
             "name":            asset.name,
-            "type":            str(asset.asset_type),
-            "label":           ASSET_TYPE_LABELS.get(str(asset.asset_type), ""),
-            "color":           ASSET_TYPE_COLORS.get(str(asset.asset_type), "#6B7280"),
-            "liquidity":       LIQUIDITY_MAP.get(str(asset.asset_type), "Other"),
+            "type":            ev(asset.asset_type),
+            "label":           ASSET_TYPE_LABELS.get(ev(asset.asset_type), ""),
+            "color":           ASSET_TYPE_COLORS.get(ev(asset.asset_type), "#6B7280"),
+            "liquidity":       LIQUIDITY_MAP.get(ev(asset.asset_type), "Other"),
             "purchase_price":  pp,
             "current_value":   cv,
             "gain":            round(gain, 2),

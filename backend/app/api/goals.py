@@ -10,6 +10,7 @@ from app.database import get_db
 from app.utils.deps import get_current_user
 from app.models.user import User
 from app.models.goal import Goal
+from app.utils.enum_utils import ev
 from app.services.financial_context import build_financial_context
 from pydantic import BaseModel
 
@@ -75,7 +76,7 @@ def _months_to_achieve(remaining: float, monthly: float) -> int | None:
 
 def _effective_current(goal, fin_ctx: dict) -> float:
     base = float(goal.current_amount or 0)
-    gtype = str(goal.goal_type)
+    gtype = ev(goal.goal_type)
     if gtype == "EMERGENCY_FUND":
         return max(base, fin_ctx.get("bank_liquid", 0))
     if gtype == "RETIREMENT":
@@ -93,7 +94,7 @@ def _goal_insights(goals: list, fin_ctx: Optional[dict] = None) -> list:
     insights = []
     active = [g for g in goals if getattr(g.status, 'value', str(g.status)).upper() == "ACTIVE"]
 
-    has_emergency = any(getattr(g.goal_type, 'value', str(g.goal_type)).upper() == "EMERGENCY_FUND" for g in active)
+    has_emergency = any(ev(g.goal_type) == "EMERGENCY_FUND" for g in active)
     if not has_emergency:
         insights.append({
             "severity": "WARNING",
@@ -283,10 +284,10 @@ async def goal_intelligence(
         goal_cards.append({
             "id":            str(g.id),
             "name":          g.name,
-            "goal_type":     str(g.goal_type),
-            "label":         TYPE_LABELS.get(str(g.goal_type), ""),
-            "color":         g.icon_color or TYPE_COLORS.get(str(g.goal_type), "#6B7280"),
-            "emoji":         TYPE_EMOJIS.get(str(g.goal_type), "🎯"),
+            "goal_type":     ev(g.goal_type),
+            "label":         TYPE_LABELS.get(ev(g.goal_type), ""),
+            "color":         g.icon_color or TYPE_COLORS.get(ev(g.goal_type), "#6B7280"),
+            "emoji":         TYPE_EMOJIS.get(ev(g.goal_type), "🎯"),
             "target":        target,
             "current":       current,
             "remaining":     remaining,

@@ -11,6 +11,7 @@ from app.utils.deps import get_current_user
 from app.models.user import User
 from app.models.investment import Investment
 from app.schemas.investment import InvestmentCreate, InvestmentUpdate, InvestmentOut
+from app.utils.enum_utils import ev
 
 router = APIRouter()
 
@@ -306,7 +307,7 @@ async def investment_intelligence(
     # ── By asset class ────────────────────────────────────────────────────────
     by_class: dict[str, float] = {}
     for inv in investments:
-        cls = ASSET_CLASS_MAP.get(str(inv.investment_type), "Other")
+        cls = ASSET_CLASS_MAP.get(ev(inv.investment_type), "Other")
         by_class[cls] = by_class.get(cls, 0) + float(inv.current_value or 0)
 
     allocation = [
@@ -324,7 +325,7 @@ async def investment_intelligence(
     # ── By investment type ────────────────────────────────────────────────────
     by_type_map: dict = {}
     for inv in investments:
-        t = str(inv.investment_type)
+        t = ev(inv.investment_type)
         if t not in by_type_map:
             by_type_map[t] = {
                 "type": t, "label": TYPE_LABELS.get(t, t),
@@ -357,9 +358,9 @@ async def investment_intelligence(
         {
             "id": str(i.id),
             "name": i.name,
-            "type": str(i.investment_type),
-            "label": TYPE_LABELS.get(str(i.investment_type), ""),
-            "color": TYPE_COLORS.get(str(i.investment_type), "#6B7280"),
+            "type": ev(i.investment_type),
+            "label": TYPE_LABELS.get(ev(i.investment_type), ""),
+            "color": TYPE_COLORS.get(ev(i.investment_type), "#6B7280"),
             "invested": float(i.invested_amount or 0),
             "current": float(i.current_value or 0),
             "pnl": float(i.unrealized_pnl or 0),
@@ -402,7 +403,7 @@ async def investment_intelligence(
 
     def _perf_row(i):
         return {
-            "name": i.name, "type": TYPE_LABELS.get(str(i.investment_type), ""),
+            "name": i.name, "type": TYPE_LABELS.get(ev(i.investment_type), ""),
             "pnl": float(i.unrealized_pnl or 0), "pnl_pct": round(_pnl_pct(i), 1),
         }
 
