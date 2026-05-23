@@ -359,13 +359,30 @@ def seed_arjun():
 
     # ── Friends ───────────────────────────────────────────────────────────────
     section("Friends / Split")
-    friends = [
-        {"name": "Rohit Kumar", "total_pending": 8500, "notes": "Goa trip split"},
-        {"name": "Sneha Patel", "total_pending": 3200, "notes": "Dinner + groceries"},
-    ]
-    for f in friends:
+    friend_ids = {}
+    for f in [
+        {"name": "Rohit Kumar", "notes": "Goa trip split", "relation": "FRIEND"},
+        {"name": "Sneha Patel", "notes": "Dinner + groceries", "relation": "FRIEND"},
+    ]:
         r = post("/friends", f, tok)
-        if ok(r): record()
+        if ok(r): d = r.json(); friend_ids[d["name"]] = d["id"]; record()
+
+    # Friend EMIs so that total_pending is computed correctly
+    for fname, amount, product in [
+        ("Rohit Kumar", 8500, "Goa trip share"),
+        ("Sneha Patel", 3200, "Dinner split"),
+    ]:
+        fid = friend_ids.get(fname)
+        if fid:
+            r = post("/emis", {
+                "friend_id": fid, "product_name": product,
+                "purchase_date": dstr(months_ago(2)),
+                "total_amount": amount, "purchase_amount": amount,
+                "monthly_emi": amount, "tenure_months": 1,
+                "interest_rate": 0, "is_no_cost_emi": True,
+                "owner_type": "SHARED",
+            }, tok)
+            if ok(r): record()
 
     # ── Net Worth snapshot ─────────────────────────────────────────────────────
     get("/net-worth/snapshot", tok)
@@ -572,11 +589,29 @@ def seed_priya():
         r = post("/assets", a, tok); record() if ok(r) else None
 
     section("Friends")
+    priya_friend_ids = {}
     for f in [
-        {"name": "Anand Sharma", "total_pending": 12000, "notes": "Manali trip expenses"},
-        {"name": "Kavya Iyer",   "total_pending": 5500,  "notes": "Wedding gift pooling"},
+        {"name": "Anand Sharma", "notes": "Manali trip expenses"},
+        {"name": "Kavya Iyer",   "notes": "Wedding gift pooling"},
     ]:
-        r = post("/friends", f, tok); record() if ok(r) else None
+        r = post("/friends", f, tok)
+        if ok(r): d = r.json(); priya_friend_ids[d["name"]] = d["id"]; record()
+
+    for fname, amount, product in [
+        ("Anand Sharma", 12000, "Manali trip share"),
+        ("Kavya Iyer",   5500,  "Wedding gift pool"),
+    ]:
+        fid = priya_friend_ids.get(fname)
+        if fid:
+            r = post("/emis", {
+                "friend_id": fid, "product_name": product,
+                "purchase_date": dstr(months_ago(2)),
+                "total_amount": amount, "purchase_amount": amount,
+                "monthly_emi": amount, "tenure_months": 1,
+                "interest_rate": 0, "is_no_cost_emi": True,
+                "owner_type": "SHARED",
+            }, tok)
+            if ok(r): record()
 
     get("/net-worth/snapshot", tok)
     post("/net-worth/snapshots", {}, tok)
@@ -757,12 +792,30 @@ def seed_vikram():
         r = post("/assets", a, tok); record() if ok(r) else None
 
     section("Friends / Split")
+    vikram_friend_ids = {}
     for f in [
-        {"name": "Rahul Verma", "total_pending": 22000, "notes": "Dubai trip split"},
-        {"name": "Siya Shah",   "total_pending": 8000,  "notes": "Office party expenses"},
-        {"name": "Dev Nair",    "total_pending": -5000, "notes": "I owe him for coworking"},
+        {"name": "Rahul Verma", "notes": "Dubai trip split"},
+        {"name": "Siya Shah",   "notes": "Office party expenses"},
+        {"name": "Dev Nair",    "notes": "I owe him for coworking"},
     ]:
-        r = post("/friends", f, tok); record() if ok(r) else None
+        r = post("/friends", f, tok)
+        if ok(r): d = r.json(); vikram_friend_ids[d["name"]] = d["id"]; record()
+
+    for fname, amount, product in [
+        ("Rahul Verma", 22000, "Dubai trip share"),
+        ("Siya Shah",   8000,  "Office party expenses"),
+    ]:
+        fid = vikram_friend_ids.get(fname)
+        if fid:
+            r = post("/emis", {
+                "friend_id": fid, "product_name": product,
+                "purchase_date": dstr(months_ago(2)),
+                "total_amount": amount, "purchase_amount": amount,
+                "monthly_emi": amount, "tenure_months": 1,
+                "interest_rate": 0, "is_no_cost_emi": True,
+                "owner_type": "SHARED",
+            }, tok)
+            if ok(r): record()
 
     get("/net-worth/snapshot", tok)
     post("/net-worth/snapshots", {}, tok)
@@ -1081,12 +1134,30 @@ def seed_suresh():
         r = post("/goals", g, tok); record() if ok(r) else None
 
     section("Friends / Money Owed")
+    suresh_friend_ids = {}
     for f in [
-        {"name": "Ravi (colleague)",   "total_pending": -50000, "notes": "Borrowed for medical emergency"},
-        {"name": "Preethi (sister)",   "total_pending": -20000, "notes": "Borrowed for bike repair"},
-        {"name": "Landlord (advance)", "total_pending": 24000,  "notes": "Security deposit"},
+        {"name": "Ravi (colleague)",   "notes": "Borrowed for medical emergency"},
+        {"name": "Preethi (sister)",   "notes": "Borrowed for bike repair"},
+        {"name": "Landlord (advance)", "notes": "Security deposit"},
     ]:
-        r = post("/friends", f, tok); record() if ok(r) else None
+        r = post("/friends", f, tok)
+        if ok(r): d = r.json(); suresh_friend_ids[d["name"]] = d["id"]; record()
+
+    # Landlord advance — Suresh is owed ₹24K security deposit
+    for fname, amount, product in [
+        ("Landlord (advance)", 24000, "Security deposit receivable"),
+    ]:
+        fid = suresh_friend_ids.get(fname)
+        if fid:
+            r = post("/emis", {
+                "friend_id": fid, "product_name": product,
+                "purchase_date": dstr(months_ago(6)),
+                "total_amount": amount, "purchase_amount": amount,
+                "monthly_emi": amount, "tenure_months": 1,
+                "interest_rate": 0, "is_no_cost_emi": True,
+                "owner_type": "SHARED",
+            }, tok)
+            if ok(r): record()
 
     section("EMIs — Multiple active")
     for e in [
