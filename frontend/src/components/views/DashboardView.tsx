@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, CreditCard, TrendingDown, Calendar, Users,
   Zap, Star, ArrowUpRight, Bell, ChevronRight,
-  TrendingUp, Sparkles, DollarSign, Target, Landmark,
+  TrendingUp, RefreshCw, DollarSign, Target, Landmark,
   BarChart3, Wallet, Shield, Building2, AlertCircle, X,
 } from 'lucide-react'
 import { useUIStore } from '@/store/ui'
@@ -51,7 +51,7 @@ const QUICK_ACTIONS = [
   { icon: DollarSign, label: 'Income',      view: 'income'      as const, color: '#8B5CF6' },
   { icon: Target,     label: 'Goals',       view: 'goals'       as const, color: '#EC4899' },
   { icon: Shield,     label: 'Insurance',   view: 'insurance'   as const, color: '#EF4444' },
-  { icon: Sparkles,   label: 'AI CFO',      view: 'ai-cfo'      as const, color: '#F97316' },
+  { icon: RefreshCw,  label: 'Recurring',   view: 'recurring'   as const, color: '#F97316' },
 ]
 
 const MODULE_VIEW_MAP: Record<string, string> = {
@@ -153,10 +153,10 @@ export function DashboardView() {
         subtitle={time ? `Live · ${time}` : 'Your complete financial overview'}
         actions={
           <div className="flex gap-2">
-            <button onClick={() => setView('ai-cfo')}
+            <button onClick={() => setView('recurring')}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
               style={{ background: 'linear-gradient(135deg,#F97316,#EA580C)' }}>
-              <Sparkles size={14} /> Ask AI CFO
+              <RefreshCw size={14} /> Recurring
             </button>
             <button onClick={() => setView('statements')} className="btn-primary">
               <Zap className="w-3.5 h-3.5" strokeWidth={2.5} /> Upload Statement
@@ -289,7 +289,7 @@ export function DashboardView() {
             if (view === 'income')      subtitle = formatCurrencyCompact(monthlyIncome) + '/mo'
             if (view === 'goals')       subtitle = `${activeGoals} active`
             if (view === 'insurance')   subtitle = netWorth?.insurance?.has_health && netWorth?.insurance?.has_term ? '✓ covered' : '⚠ gaps'
-            if (view === 'ai-cfo')      subtitle = 'Ask anything'
+            if (view === 'recurring')    subtitle = 'Commitments'
             return (
               <motion.button
                 key={view}
@@ -444,11 +444,11 @@ export function DashboardView() {
             </div>
           </div>
 
-          {/* AI Insights */}
+          {/* Financial Insights */}
           <div className="card p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-4 h-4" style={{ color: '#F97316' }} strokeWidth={2} />
-              <h2 className="section-title">AI Insights</h2>
+              <span className="text-base">💡</span>
+              <h2 className="section-title">Financial Insights</h2>
               {!!stats?.unread_insights && (
                 <span className="ml-auto text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full"
                   style={{ background: '#F97316' }}>
@@ -476,7 +476,7 @@ export function DashboardView() {
                     )
                   })
                   : <EmptyState icon={Bell} message="No insights yet. Upload a statement to get started.">
-                      <button onClick={() => setView('ai-cfo')} className="text-xs font-semibold mt-1 inline-block" style={{ color: '#F97316' }}>Chat with AI CFO →</button>
+                      <button onClick={() => setView('statements')} className="text-xs font-semibold mt-1 inline-block" style={{ color: '#F97316' }}>Upload Statement →</button>
                     </EmptyState>
               }
             </div>

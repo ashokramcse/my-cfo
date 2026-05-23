@@ -2,14 +2,14 @@ import { create } from 'zustand'
 
 export type ViewId =
   | 'dashboard' | 'net-worth' | 'banking' | 'investments' | 'loans' | 'assets'
-  | 'income' | 'insurance' | 'goals' | 'ai-cfo'
-  | 'cards' | 'transactions' | 'emis'
+  | 'income' | 'insurance' | 'goals'
+  | 'cards' | 'transactions' | 'emis' | 'recurring'
   | 'friends' | 'statements' | 'reports' | 'settings' | 'sharing'
 
 const VALID_VIEWS = new Set<string>([
   'dashboard', 'net-worth', 'banking', 'investments', 'loans', 'assets',
-  'income', 'insurance', 'goals', 'ai-cfo',
-  'cards', 'transactions', 'emis',
+  'income', 'insurance', 'goals',
+  'cards', 'transactions', 'emis', 'recurring',
   'friends', 'statements', 'reports', 'settings', 'sharing',
 ])
 
@@ -32,7 +32,6 @@ interface UIState {
   activeModal: string | null
   openModal: (id: string) => void
   closeModal: () => void
-  // SPA view routing — synced with URL hash for deep linking
   currentView: ViewId
   setView: (v: ViewId) => void
 }

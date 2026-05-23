@@ -1,5 +1,5 @@
 'use client'
-import { LayoutDashboard, Landmark, CreditCard, BarChart3, Sparkles } from 'lucide-react'
+import { LayoutDashboard, Landmark, CreditCard, BarChart3, RefreshCw } from 'lucide-react'
 import { useUIStore, ViewId } from '@/store/ui'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { cn } from '@/lib/utils'
@@ -8,8 +8,8 @@ const BOTTOM_NAV = [
   { view: 'dashboard'   as ViewId, icon: LayoutDashboard, label: 'Home'    },
   { view: 'banking'     as ViewId, icon: Landmark,        label: 'Banking' },
   { view: 'cards'       as ViewId, icon: CreditCard,      label: 'Cards'   },
-  { view: 'investments' as ViewId, icon: BarChart3,        label: 'Invest'  },
-  { view: 'ai-cfo'      as ViewId, icon: Sparkles,         label: 'AI CFO'  },
+  { view: 'investments' as ViewId, icon: BarChart3,       label: 'Invest'  },
+  { view: 'recurring'   as ViewId, icon: RefreshCw,       label: 'Recurring'},
 ]
 
 export function MobileBottomNav() {
@@ -34,7 +34,7 @@ export function MobileBottomNav() {
           <button
             key={view}
             onClick={() => setView(view)}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors relative"
             style={{ color: active ? '#F97316' : 'rgba(255,255,255,0.38)' }}
           >
             <Icon

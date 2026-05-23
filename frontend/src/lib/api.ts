@@ -200,11 +200,10 @@ export const goalsApi = {
   intelligence: () => api.get('/goals/analytics/intelligence'),
 }
 
-export const aiCfoApi = {
-  chat: (message: string, sessionId?: string, model?: string) =>
-    api.post('/ai-cfo/chat', { message, session_id: sessionId, model }),
-  history: (limit?: number) => api.get('/ai-cfo/history', { params: { limit } }),
-  clearHistory: () => api.delete('/ai-cfo/history'),
+export const recurringApi = {
+  summary: () => api.get('/recurring/summary'),
+  upcoming: (days = 30) => api.get('/recurring/upcoming', { params: { days } }),
+  calendar: () => api.get('/recurring/calendar'),
 }
 
 export const notificationsApi = {

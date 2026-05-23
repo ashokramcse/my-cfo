@@ -4,6 +4,7 @@ import { DashboardView }   from './DashboardView'
 import { CardsView }       from './CardsView'
 import { TransactionsView }from './TransactionsView'
 import { EMIsView }        from './EMIsView'
+import { RecurringView }   from './RecurringView'
 import { FriendsView }     from './FriendsView'
 import { StatementsView }  from './StatementsView'
 import { ReportsView }     from './ReportsView'
@@ -16,7 +17,6 @@ import { AssetsView }      from './AssetsView'
 import { IncomeView }      from './IncomeView'
 import { InsuranceView }   from './InsuranceView'
 import { GoalsView }       from './GoalsView'
-import { AICFOView }       from './AICFOView'
 import { SharingView }     from './SharingView'
 
 export function ViewRouter() {
@@ -32,10 +32,10 @@ export function ViewRouter() {
     case 'income':       return <IncomeView />
     case 'insurance':    return <InsuranceView />
     case 'goals':        return <GoalsView />
-    case 'ai-cfo':       return <AICFOView />
     case 'cards':        return <CardsView />
     case 'transactions': return <TransactionsView />
     case 'emis':         return <EMIsView />
+    case 'recurring':    return <RecurringView />
     case 'friends':      return <FriendsView />
     case 'statements':   return <StatementsView />
     case 'reports':      return <ReportsView />
