@@ -39,7 +39,7 @@ function PasswordStrength({ password }: { password: string }) {
 
 export default function SignupPage() {
   const router = useRouter()
-  const { register, isLoading, user } = useAuthStore()
+  const { register, isLoading, user, _hydrated } = useAuthStore()
 
   const [step, setStep]         = useState(1)
   const [error, setError]       = useState('')
@@ -51,8 +51,8 @@ export default function SignupPage() {
   })
 
   useEffect(() => {
-    if (user) router.replace('/dashboard')
-  }, [user, router])
+    if (_hydrated && user) router.replace('/dashboard')
+  }, [_hydrated, user, router])
 
   function set(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }))

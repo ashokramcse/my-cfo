@@ -22,6 +22,7 @@ interface AuthState {
   accessToken: string | null
   refreshToken: string | null
   isLoading: boolean
+  _hydrated: boolean          // true once zustand persist has rehydrated from localStorage
 
   login: (identifier: string, password: string) => Promise<void>
   register: (data: RegisterPayload) => Promise<void>
@@ -30,6 +31,7 @@ interface AuthState {
   loadUser: () => Promise<void>
   setTokens: (access: string, refresh: string) => void
   clearAuth: () => void
+  setHydrated: () => void
 }
 
 export interface RegisterPayload {
@@ -49,6 +51,9 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       isLoading: false,
+      _hydrated: false,
+
+      setHydrated: () => set({ _hydrated: true }),
 
       setTokens: (access, refresh) => {
         set({ accessToken: access, refreshToken: refresh })
@@ -138,6 +143,8 @@ export const useAuthStore = create<AuthState>()(
         if (state?.refreshToken) {
           localStorage.setItem('refresh_token', state.refreshToken)
         }
+        // Mark hydration complete so AuthGate knows it can safely read tokens
+        useAuthStore.getState().setHydrated()
       },
     }
   )
