@@ -1,6 +1,6 @@
-# FinOS — Personal Financial Operating System: Architecture
+# My CFO — Personal Financial OS: Architecture
 
-> **The Definitive Self-Hosted AI-Powered Personal Financial Operating System for Indian Users**
+> **Self-Hosted Personal Financial Operating System — built for Indian users**
 
 ---
 
@@ -22,36 +22,28 @@ FinOS is not a budgeting app or an expense tracker. It is a **Financial Life Man
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        CLIENT LAYER                              │
-│  Next.js 15 (App Router) · TypeScript · Tailwind · Recharts     │
-│  Zustand (state) · TanStack Query v5 (server state)             │
+│  Next.js 15 (App Router) · TypeScript · Tailwind CSS            │
+│  ECharts 5 (Sankey/Sunburst/Timeline) · D3.js 7 (Force graph)  │
+│  Zustand 5 (auth + UI state) · TanStack Query v5 (server state) │
 └──────────────────────────┬──────────────────────────────────────┘
-                           │ HTTPS / WebSocket
+                           │ HTTP (nginx proxied)
 ┌──────────────────────────▼──────────────────────────────────────┐
-│                      API GATEWAY (nginx)                         │
-│  /api/v1/** → FastAPI backend   /static → Next.js assets        │
+│                      API GATEWAY (nginx :4000)                   │
+│  /api/v1/** → FastAPI :8090   /*  → Next.js :3030               │
 └──────────────┬─────────────────────────────┬────────────────────┘
                │                             │
 ┌──────────────▼──────────┐   ┌─────────────▼──────────────────┐
 │   FastAPI Backend        │   │   Worker Layer (Celery + Redis) │
-│   Async SQLAlchemy       │   │   - PDF/OCR parsing jobs        │
-│   Pydantic v2            │   │   - AI embedding generation     │
-│   JWT Auth               │   │   - Notification dispatch       │
-│   Alembic migrations     │   │   - Snapshot scheduler          │
+│   Async SQLAlchemy 2.0   │   │   - PDF/OCR parsing jobs        │
+│   Pydantic v2            │   │   - Notification dispatch       │
+│   JWT Auth (jose)        │   │   - Snapshot scheduler          │
+│   Alembic migrations     │   │                                 │
 └──────────────┬──────────┘   └────────────────────────────────┘
                │
 ┌──────────────▼──────────────────────────────────────────────────┐
 │                     DATA LAYER                                   │
-│  PostgreSQL 15 (primary data store, JSONB for flexible fields)  │
-│  Redis (cache, task queues, session store, pub/sub)             │
-│  pgvector (vector embeddings for AI CFO RAG)                    │
-└──────────────┬──────────────────────────────────────────────────┘
-               │
-┌──────────────▼──────────────────────────────────────────────────┐
-│                     AI LAYER                                     │
-│  Ollama (local LLM inference)                                   │
-│  Models: llama3, qwen2.5, mistral, deepseek-r1                  │
-│  Embeddings: nomic-embed-text or mxbai-embed-large              │
-│  RAG: pgvector similarity search over financial embeddings      │
+│  PostgreSQL 17 (primary store, JSONB for flexible fields)       │
+│  Redis 7 (cache, task queues, session store)                    │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
