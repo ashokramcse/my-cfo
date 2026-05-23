@@ -161,6 +161,39 @@ def _loan_insights(loans: list, total_outstanding: float, total_emi: float,
             "action": "loans",
         })
 
+    # Total interest cost projection (always-on)
+    if active and len(insights) < 2:
+        avg_rate = (sum(float(l.interest_rate or 0) for l in active) / len(active))
+        annual_interest = total_outstanding * (avg_rate / 100)
+        insights.append({
+            "severity": "INFO",
+            "title": f"~₹{annual_interest:,.0f} Interest This Year",
+            "body": f"Estimated annual interest on ₹{total_outstanding:,.0f} outstanding at avg {avg_rate:.1f}%. Prepayment directly reduces this cost.",
+            "action": "loans",
+        })
+
+    # Loan count / debt-free timeline nudge (always-on if fewer than 3 insights)
+    if active and len(insights) < 3:
+        soonest = min((l for l in active if (l.remaining_months or 0) > 0),
+                      key=lambda l: l.remaining_months or 999, default=None)
+        if soonest:
+            name = soonest.nickname or LOAN_TYPE_LABELS.get(ev(soonest.loan_type), "Loan")
+            insights.append({
+                "severity": "INFO",
+                "title": f"{name} Closes in {soonest.remaining_months}m",
+                "body": f"Your nearest loan closure is in {soonest.remaining_months} months. "
+                        "Channel freed-up EMI into investments after payoff for accelerated wealth building.",
+                "action": "loans",
+            })
+        elif len(active) > 0:
+            insights.append({
+                "severity": "INFO",
+                "title": f"{len(active)} Active Loan(s)",
+                "body": f"Total EMI commitment: ₹{total_emi:,.0f}/month across {len(active)} loan(s). "
+                        "Set remaining months on each loan to track closure timelines.",
+                "action": "loans",
+            })
+
     return insights[:6]
 
 

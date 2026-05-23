@@ -152,6 +152,51 @@ def _investment_insights(investments: list, total_value: float, by_class: dict,
                 "action": "investments",
             })
 
+    # Portfolio size milestone / growth nudge (always-on)
+    if total_value > 0 and len(insights) < 2:
+        if total_value < 100000:
+            insights.append({
+                "severity": "INFO",
+                "title": "Build Your ₹1L Milestone",
+                "body": f"Portfolio at ₹{total_value:,.0f}. Reaching ₹1L through consistent SIPs builds compounding momentum.",
+                "action": "investments",
+            })
+        else:
+            equity_val = by_class.get("Equity", 0) + by_class.get("Mutual Funds", 0)
+            eq_pct = equity_val / total_value * 100 if total_value > 0 else 0
+            if eq_pct < 30:
+                insights.append({
+                    "severity": "INFO",
+                    "title": "Low Equity Allocation",
+                    "body": f"Only {eq_pct:.0f}% in equities. For long-term wealth, target 60–70% in equity for inflation-beating returns.",
+                    "action": "investments",
+                })
+
+    # Diversification score (always-on if fewer than 3 insights)
+    if len(insights) < 3:
+        num_classes = len([v for v in by_class.values() if v > 0])
+        if num_classes == 1:
+            insights.append({
+                "severity": "WARNING",
+                "title": "Single Asset Class",
+                "body": "All investments are in one asset class. Spread across equity, debt, and gold to reduce concentration risk.",
+                "action": "investments",
+            })
+        elif num_classes >= 4:
+            insights.append({
+                "severity": "INFO",
+                "title": f"Well Diversified: {num_classes} Asset Classes",
+                "body": "Portfolio spans multiple asset classes. Rebalance annually to maintain target allocation ratios.",
+                "action": "investments",
+            })
+        elif sip_monthly > 0:
+            insights.append({
+                "severity": "INFO",
+                "title": f"SIP Running: ₹{sip_monthly:,.0f}/month",
+                "body": "Your systematic investment plan is active. Stay consistent — even market dips accelerate unit accumulation.",
+                "action": "investments",
+            })
+
     return insights[:6]
 
 
