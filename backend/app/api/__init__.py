@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from app.api import auth, cards, transactions, emis, friends, statements, reports, insights
 from app.api import bank_accounts, investments, loans, assets, net_worth
 from app.api import income, insurance, goals, notifications, sharing, recurring
+from app.api import investment_transactions
 
 router = APIRouter()
 router.include_router(auth.router,          prefix="/auth",          tags=["Auth"])
@@ -22,4 +23,5 @@ router.include_router(insurance.router,     prefix="/insurance",     tags=["Insu
 router.include_router(goals.router,         prefix="/goals",         tags=["Goals"])
 router.include_router(recurring.router,     prefix="/recurring",     tags=["Recurring"])
 router.include_router(notifications.router, prefix="/notifications",  tags=["Notifications"])
-router.include_router(sharing.router,       prefix="/sharing",       tags=["Sharing"])
+router.include_router(sharing.router,            prefix="/sharing",       tags=["Sharing"])
+router.include_router(investment_transactions.router, prefix="/investments", tags=["Investment Ledger"])

@@ -75,6 +75,18 @@ class Investment(Base):
     xirr = Column(Numeric(8, 4))            # annualized return %
     cagr = Column(Numeric(8, 4))
 
+    # Fixed-income / SGB / bond fields
+    maturity_date     = Column(Date, nullable=True)          # SGB: 8 yr from issue; bonds: maturity
+    coupon_rate       = Column(Numeric(6, 3), nullable=True) # SGB: 2.5%, bonds: coupon %
+    last_coupon_date  = Column(Date, nullable=True)
+    next_coupon_date  = Column(Date, nullable=True)
+
+    # Price source for external feed hooks (P3 — gold MCX, MF AMFI)
+    price_source      = Column(String(50), default="MANUAL")  # MANUAL|AMFI|MCX|NSE|BSE
+
+    # FinancialEntity isolation (P2 — dual pocket)
+    entity_id         = Column(UUID(as_uuid=True), nullable=True)  # → financial_entities.id
+
     # Metadata
     purchase_date = Column(Date)
     notes = Column(Text)
@@ -84,4 +96,7 @@ class Investment(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    user = relationship("User", back_populates="investments")
+    user         = relationship("User", back_populates="investments")
+    transactions = relationship("InvestmentTransaction", back_populates="investment",
+                                cascade="all, delete-orphan",
+                                order_by="InvestmentTransaction.tx_date")

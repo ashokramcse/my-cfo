@@ -14,6 +14,7 @@ class AssetType(str, enum.Enum):
     ELECTRONICS = "ELECTRONICS"
     FURNITURE = "FURNITURE"
     ARTWORK = "ARTWORK"
+    RECEIVABLE = "RECEIVABLE"   # Director's loan to own company, inter-entity receivable
     OTHER = "OTHER"
 
 
@@ -54,6 +55,15 @@ class Asset(Base):
     ownership_docs = Column(String(200))  # document reference
     is_mortgaged = Column(Boolean, default=False)
     mortgage_outstanding = Column(Numeric(15, 2), default=0)
+
+    # Receivable / Director's loan fields (used when asset_type = RECEIVABLE)
+    counterparty_name      = Column(String(200), nullable=True)  # "ABC Pvt Ltd", "Mom"
+    counterparty_entity_id = Column(UUID(as_uuid=True), nullable=True)  # → financial_entities.id
+    due_date               = Column(Date, nullable=True)          # expected repayment date
+    interest_rate          = Column(Numeric(6, 3), nullable=True) # if interest-bearing
+
+    # FinancialEntity isolation
+    entity_id = Column(UUID(as_uuid=True), nullable=True)  # → financial_entities.id
 
     notes = Column(Text)
     extra_data = Column(JSONB, default=dict)

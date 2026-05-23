@@ -1,3 +1,5 @@
+from app.models.investment_transaction import InvestmentTransaction, InvTxType, TaxCategory
+from app.models.financial_entity import FinancialEntity, EntityType
 from app.models.user import User
 from app.models.card import CreditCard
 from app.models.statement import Statement
@@ -38,4 +40,6 @@ __all__ = [
     "UserRelationship", "RelationshipType",
     "SharePermission", "AccessType",
     "ShareInvitation", "InvitationStatus",
+    "InvestmentTransaction", "InvTxType", "TaxCategory",
+    "FinancialEntity", "EntityType",
 ]

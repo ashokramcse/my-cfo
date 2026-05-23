@@ -77,8 +77,21 @@ class BankTransaction(Base):
     reference_no      = Column(String(100))                      # UTR / cheque / UPI ref
     balance_after     = Column(Numeric(15, 2))                   # running balance after tx
 
-    # Transfer linking
-    linked_account_id = Column(UUID(as_uuid=True), ForeignKey("bank_accounts.id", ondelete="SET NULL"))
+    # Settlement status lifecycle
+    # PENDING → SETTLED → RECONCILED
+    # Use PENDING for MF redemptions awaiting T+3, cheques in transit, etc.
+    status            = Column(String(20), default="SETTLED")        # PENDING|SETTLED|RECONCILED
+
+    # TDS tracking (for FD interest, dividends, etc.)
+    gross_amount      = Column(Numeric(15, 2), nullable=True)        # before TDS deduction
+    tds_amount        = Column(Numeric(15, 2), default=0)            # tax deducted at source
+    tds_section       = Column(String(20), nullable=True)            # 194A, 194N, 194DA…
+
+    # Cross-entity linking (wealth transfer integrity)
+    linked_account_id         = Column(UUID(as_uuid=True), ForeignKey("bank_accounts.id", ondelete="SET NULL"))
+    linked_investment_tx_id   = Column(UUID(as_uuid=True), nullable=True)   # → investment_transactions.id
+    linked_loan_id            = Column(UUID(as_uuid=True), ForeignKey("loans.id", ondelete="SET NULL"), nullable=True)
+    linked_card_id            = Column(UUID(as_uuid=True), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True)
 
     # Quality flags
     is_duplicate      = Column(Boolean, default=False)

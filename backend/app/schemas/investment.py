@@ -15,7 +15,7 @@ class InvestmentCreate(BaseModel):
     current_price: Decimal = Decimal("0")
     invested_amount: Decimal = Decimal("0")
     current_value: Optional[Decimal] = None      # explicit current valuation (optional)
-    is_locked: bool = False                       # lock-in period flag
+    is_locked: bool = False
     is_sip: bool = False
     sip_amount: Optional[Decimal] = None
     sip_date: Optional[int] = None
@@ -28,6 +28,11 @@ class InvestmentCreate(BaseModel):
     platform: Optional[str] = None
     lock_in_until: Optional[date] = None
     purchase_date: Optional[date] = None
+    # SGB / bond / fixed-income fields
+    maturity_date: Optional[date] = None
+    coupon_rate: Optional[Decimal] = None
+    next_coupon_date: Optional[date] = None
+    price_source: str = "MANUAL"
     notes: Optional[str] = None
 
 
@@ -44,6 +49,10 @@ class InvestmentUpdate(BaseModel):
     realized_pnl: Optional[Decimal] = None
     xirr: Optional[Decimal] = None
     cagr: Optional[Decimal] = None
+    maturity_date: Optional[date] = None
+    coupon_rate: Optional[Decimal] = None
+    next_coupon_date: Optional[date] = None
+    price_source: Optional[str] = None
     notes: Optional[str] = None
 
 
@@ -74,6 +83,10 @@ class InvestmentOut(BaseModel):
     xirr: Optional[Decimal]
     cagr: Optional[Decimal]
     purchase_date: Optional[date]
+    maturity_date: Optional[date]
+    coupon_rate: Optional[Decimal]
+    next_coupon_date: Optional[date]
+    price_source: Optional[str]
     notes: Optional[str]
     last_price_updated: Optional[datetime]
     created_at: datetime
