@@ -29,6 +29,7 @@ from app.models.asset import Asset
 from app.models.card import CreditCard
 from app.models.emi import EMI, EMIStatus
 from app.models.net_worth import NetWorthSnapshot
+from app.models.bank_transaction import BankTransaction
 from app.services.financial_context import build_financial_context
 
 router = APIRouter()
@@ -556,20 +557,146 @@ async def net_worth_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Historical snapshots for trend charts — one snapshot per calendar month."""
+    """
+    Historical net worth for trend chart — one point per calendar month.
+    Uses saved snapshots where available; fills gaps with synthetic points
+    reconstructed from bank transaction history.
+    """
     cutoff = datetime.now(timezone.utc) - timedelta(days=months * 31)
-    result = await db.execute(
+    uid = current_user.id
+
+    # ── 1. Load saved snapshots ────────────────────────────────────────────────
+    snap_res = await db.execute(
         select(NetWorthSnapshot)
-        .where(
-            NetWorthSnapshot.user_id == current_user.id,
-            NetWorthSnapshot.snapshot_date >= cutoff,
-        )
+        .where(NetWorthSnapshot.user_id == uid, NetWorthSnapshot.snapshot_date >= cutoff)
         .order_by(NetWorthSnapshot.snapshot_date.asc())
     )
-    snaps = result.scalars().all()
-    # Deduplicate: keep last snapshot per calendar month
-    monthly_map: dict = {}
+    snaps = snap_res.scalars().all()
+    snap_map: dict = {}
     for s in snaps:
         key = s.snapshot_date.strftime("%Y-%m")
-        monthly_map[key] = s  # last one wins
-    return [format_snap(s) for s in monthly_map.values()]
+        snap_map[key] = format_snap(s)
+
+    # ── 2. Compute current totals (baseline for reconstruction) ───────────────
+    data = await _build_intelligence(db, uid)
+    current_bank        = data["bank_total"]
+    current_investments = data["investment_value"]
+    current_assets      = data["asset_value"]
+    current_loans       = data["loan_outstanding"]
+    current_cc          = data["cc_outstanding"]
+    current_total_assets = data["total_assets"]
+    current_total_liab   = data["total_liabilities"]
+    current_nw           = data["net_worth"]
+
+    # ── 3. Build monthly bank-balance history from transactions ───────────────
+    # For each month end, find the last balance_after in any account.
+    # Fallback: reconstruct by subtracting net debits/credits after that date.
+    tx_res = await db.execute(
+        select(BankTransaction)
+        .where(
+            BankTransaction.user_id == uid,
+            BankTransaction.transaction_date >= cutoff,
+            BankTransaction.is_excluded == False,
+        )
+        .order_by(BankTransaction.transaction_date.asc())
+    )
+    txs = tx_res.scalars().all()
+
+    # Group net transaction flow per month (credits positive, debits negative)
+    from collections import defaultdict
+    monthly_flow: dict = defaultdict(float)
+    for tx in txs:
+        key = tx.transaction_date.strftime("%Y-%m")
+        amt = float(tx.amount or 0)
+        if tx.tx_type and tx.tx_type.value in ("CREDIT", "SALARY", "TRANSFER_IN", "REFUND"):
+            monthly_flow[key] += amt
+        else:
+            monthly_flow[key] -= amt
+
+    # Loan monthly reduction estimate (EMI reduces outstanding by ~principal portion)
+    loan_res = await db.execute(select(Loan).where(Loan.user_id == uid, Loan.status == "ACTIVE"))
+    active_loans = loan_res.scalars().all()
+    monthly_principal = sum(float(l.emi_amount or 0) * 0.55 for l in active_loans)  # ~55% principal
+
+    # ── 4. Generate one point per month ───────────────────────────────────────
+    now = datetime.now(timezone.utc)
+    result_points = []
+    # Walk backwards month-by-month, reconstruct bank balance
+    running_bank = current_bank
+    running_loans = current_loans
+
+    month_keys = []
+    d = now
+    for _ in range(months):
+        month_keys.append(d.strftime("%Y-%m"))
+        # go to previous month
+        if d.month == 1:
+            d = d.replace(year=d.year - 1, month=12)
+        else:
+            d = d.replace(month=d.month - 1)
+    month_keys.reverse()  # oldest first
+
+    running_bank = current_bank
+    running_loans = current_loans
+    # Walk forward: subtract flows we haven't yet had (i.e. go backwards first)
+    # Easier: walk months oldest→newest, cumulative from reconstructed start
+    # Step 1: estimate starting bank balance months ago
+    total_flow = sum(monthly_flow.values())
+    start_bank = current_bank - total_flow  # approximate starting balance
+
+    cum_bank = start_bank
+    cum_loans = current_loans + monthly_principal * months  # approx starting outstanding
+
+    for mk in month_keys:
+        if mk in snap_map:
+            # Use real snapshot if available
+            result_points.append(snap_map[mk])
+        else:
+            # Synthetic point
+            flow = monthly_flow.get(mk, 0)
+            cum_bank += flow
+            cum_loans = max(0, cum_loans - monthly_principal)
+            total_assets_est = cum_bank + current_investments + current_assets
+            total_liab_est   = max(0, cum_loans) + current_cc
+            nw_est = total_assets_est - total_liab_est
+            result_points.append({
+                "date":              f"{mk}-15T00:00:00",
+                "net_worth":         round(nw_est, 2),
+                "total_assets":      round(total_assets_est, 2),
+                "total_liabilities": round(total_liab_est, 2),
+                "bank_balance":      round(cum_bank, 2),
+                "investment_value":  round(current_investments, 2),
+                "asset_value":       round(current_assets, 2),
+                "change_amount":     0,
+                "change_pct":        0,
+                "health_score":      0,
+                "liquid_net_worth":  round(cum_bank - current_cc, 2),
+                "synthetic":         True,
+            })
+
+    # Always ensure current month has the real current values
+    cur_key = now.strftime("%Y-%m")
+    cur_point = {
+        "date":              now.strftime("%Y-%m-%dT%H:%M:%S"),
+        "net_worth":         round(current_nw, 2),
+        "total_assets":      round(current_total_assets, 2),
+        "total_liabilities": round(current_total_liab, 2),
+        "bank_balance":      round(current_bank, 2),
+        "investment_value":  round(current_investments, 2),
+        "asset_value":       round(current_assets, 2),
+        "change_amount":     0,
+        "change_pct":        0,
+        "health_score":      data.get("health_score", 0),
+        "liquid_net_worth":  round(data["liquid_net_worth"], 2),
+        "synthetic":         False,
+    }
+    if snap_map.get(cur_key):
+        cur_point = snap_map[cur_key]
+
+    # Replace or append current month
+    if result_points and result_points[-1]["date"][:7] == cur_key:
+        result_points[-1] = cur_point
+    else:
+        result_points.append(cur_point)
+
+    return result_points

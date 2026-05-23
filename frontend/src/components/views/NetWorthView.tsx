@@ -138,35 +138,7 @@ function AllocationDonut({ data }: { data: AllocationSlice[] }) {
 
 function TimelineChart({ data }: { data: HistoryPoint[] }) {
   if (!data.length) return <EmptyChart label="Take a snapshot to start tracking" />
-
-  // Single snapshot — show a summary card instead of broken dots
-  if (data.length === 1) {
-    const p = data[0]
-    return (
-      <div className="flex flex-col items-center justify-center h-[200px] gap-4">
-        <div className="flex gap-6 text-center">
-          {[
-            { label: 'Assets', value: p.total_assets, color: '#10B981' },
-            { label: 'Liabilities', value: p.total_liabilities, color: '#F97316' },
-            { label: 'Net Worth', value: p.net_worth, color: '#7C3AED' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="flex flex-col items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
-              <span className="text-[11px] text-muted-foreground">{label}</span>
-              <span className="text-sm font-bold" style={{ color }}>{formatCurrencyCompact(value)}</span>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs text-muted-foreground text-center max-w-[260px] leading-relaxed">
-          Snapshot taken on <span className="font-medium text-foreground">{format(parseISO(data[0].date), 'dd MMM yyyy')}</span>.
-          Take monthly snapshots to build your wealth timeline.
-        </p>
-      </div>
-    )
-  }
-
   const fmt = data.map(d => ({ ...d, label: format(parseISO(d.date), 'MMM yy') }))
-  const showDots = data.length <= 4
   return (
     <ResponsiveContainer width="100%" height={200}>
       <AreaChart data={fmt} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
@@ -194,9 +166,9 @@ function TimelineChart({ data }: { data: HistoryPoint[] }) {
           ]}
           contentStyle={{ background: '#FFFAF7', border: '1px solid #E7E2DC', borderRadius: 12, fontSize: 12 }}
         />
-        <Area type="monotone" dataKey="total_assets"      stroke="#10B981" fill="url(#aGrad)" strokeWidth={1.5} dot={showDots ? { r: 3, fill: '#10B981', strokeWidth: 0 } : false} />
-        <Area type="monotone" dataKey="total_liabilities" stroke="#F97316" fill="url(#lGrad)" strokeWidth={1.5} dot={showDots ? { r: 3, fill: '#F97316', strokeWidth: 0 } : false} />
-        <Area type="monotone" dataKey="net_worth"         stroke="#7C3AED" fill="url(#nGrad)" strokeWidth={2.5} dot={showDots ? { r: 4, fill: '#7C3AED', strokeWidth: 0 } : false} />
+        <Area type="monotone" dataKey="total_assets"      stroke="#10B981" fill="url(#aGrad)" strokeWidth={1.5} dot={false} activeDot={{ r: 4 }} />
+        <Area type="monotone" dataKey="total_liabilities" stroke="#F97316" fill="url(#lGrad)" strokeWidth={1.5} dot={false} activeDot={{ r: 4 }} />
+        <Area type="monotone" dataKey="net_worth"         stroke="#7C3AED" fill="url(#nGrad)" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
       </AreaChart>
     </ResponsiveContainer>
   )
