@@ -520,6 +520,34 @@ def _cashflow_insights(liquid_balance, burn_rate, runway_months, monthly_avg_in,
                 "body": f"{_fmt(top['amount'])} ({top['amount']/monthly_avg_out*100:.0f}% of spending). Review if this aligns with your goals.",
                 "action": "banking"})
 
+    # Savings rate insight
+    if monthly_avg_in > 0:
+        savings = monthly_avg_in - monthly_avg_out
+        savings_rate = (savings / monthly_avg_in) * 100
+        if savings_rate >= 20:
+            items.append({"severity": "INFO", "title": f"Saving {savings_rate:.0f}% of Income",
+                "body": f"Great discipline — you're saving {_fmt(savings)}/month. Consider allocating surplus to investments or goals.",
+                "action": "banking"})
+        elif savings_rate > 0:
+            items.append({"severity": "WARNING", "title": f"Low Savings Rate: {savings_rate:.0f}%",
+                "body": f"You're saving only {_fmt(savings)}/month. Target 20%+ ({_fmt(monthly_avg_in * 0.2)}) for long-term financial health.",
+                "action": "banking"})
+
+    # Recurring vs discretionary insight
+    if category_breakdown and monthly_avg_out > 0:
+        recurring_cats = {"EMI", "RENT", "UTILITIES", "SUBSCRIPTION", "INSURANCE"}
+        recurring_total = sum(c["amount"] for c in category_breakdown if c["category"].upper().replace(" ", "_") in recurring_cats)
+        if recurring_total > 0:
+            pct = recurring_total / monthly_avg_out * 100
+            if pct > 60:
+                items.append({"severity": "WARNING", "title": f"{pct:.0f}% Fixed Commitments",
+                    "body": f"{_fmt(recurring_total)}/month locked in recurring expenses (EMI, rent, subscriptions). Limited flexibility for emergencies.",
+                    "action": "banking"})
+            else:
+                items.append({"severity": "INFO", "title": f"Fixed Costs: {pct:.0f}% of Spending",
+                    "body": f"{_fmt(recurring_total)}/month in recurring commitments. The remaining {100-pct:.0f}% is discretionary spending.",
+                    "action": "banking"})
+
     if not items:
         items.append({"severity": "INFO", "title": "Add Bank Transactions",
             "body": "Import your bank statements to see spending patterns, cash flow analysis and hidden charge detection.",
