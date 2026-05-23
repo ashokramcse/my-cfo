@@ -134,9 +134,9 @@ export function TransactionsView() {
                           )}
                         </td>
                         <td>
-                          <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg" style={{ background: '#FFF1E6' }}>
+                          <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg font-medium" style={{ background: `${meta.color}18`, color: meta.color }}>
                             <span>{meta.icon}</span>
-                            <span className="text-muted-foreground">{meta.label}</span>
+                            <span>{meta.label}</span>
                           </span>
                         </td>
                         <td className="text-xs text-muted-foreground">

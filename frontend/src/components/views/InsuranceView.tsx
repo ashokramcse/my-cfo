@@ -142,7 +142,7 @@ export function InsuranceView() {
   const NAV: Record<string,ViewId> = { insurance:'insurance', 'net-worth':'net-worth', assets:'assets' }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6 pb-10 p-3 sm:p-5 xl:p-6 max-w-[1440px] mx-auto">
       <PageHeader icon={Shield} title="Insurance Management"
         subtitle="Coverage overview · renewals · protection gaps"
         actions={

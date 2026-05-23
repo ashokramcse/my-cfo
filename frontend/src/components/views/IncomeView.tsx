@@ -195,7 +195,7 @@ export function IncomeView() {
   }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6 pb-10 p-3 sm:p-5 xl:p-6 max-w-[1440px] mx-auto">
       <PageHeader icon={DollarSign} title="Income Management"
         subtitle="All income sources · tax overview · monthly trends"
         actions={

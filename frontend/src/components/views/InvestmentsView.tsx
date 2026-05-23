@@ -159,7 +159,7 @@ export function InvestmentsView() {
   }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6 pb-10 p-3 sm:p-5 xl:p-6 max-w-[1440px] mx-auto">
       <PageHeader icon={LineChart} title="Investment Intelligence" subtitle="Multi-asset portfolio analytics" />
 
       {/* ── Hero ── */}

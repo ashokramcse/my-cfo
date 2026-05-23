@@ -24,6 +24,7 @@ import uuid
 
 from app.database import get_db
 from app.utils.deps import get_current_user
+from app.utils.enum_utils import ev
 from app.models.user import User
 from app.models.bank_account import BankAccount
 from app.models.bank_transaction import BankTransaction, BankTxType, BankTxCategory, INCOME_CATEGORIES
@@ -372,10 +373,10 @@ async def cashflow_intelligence(
     cat_map: dict = {}
     for tx in txs:
         if tx.tx_type != BankTxType.DEBIT: continue
-        cat = tx.category or "OTHER"
+        cat = ev(tx.category) or "OTHER"
         cat_map[cat] = cat_map.get(cat, 0.0) + float(tx.amount)
     category_breakdown = [
-        {"category": k, "amount": round(v, 2)}
+        {"category": k.replace("_", " ").title(), "amount": round(v, 2)}
         for k, v in sorted(cat_map.items(), key=lambda x: -x[1])
     ]
 
@@ -406,7 +407,7 @@ async def cashflow_intelligence(
         else:
             days_left = (31 - today) + due_day  # next month
         upcoming.append({
-            "label": f"{loan.nickname or loan.loan_type} EMI",
+            "label": f"{loan.nickname or ev(loan.loan_type).replace('_', ' ').title()} EMI",
             "amount": float(loan.emi_amount or 0),
             "days_left": days_left,
             "type": "LOAN",
@@ -534,8 +535,8 @@ def _tx_out(tx: BankTransaction) -> dict:
         "transaction_date": tx.transaction_date.isoformat(),
         "description":      tx.description,
         "amount":           float(tx.amount),
-        "tx_type":          tx.tx_type,
-        "category":         tx.category,
+        "tx_type":          ev(tx.tx_type),
+        "category":         ev(tx.category),
         "merchant_name":    tx.merchant_name,
         "reference_no":     tx.reference_no,
         "balance_after":    float(tx.balance_after) if tx.balance_after else None,

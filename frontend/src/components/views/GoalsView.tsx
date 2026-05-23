@@ -192,7 +192,7 @@ export function GoalsView() {
   const NAV: Record<string,ViewId> = { goals:'goals', banking:'banking', investments:'investments', 'net-worth':'net-worth' }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6 pb-10 p-3 sm:p-5 xl:p-6 max-w-[1440px] mx-auto">
       <PageHeader icon={Target} title="Financial Goals"
         subtitle="Goal tracking · progress · projections"
         actions={

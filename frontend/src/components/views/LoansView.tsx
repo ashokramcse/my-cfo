@@ -141,7 +141,7 @@ export function LoansView() {
     ? Math.min(intel.total_paid / intel.total_principal * 100, 100) : 0
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6 pb-10 p-3 sm:p-5 xl:p-6 max-w-[1440px] mx-auto">
       <PageHeader icon={Landmark} title="Debt Intelligence" subtitle="Debt command center & repayment planner" />
 
       {/* ── Hero ── */}
