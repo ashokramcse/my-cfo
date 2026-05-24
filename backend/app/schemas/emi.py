@@ -20,6 +20,7 @@ class EMICreate(BaseModel):
     is_no_cost_emi: bool = False
     processing_fee: Decimal = Decimal(0)
     start_date: Optional[datetime] = None
+    paid_months: int = 0          # pre-populate for historical / imported EMIs
     owner_type: EMIOwnerType = EMIOwnerType.SELF
     user_share_percent: Decimal = Decimal(100)
     reminder_enabled: bool = True

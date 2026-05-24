@@ -246,6 +246,30 @@ async def add_transaction(
     description = data.get("description", "")
     category    = data.get("category", "OTHER")
     tx_date     = datetime.fromisoformat(data["transaction_date"]) if "transaction_date" in data else datetime.now(timezone.utc)
+    reference_no = data.get("reference_no")
+
+    # ── Input guards ──────────────────────────────────────────────────────────
+    if amount <= 0:
+        raise HTTPException(status_code=422, detail="amount must be greater than zero")
+    if amount > Decimal("99999999.99"):
+        raise HTTPException(status_code=422, detail="amount exceeds maximum allowed value")
+    from datetime import date as _date
+    if tx_date.date() > _date.today() + __import__("datetime").timedelta(days=7):
+        raise HTTPException(status_code=422, detail="transaction_date cannot be more than 7 days in the future")
+
+    # ── Duplicate detection by reference_no ───────────────────────────────────
+    if reference_no:
+        dup = await db.execute(
+            select(BankTransaction).where(
+                BankTransaction.account_id == account_id,
+                BankTransaction.reference_no == reference_no,
+            )
+        )
+        if dup.scalar_one_or_none():
+            raise HTTPException(
+                status_code=409,
+                detail=f"Duplicate transaction: reference_no '{reference_no}' already exists for this account",
+            )
 
     is_hidden   = _is_hidden_charge(description)
 
@@ -258,7 +282,7 @@ async def add_transaction(
         tx_type          = tx_type,
         category         = category,
         merchant_name    = data.get("merchant_name"),
-        reference_no     = data.get("reference_no"),
+        reference_no     = reference_no,
         is_hidden_charge = is_hidden,
         import_source    = "MANUAL",
     )

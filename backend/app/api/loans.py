@@ -225,6 +225,21 @@ async def create_loan(
     return loan
 
 
+@router.get("/{loan_id}", response_model=LoanOut)
+async def get_loan(
+    loan_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Loan).where(Loan.id == loan_id, Loan.user_id == current_user.id)
+    )
+    loan = result.scalar_one_or_none()
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    return loan
+
+
 @router.patch("/{loan_id}", response_model=LoanOut)
 async def update_loan(
     loan_id: uuid.UUID,

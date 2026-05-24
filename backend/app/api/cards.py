@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import Optional
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 import uuid
 from app.database import get_db
 from app.utils.deps import get_current_user
@@ -207,6 +208,17 @@ async def update_card(
 
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(card, field, value)
+
+    # Guard: outstanding cannot exceed credit limit
+    if card.current_outstanding is not None and card.credit_limit:
+        if card.current_outstanding > card.credit_limit:
+            raise HTTPException(
+                status_code=422,
+                detail=f"current_outstanding (₹{card.current_outstanding}) cannot exceed credit_limit (₹{card.credit_limit})",
+            )
+        # Recompute available_limit to stay consistent
+        card.available_limit = max(Decimal(0), card.credit_limit - card.current_outstanding)
+
     return card
 
 

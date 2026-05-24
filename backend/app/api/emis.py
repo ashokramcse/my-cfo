@@ -40,20 +40,23 @@ async def _refresh_friend_totals(db: AsyncSession, friend_id: uuid.UUID):
         friend.risk_level = "HIGH" if pending > 50000 else "MEDIUM" if pending > 10000 else "LOW"
 
 
-def _build_payments(emi: EMI) -> list[EMIPayment]:
+def _build_payments(emi: EMI, already_paid: int = 0) -> list[EMIPayment]:
+    """Build installment schedule.  already_paid pre-marks the first N installments
+    as paid so historical/imported EMIs don't start at zero."""
     payments = []
     start = emi.start_date or emi.purchase_date
     for i in range(1, emi.tenure_months + 1):
         due = start.replace(day=min(start.day, 28)) + timedelta(days=30 * i)
+        pre_paid = i <= already_paid
         payments.append(EMIPayment(
             emi_id=emi.id,
             user_id=emi.user_id,
             installment_no=i,
             due_date=due,
             expected_amount=emi.monthly_emi,
-            is_paid=i <= emi.paid_months,
-            paid_date=due if i <= emi.paid_months else None,
-            paid_amount=emi.monthly_emi if i <= emi.paid_months else Decimal(0),
+            is_paid=pre_paid,
+            paid_date=due if pre_paid else None,
+            paid_amount=emi.monthly_emi if pre_paid else Decimal(0),
         ))
     return payments
 
@@ -101,20 +104,24 @@ async def create_emi(
     data.pop("remaining_months", None)
     data.pop("amount_remaining", None)
     data.pop("amount_paid", None)
-    data.pop("paid_months", None)
+    # paid_months at creation: honour it so historical / imported EMIs start correctly.
+    # _build_payments() uses emi.paid_months to pre-mark already-paid installments.
+    initial_paid_months = int(data.pop("paid_months", None) or 0)
 
     total_interest = float(data["total_amount"]) - float(data["purchase_amount"])
-    remaining_months = data["tenure_months"]
-    amount_remaining = data["total_amount"]
+    remaining_months = data["tenure_months"] - initial_paid_months
+    amount_remaining = data["monthly_emi"] * remaining_months if "monthly_emi" in data else data["total_amount"]
 
     from dateutil.relativedelta import relativedelta
     end_date = start + relativedelta(months=data["tenure_months"])
-    next_due = start + relativedelta(months=1)
+    # next_due points to the first unpaid installment
+    next_due = start + relativedelta(months=initial_paid_months + 1)
 
     emi = EMI(
         **data,
         user_id=current_user.id,
         total_interest=max(0, total_interest),
+        paid_months=initial_paid_months,
         remaining_months=remaining_months,
         amount_remaining=amount_remaining,
         start_date=start,
@@ -124,7 +131,8 @@ async def create_emi(
     db.add(emi)
     await db.flush()
 
-    payments = _build_payments(emi)
+    # Pass initial_paid_months explicitly — avoids async lazy-load of expired attribute
+    payments = _build_payments(emi, already_paid=initial_paid_months)
     for p in payments:
         db.add(p)
 
@@ -226,9 +234,11 @@ async def record_payment(
     if not payment:
         raise HTTPException(status_code=404, detail="Installment not found")
 
-    payment.paid_amount = paid_amount
+    # Accumulate — don't overwrite — so two partial payments can together satisfy an installment.
+    previous_paid = payment.paid_amount or Decimal(0)
+    payment.paid_amount = previous_paid + paid_amount
     payment.paid_date = paid_date or datetime.now(timezone.utc)
-    payment.is_paid = paid_amount >= payment.expected_amount
+    payment.is_paid = payment.paid_amount >= payment.expected_amount
     payment.is_overdue = payment.paid_date > payment.due_date
 
     emi.amount_paid = (emi.amount_paid or Decimal(0)) + paid_amount

@@ -37,6 +37,8 @@ class CategoryType(str, enum.Enum):
     CASH_WITHDRAWAL = "CASH_WITHDRAWAL"
     TRANSFER = "TRANSFER"
     FEES = "FEES"
+    PAYMENT = "PAYMENT"   # CC bill payment / loan EMI payment
+    REFUND = "REFUND"     # merchant refund / charge reversal
     OTHER = "OTHER"
 
 
