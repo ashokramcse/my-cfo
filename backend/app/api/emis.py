@@ -228,7 +228,7 @@ async def record_payment(
 
     payment.paid_amount = paid_amount
     payment.paid_date = paid_date or datetime.now(timezone.utc)
-    payment.is_paid = True
+    payment.is_paid = paid_amount >= payment.expected_amount
     payment.is_overdue = payment.paid_date > payment.due_date
 
     emi.paid_months = installment_no
@@ -236,6 +236,18 @@ async def record_payment(
     emi.amount_remaining = max(Decimal(0), (emi.amount_remaining or emi.total_amount) - paid_amount)
     emi.remaining_months = emi.tenure_months - installment_no
     emi.last_collection_date = payment.paid_date
+
+    # Advance next_due_date to the next unpaid installment's due date
+    if installment_no < emi.tenure_months:
+        next_payment_result = await db.execute(
+            select(EMIPayment).where(
+                EMIPayment.emi_id == emi_id,
+                EMIPayment.installment_no == installment_no + 1,
+            )
+        )
+        next_payment = next_payment_result.scalar_one_or_none()
+        if next_payment:
+            emi.next_due_date = next_payment.due_date
 
     if emi.owner_type != EMIOwnerType.SELF:
         emi.amount_collected = (emi.amount_collected or Decimal(0)) + paid_amount

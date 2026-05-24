@@ -4,6 +4,8 @@ from sqlalchemy import select, and_
 from datetime import datetime, timezone, timedelta
 import hashlib
 import uuid
+from collections import defaultdict
+import time
 
 from app.database import get_db
 from app.models.user import User
@@ -21,6 +23,24 @@ from app.utils.deps import get_current_user
 from app.config import settings
 
 router = APIRouter()
+
+# ── In-memory login rate limiter: max 10 attempts per IP per 15 minutes ───────
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+_RATE_LIMIT_WINDOW = 900   # 15 minutes in seconds
+_RATE_LIMIT_MAX    = 10    # max attempts per window
+
+
+def _check_login_rate_limit(ip: str) -> None:
+    now = time.time()
+    cutoff = now - _RATE_LIMIT_WINDOW
+    attempts = [t for t in _login_attempts[ip] if t > cutoff]
+    _login_attempts[ip] = attempts
+    if len(attempts) >= _RATE_LIMIT_MAX:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Please try again in 15 minutes.",
+        )
+    _login_attempts[ip].append(now)
 
 
 def _hash_token(token: str) -> str:
@@ -79,6 +99,8 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
 
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    _check_login_rate_limit(_client_ip(request))
+
     # Support login via email or username
     identifier = payload.identifier.strip().lower()
     if "@" in identifier:

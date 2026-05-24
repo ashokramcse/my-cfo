@@ -267,27 +267,60 @@ async def add_investment_transaction(
     # ── Tax computation for SELL / MATURITY ──────────────────────────────────
     tax_meta: dict = {}
     if tx_type in (InvTxType.SELL, InvTxType.MATURITY, InvTxType.SWITCH_OUT):
-        # FIFO cost basis
+        # ── True FIFO cost basis ─────────────────────────────────────────────
+        # Fetch all prior BUY lots in chronological order
         buy_result = await db.execute(
             select(InvestmentTransaction)
             .where(
                 InvestmentTransaction.investment_id == investment_id,
                 InvestmentTransaction.tx_type.in_([InvTxType.BUY, InvTxType.SWITCH_IN]),
             )
-            .order_by(InvestmentTransaction.tx_date)
+            .order_by(InvestmentTransaction.tx_date, InvestmentTransaction.id)
         )
         buys = buy_result.scalars().all()
 
+        # Fetch all prior SELL events (already committed) to know how many units
+        # have already been consumed from each lot.
+        prior_sell_result = await db.execute(
+            select(InvestmentTransaction)
+            .where(
+                InvestmentTransaction.investment_id == investment_id,
+                InvestmentTransaction.tx_type.in_([
+                    InvTxType.SELL, InvTxType.MATURITY, InvTxType.SWITCH_OUT
+                ]),
+            )
+            .order_by(InvestmentTransaction.tx_date, InvestmentTransaction.id)
+        )
+        prior_sells = prior_sell_result.scalars().all()
+
+        # Compute how many units prior sells have already consumed (FIFO order)
+        prior_units_sold = sum(abs(float(s.units or 0)) for s in prior_sells)
+
+        # Skip BUY lots that are fully consumed by prior sells
+        remaining_skip = Decimal(str(prior_units_sold))
+        lot_queue: list[tuple[Decimal, Decimal, object]] = []  # (available_units, price, tx_date)
+        for buy in buys:
+            buy_units = abs(buy.units or Decimal("0"))
+            if remaining_skip >= buy_units:
+                remaining_skip -= buy_units  # lot fully consumed by earlier sell
+            elif remaining_skip > 0:
+                available = buy_units - remaining_skip  # partial consumption
+                lot_queue.append((available, buy.price_per_unit, buy.tx_date))
+                remaining_skip = Decimal("0")
+            else:
+                lot_queue.append((buy_units, buy.price_per_unit, buy.tx_date))
+
+        # Now consume from lot_queue for the current SELL
         cost_basis = Decimal("0")
         earliest_buy = None
         units_to_match = units
-        for buy in buys:
+        for lot_units, lot_price, lot_date in lot_queue:
             if units_to_match <= 0:
                 break
-            matched = min(buy.units, units_to_match)
-            cost_basis += matched * buy.price_per_unit
+            matched = min(lot_units, units_to_match)
+            cost_basis += matched * lot_price
             if earliest_buy is None:
-                earliest_buy = buy.tx_date
+                earliest_buy = lot_date
             units_to_match -= matched
 
         holding_days = (tx_date - earliest_buy).days if earliest_buy else 0

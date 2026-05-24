@@ -90,6 +90,24 @@ async def create_bank_account(
     return account
 
 
+@router.get("/{account_id}", response_model=BankAccountOut)
+async def get_bank_account(
+    account_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(BankAccount).where(
+            BankAccount.id == account_id,
+            BankAccount.user_id == current_user.id,
+        )
+    )
+    account = result.scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=404, detail="Bank account not found")
+    return account
+
+
 @router.patch("/{account_id}", response_model=BankAccountOut)
 async def update_bank_account(
     account_id: uuid.UUID,

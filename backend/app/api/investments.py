@@ -241,6 +241,24 @@ async def create_investment(
     return investment
 
 
+@router.get("/{investment_id}", response_model=InvestmentOut)
+async def get_investment(
+    investment_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Investment).where(
+            Investment.id == investment_id,
+            Investment.user_id == current_user.id,
+        )
+    )
+    investment = result.scalar_one_or_none()
+    if not investment:
+        raise HTTPException(status_code=404, detail="Investment not found")
+    return investment
+
+
 @router.patch("/{investment_id}", response_model=InvestmentOut)
 async def update_investment(
     investment_id: uuid.UUID,
