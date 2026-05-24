@@ -238,7 +238,27 @@ async def update_loan(
     loan = result.scalar_one_or_none()
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
-    for field, value in data.model_dump(exclude_unset=True).items():
+    updates = data.model_dump(exclude_unset=True)
+
+    # Guard against negative financial values — prevent ledger corruption
+    for non_negative in ("outstanding_balance", "total_paid", "total_interest_paid", "principal_amount"):
+        if non_negative in updates and updates[non_negative] is not None:
+            if updates[non_negative] < 0:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"{non_negative} cannot be negative",
+                )
+
+    # total_paid cannot exceed principal_amount
+    new_paid = updates.get("total_paid")
+    principal = float(updates.get("principal_amount", loan.principal_amount) or 0)
+    if new_paid is not None and float(new_paid) > principal:
+        raise HTTPException(
+            status_code=422,
+            detail=f"total_paid ({new_paid}) cannot exceed principal_amount ({principal})",
+        )
+
+    for field, value in updates.items():
         setattr(loan, field, value)
     await db.commit()
     await db.refresh(loan)

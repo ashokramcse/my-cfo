@@ -18,9 +18,11 @@ from app.database import Base
 
 
 class BankTxType(str, enum.Enum):
-    CREDIT      = "CREDIT"      # salary, transfer-in, interest, refund
-    DEBIT       = "DEBIT"       # expense, transfer-out, fee, EMI
-    TRANSFER    = "TRANSFER"    # internal between own accounts
+    CREDIT       = "CREDIT"       # salary, transfer-in, interest, refund
+    DEBIT        = "DEBIT"        # expense, transfer-out, fee, EMI
+    TRANSFER     = "TRANSFER"     # internal between own accounts (legacy)
+    TRANSFER_IN  = "TRANSFER_IN"  # explicit inbound transfer from another own account
+    TRANSFER_OUT = "TRANSFER_OUT" # explicit outbound transfer to another own account
 
 
 class BankTxCategory(str, enum.Enum):

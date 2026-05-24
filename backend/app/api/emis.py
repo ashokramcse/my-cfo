@@ -231,28 +231,35 @@ async def record_payment(
     payment.is_paid = paid_amount >= payment.expected_amount
     payment.is_overdue = payment.paid_date > payment.due_date
 
-    emi.paid_months = installment_no
     emi.amount_paid = (emi.amount_paid or Decimal(0)) + paid_amount
     emi.amount_remaining = max(Decimal(0), (emi.amount_remaining or emi.total_amount) - paid_amount)
-    emi.remaining_months = emi.tenure_months - installment_no
     emi.last_collection_date = payment.paid_date
 
-    # Advance next_due_date to the next unpaid installment's due date
-    if installment_no < emi.tenure_months:
-        next_payment_result = await db.execute(
-            select(EMIPayment).where(
-                EMIPayment.emi_id == emi_id,
-                EMIPayment.installment_no == installment_no + 1,
-            )
-        )
-        next_payment = next_payment_result.scalar_one_or_none()
-        if next_payment:
-            emi.next_due_date = next_payment.due_date
+    # Recompute paid_months as the TRUE count of fully-paid installments (not installment_no)
+    # This handles out-of-order payments correctly — e.g. if you pay #4 before #1,
+    # paid_months should NOT jump to 4; it should reflect what's actually been paid.
+    all_payments_res = await db.execute(
+        select(EMIPayment).where(EMIPayment.emi_id == emi_id)
+    )
+    all_payments = all_payments_res.scalars().all()
+    fully_paid_count = sum(1 for p in all_payments if p.is_paid)
+    emi.paid_months = fully_paid_count
+    emi.remaining_months = emi.tenure_months - fully_paid_count
+
+    # next_due_date = due_date of the EARLIEST unpaid installment (not next sequential)
+    unpaid = sorted(
+        [p for p in all_payments if not p.is_paid],
+        key=lambda p: p.installment_no,
+    )
+    if unpaid:
+        emi.next_due_date = unpaid[0].due_date
+    elif installment_no >= emi.tenure_months:
+        emi.next_due_date = None  # all paid
 
     if emi.owner_type != EMIOwnerType.SELF:
         emi.amount_collected = (emi.amount_collected or Decimal(0)) + paid_amount
 
-    if installment_no >= emi.tenure_months:
+    if fully_paid_count >= emi.tenure_months:
         emi.status = EMIStatus.COMPLETED
 
     if emi.friend_id:

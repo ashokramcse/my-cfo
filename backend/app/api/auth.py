@@ -31,6 +31,7 @@ _RATE_LIMIT_MAX    = 10    # max attempts per window
 
 
 def _check_login_rate_limit(ip: str) -> None:
+    """Check rate limit BEFORE credential verification (prevents timing oracle)."""
     now = time.time()
     cutoff = now - _RATE_LIMIT_WINDOW
     attempts = [t for t in _login_attempts[ip] if t > cutoff]
@@ -40,7 +41,11 @@ def _check_login_rate_limit(ip: str) -> None:
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many login attempts. Please try again in 15 minutes.",
         )
-    _login_attempts[ip].append(now)
+
+
+def _record_failed_login(ip: str) -> None:
+    """Record a FAILED attempt — only failed attempts count toward the rate limit."""
+    _login_attempts[ip].append(time.time())
 
 
 def _hash_token(token: str) -> str:
@@ -112,8 +117,10 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(payload.password, user.hashed_password):
+        _record_failed_login(_client_ip(request))
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if not user.is_active:
+        _record_failed_login(_client_ip(request))
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account disabled")
 
     access_token = create_access_token({"sub": str(user.id)})

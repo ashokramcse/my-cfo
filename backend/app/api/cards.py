@@ -225,6 +225,83 @@ async def delete_card(
     await db.delete(card)
 
 
+@router.get("/{card_id}/billing-summary")
+async def card_billing_summary(
+    card_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Revolving credit billing summary: minimum due, interest estimate,
+    days to due date, and risk indicators.
+
+    Minimum due = max(5% of outstanding, ₹200) — standard Indian CC rule.
+    Interest estimate based on card's annual rate (annualised → monthly).
+    """
+    result = await db.execute(
+        select(CreditCard).where(CreditCard.id == card_id, CreditCard.user_id == current_user.id)
+    )
+    card = result.scalar_one_or_none()
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+
+    outstanding = float(card.current_outstanding or 0)
+    credit_limit = float(card.credit_limit or 0)
+    annual_rate = float(card.interest_rate or 0)
+
+    # Minimum due: Indian CC standard — 5% of outstanding, minimum ₹200
+    minimum_due = round(max(outstanding * 0.05, 200.0) if outstanding > 0 else 0.0, 2)
+
+    # Monthly interest estimate (if revolving — i.e. not paid in full)
+    monthly_rate = annual_rate / 12 / 100
+    monthly_interest = round(outstanding * monthly_rate, 2)
+
+    # Days to due date
+    from datetime import date
+    today = date.today()
+    days_to_due = None
+    due_date = None
+    if card.due_date_day:
+        import calendar
+        this_month_due = today.replace(day=card.due_date_day)
+        if this_month_due < today:
+            # Already passed → next month
+            if today.month == 12:
+                next_month = today.replace(year=today.year + 1, month=1, day=card.due_date_day)
+            else:
+                last_day = calendar.monthrange(today.year, today.month + 1)[1]
+                day = min(card.due_date_day, last_day)
+                next_month = today.replace(month=today.month + 1, day=day)
+            due_date = next_month
+        else:
+            due_date = this_month_due
+        days_to_due = (due_date - today).days
+
+    utilization = round(outstanding / credit_limit * 100, 1) if credit_limit > 0 else 0
+
+    return {
+        "card_id":           str(card_id),
+        "nickname":          card.nickname,
+        "current_outstanding": outstanding,
+        "credit_limit":      credit_limit,
+        "available_limit":   float(card.available_limit or 0),
+        "utilization_pct":   utilization,
+        "minimum_due":       minimum_due,
+        "annual_interest_rate": annual_rate,
+        "monthly_interest_estimate": monthly_interest,
+        "due_date":          str(due_date) if due_date else None,
+        "days_to_due":       days_to_due,
+        "payment_status":    "OVERDUE" if days_to_due is not None and days_to_due < 0
+                             else "DUE_SOON" if days_to_due is not None and days_to_due <= 5
+                             else "OK",
+        "full_pay_to_avoid_interest": outstanding,
+        "interest_if_min_only":       monthly_interest,
+        "risk_level":        "CRITICAL" if utilization >= 90 else
+                             "HIGH"     if utilization >= 70 else
+                             "MEDIUM"   if utilization >= 30 else "LOW",
+    }
+
+
 @router.get("/{card_id}/utilization")
 async def card_utilization(
     card_id: uuid.UUID,

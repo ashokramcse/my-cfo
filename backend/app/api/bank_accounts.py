@@ -264,10 +264,16 @@ async def add_transaction(
     )
     db.add(tx)
 
-    # Update account balance
-    if tx_type == BankTxType.CREDIT:
+    # Update account balance based on direction of transaction
+    credit_types = {BankTxType.CREDIT, BankTxType.TRANSFER_IN}
+    debit_types  = {BankTxType.DEBIT,  BankTxType.TRANSFER_OUT}
+    try:
+        tx_type_enum = BankTxType(tx_type)
+    except ValueError:
+        tx_type_enum = None
+    if tx_type_enum in credit_types:
         account.current_balance = (account.current_balance or Decimal(0)) + amount
-    elif tx_type == BankTxType.DEBIT:
+    elif tx_type_enum in debit_types:
         account.current_balance = (account.current_balance or Decimal(0)) - amount
 
     await db.commit()

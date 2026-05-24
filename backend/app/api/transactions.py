@@ -10,6 +10,7 @@ from app.database import get_db
 from app.utils.deps import get_current_user, require_write, DataAccessContext
 from app.models.user import User
 from app.models.transaction import Transaction, CategoryType, TransactionType
+from app.models.card import CreditCard
 from app.schemas.transaction import TransactionCreate, TransactionUpdate, TransactionOut, TransactionListOut
 
 router = APIRouter()
@@ -94,6 +95,32 @@ async def create_transaction(
     tx = Transaction(**payload.model_dump(), user_id=current_user.id, is_manual=True)
     db.add(tx)
     await db.flush()
+
+    # ── Auto-update card outstanding / available when a transaction is linked to a card ──
+    # Spending types increase outstanding (reduce available); payment/credit types do the reverse.
+    if payload.card_id and not getattr(payload, 'is_excluded', False):
+        card_res = await db.execute(
+            select(CreditCard).where(
+                CreditCard.id == payload.card_id,
+                CreditCard.user_id == current_user.id,
+            )
+        )
+        card = card_res.scalar_one_or_none()
+        if card:
+            _SPEND_TYPES  = {TransactionType.PURCHASE, TransactionType.EMI,
+                              TransactionType.CASH_ADVANCE, TransactionType.FEE,
+                              TransactionType.INTEREST}
+            _CREDIT_TYPES = {TransactionType.PAYMENT, TransactionType.REFUND,
+                              TransactionType.REWARD_REDEMPTION}
+            amt = payload.amount
+            if payload.transaction_type in _SPEND_TYPES:
+                card.current_outstanding = (card.current_outstanding or Decimal(0)) + amt
+                card.available_limit     = max(Decimal(0), (card.available_limit or Decimal(0)) - amt)
+            elif payload.transaction_type in _CREDIT_TYPES:
+                card.current_outstanding = max(Decimal(0), (card.current_outstanding or Decimal(0)) - amt)
+                card.available_limit     = min(card.credit_limit,
+                                               (card.available_limit or Decimal(0)) + amt)
+
     return tx
 
 
