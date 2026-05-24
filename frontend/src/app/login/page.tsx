@@ -13,11 +13,37 @@ export default function LoginPage() {
   const [password, setPassword]     = useState('')
   const [showPwd, setShowPwd]       = useState(false)
   const [error, setError]           = useState('')
+  // 'checking' = validating existing token | 'ready' = show form | 'redirecting' = going to dashboard
+  const [authState, setAuthState]   = useState<'checking' | 'ready' | 'redirecting'>('checking')
 
-  // Redirect if already logged in (check localStorage directly — no hydration race)
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
-    if (token) router.replace('/dashboard')
+    let cancelled = false
+
+    async function checkExistingSession() {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+      if (!token) {
+        if (!cancelled) setAuthState('ready')
+        return
+      }
+
+      // Validate token before redirecting — prevents dashboard flash on stale tokens
+      try {
+        const { api } = await import('@/lib/api')
+        await api.get('/auth/me')
+        if (!cancelled) {
+          setAuthState('redirecting')
+          router.replace('/dashboard')
+        }
+      } catch {
+        // Token invalid / expired — clear it and show the login form
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        if (!cancelled) setAuthState('ready')
+      }
+    }
+
+    checkExistingSession()
+    return () => { cancelled = true }
   }, [router])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -30,6 +56,26 @@ export default function LoginPage() {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
       setError(msg || 'Invalid credentials. Please try again.')
     }
+  }
+
+  // ── Checking / redirecting — show a minimal branded spinner, never flash dashboard ──
+  if (authState !== 'ready') {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: 'radial-gradient(ellipse at 60% 0%, #1a0a2e 0%, #0a0f1e 60%, #050810 100%)' }}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #F97316, #ea580c)' }}
+          >
+            <Wallet className="w-6 h-6 text-white" />
+          </div>
+          <div className="w-5 h-5 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+        </div>
+      </div>
+    )
   }
 
   return (

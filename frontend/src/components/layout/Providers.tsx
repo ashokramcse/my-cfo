@@ -2,13 +2,19 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { cardsApi, transactionsApi, emisApi, friendsApi, reportsApi, insightsApi, statementsApi, netWorthApi, bankAccountsApi, investmentsApi, loansApi, assetsApi } from '@/lib/api'
 
 // Prefetch all pages' primary data — but only when authenticated.
 // We validate the token first with /auth/me to avoid flooding logs
 // with 401s when a stale/invalid token is present (e.g. after SECRET_KEY rotation).
 function DataPrefetcher({ queryClient }: { queryClient: QueryClient }) {
+  const pathname = usePathname()
+
   useEffect(() => {
+    // Never prefetch on auth pages — avoids API noise and race conditions
+    if (pathname === '/login' || pathname === '/signup') return
+
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
     if (!token) return   // not logged in — skip prefetch entirely
 
