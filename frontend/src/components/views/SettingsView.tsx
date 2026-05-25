@@ -61,7 +61,7 @@ export function SettingsView() {
   const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   useEffect(() => {
-    if (profile) setProfileForm({ full_name: profile.full_name || profile.username || '', email: profile.email || '' })
+    if (profile) setProfileForm({ full_name: profile.full_name || '', email: profile.email || '' })
   }, [profile])
 
   const saveProfile = useMutation({
@@ -273,7 +273,7 @@ export function SettingsView() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { label: 'Username',  value: profile?.username  || '—' },
-                  { label: 'Full Name', value: profile?.full_name || profile?.username || '—' },
+                  { label: 'Full Name', value: profile?.full_name || '—' },
                   { label: 'Email',     value: profile?.email     || '—' },
                   { label: 'Currency',  value: 'INR ₹' },
                   { label: 'Timezone',  value: 'Asia / Kolkata' },
