@@ -167,7 +167,7 @@ function GroupCard({ group, index }: { group: RecurringGroup; index: number }) {
         <div className="text-right">
           <div className="text-base font-extrabold font-mono text-foreground"
             style={{ letterSpacing: '-0.025em', fontFeatureSettings: '"tnum" 1' }}>
-            ₹{formatCurrencyCompact(group.monthly)}
+            {formatCurrencyCompact(group.monthly)}
           </div>
           <div className="text-[10px] text-muted-foreground">per month</div>
         </div>
@@ -192,7 +192,7 @@ function GroupCard({ group, index }: { group: RecurringGroup; index: number }) {
             </div>
             <span className="font-mono text-sm font-bold text-foreground flex-shrink-0"
               style={{ fontFeatureSettings: '"tnum" 1' }}>
-              ₹{formatCurrencyCompact(item.amount)}
+              {formatCurrencyCompact(item.amount)}
             </span>
           </div>
         ))}
@@ -247,7 +247,7 @@ function UpcomingSection({ items }: { items: RecurringItem[] }) {
                 </div>
                 <span className="font-mono text-sm font-bold text-foreground"
                   style={{ fontFeatureSettings: '"tnum" 1' }}>
-                  ₹{formatCurrencyCompact(item.amount)}
+                  {formatCurrencyCompact(item.amount)}
                 </span>
                 <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               </div>
@@ -286,7 +286,7 @@ function ForecastChart({ data }: { data: { month: string; total: number }[] }) {
               axisLine={false} tickLine={false} width={52}
             />
             <Tooltip
-              formatter={(v: number) => [`₹${formatCurrencyCompact(v)}`, 'Total Commitments']}
+              formatter={(v: number) => [formatCurrencyCompact(v), 'Total Commitments']}
               contentStyle={{ background: '#FFFAF7', border: '1px solid #E7E2DC', borderRadius: 12, fontSize: 12 }}
             />
             <Bar dataKey="total" radius={[6, 6, 0, 0]}>
@@ -299,9 +299,9 @@ function ForecastChart({ data }: { data: { month: string; total: number }[] }) {
           </BarChart>
         </ResponsiveContainer>
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40 text-xs">
-          <span className="text-muted-foreground">Peak month: ₹{formatCurrencyCompact(maxVal)}</span>
+          <span className="text-muted-foreground">Peak month: {formatCurrencyCompact(maxVal)}</span>
           <span className="text-muted-foreground">
-            Avg: ₹{formatCurrencyCompact(data.reduce((s, d) => s + d.total, 0) / data.length)}
+            Avg: {formatCurrencyCompact(data.reduce((s, d) => s + d.total, 0) / data.length)}
           </span>
         </div>
       </div>
@@ -381,14 +381,14 @@ export function RecurringView() {
             <div className="grid grid-cols-3 gap-3">
               <MetricTile
                 label="Total Monthly"
-                value={`₹${formatCurrencyCompact(data.total_monthly)}`}
+                value={formatCurrencyCompact(data.total_monthly)}
                 sub="All recurring obligations"
                 color="#F97316" bg="#FFF7ED" border="#FED7AA"
                 icon={RefreshCw} delay={0}
               />
               <MetricTile
                 label="Annual Committed"
-                value={`₹${formatCurrencyCompact(data.total_annual)}`}
+                value={formatCurrencyCompact(data.total_annual)}
                 sub={`${formatCurrency(data.total_annual)} per year`}
                 color="#7C3AED" bg="#F5F3FF" border="#DDD6FE"
                 icon={TrendingUp} delay={0.06}

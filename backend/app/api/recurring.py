@@ -671,6 +671,30 @@ async def build_all_groups(
     # Liabilities = card EMIs + loan EMIs
     all_liabilities = emi_items + loan_items
 
+    # ── Cross-group deduplication ──────────────────────────────────────────
+    # Bank-transaction-detected items (subscriptions, utilities) must not
+    # repeat items that already appear in structured groups (investments,
+    # liabilities, insurance, lending).  Match by normalised name + amount.
+    structured_names: set[str] = set()
+    for item in investment_items + all_liabilities + insurance_items + lending_items:
+        structured_names.add(item["name"].strip().lower())
+
+    def _dedup_bank_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Remove bank-detected items whose name already exists in a structured group."""
+        out = []
+        for item in items:
+            key = item["name"].strip().lower()
+            if key not in structured_names:
+                out.append(item)
+        return out
+
+    subscription_items = _dedup_bank_items(subscription_items)
+    utility_items = _dedup_bank_items(utility_items)
+
+    # Also dedup between subscriptions and utilities — subscriptions take priority
+    sub_names = {i["name"].strip().lower() for i in subscription_items}
+    utility_items = [i for i in utility_items if i["name"].strip().lower() not in sub_names]
+
     add_group("investments", "Investments", "📈", "#10B981", investment_items)
     add_group("liabilities", "Liabilities", "💳", "#EF4444", all_liabilities)
     add_group("subscriptions", "Subscriptions", "📦", "#8B5CF6", subscription_items)
@@ -687,12 +711,24 @@ def compute_upcoming(
 ) -> List[Dict[str, Any]]:
     cutoff = today + timedelta(days=horizon_days)
     upcoming: List[Dict[str, Any]] = []
+    # Dedup key: (normalised name, amount, next_date) — same item can appear in
+    # multiple groups when bank-transaction detection and structured data overlap
+    seen: set[tuple] = set()
+
     for group in groups:
         for item in group["items"]:
             nd = item.get("next_date")
             if nd:
                 nd_date = date.fromisoformat(nd) if isinstance(nd, str) else nd
                 if today <= nd_date <= cutoff:
+                    dedup_key = (
+                        item.get("name", "").strip().lower(),
+                        round(float(item.get("amount", 0)), 0),
+                        str(nd_date),
+                    )
+                    if dedup_key in seen:
+                        continue
+                    seen.add(dedup_key)
                     upcoming.append(
                         {
                             **item,
