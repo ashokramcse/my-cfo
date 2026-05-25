@@ -302,6 +302,13 @@ async def add_transaction(
 
     await db.commit()
     await db.refresh(tx)
+
+    # Kick off reconciliation so a new wallet/bank entry gets linked to its
+    # peer immediately (e.g. user adds a wallet CREDIT after already having
+    # the matching bank DEBIT).
+    from app.services.wallet_reconciler import reconcile_for_user
+    await reconcile_for_user(db, current_user.id)
+
     return _tx_out(tx)
 
 
@@ -353,7 +360,39 @@ async def import_transactions(
         created += 1
 
     await db.commit()
-    return {"created": created, "duplicates": duplicates, "total": len(transactions)}
+
+    # Run wallet/UPI reconciliation after every bulk import so that
+    # cross-account transfer pairs are linked immediately.
+    from app.services.wallet_reconciler import reconcile_for_user
+    reconcile_stats = await reconcile_for_user(db, current_user.id)
+
+    return {
+        "created": created,
+        "duplicates": duplicates,
+        "total": len(transactions),
+        "reconciled": reconcile_stats,
+    }
+
+
+@router.post("/reconcile")
+async def reconcile_wallet_transfers(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Manually trigger wallet/UPI cross-account reconciliation.
+
+    Finds transfer pairs (bank↔wallet top-ups, UPI duplicates) and:
+    - Links both legs via linked_tx_id
+    - Marks transfer legs is_transfer_leg=True, is_excluded=True
+    - Marks UPI duplicates is_duplicate=True, is_excluded=True
+    - Tags wallet fees as WALLET_FEE category
+
+    Safe to call multiple times — already-linked transactions are skipped.
+    """
+    from app.services.wallet_reconciler import reconcile_for_user
+    stats = await reconcile_for_user(db, current_user.id)
+    return {"status": "ok", "stats": stats}
 
 
 # ─── Cash Flow Intelligence ───────────────────────────────────────────────────
@@ -388,6 +427,10 @@ async def cashflow_intelligence(
             BankTransaction.user_id == uid,
             BankTransaction.transaction_date >= since,
             BankTransaction.is_excluded == False,
+            # Exclude transfer legs (wallet loads, own-account transfers) from
+            # inflow/outflow totals — they are internal money movements, not
+            # real income or expenses.
+            BankTransaction.is_transfer_leg == False,
         )
         .order_by(BankTransaction.transaction_date)
     )
@@ -619,6 +662,10 @@ def _tx_out(tx: BankTransaction) -> dict:
         "is_hidden_charge": tx.is_hidden_charge,
         "is_recurring":     tx.is_recurring,
         "is_duplicate":     tx.is_duplicate,
+        "is_excluded":      tx.is_excluded,
+        "is_transfer_leg":  tx.is_transfer_leg,
+        "linked_tx_id":     str(tx.linked_tx_id) if tx.linked_tx_id else None,
+        "linked_account_id": str(tx.linked_account_id) if tx.linked_account_id else None,
         "import_source":    tx.import_source,
         "notes":            tx.notes,
     }

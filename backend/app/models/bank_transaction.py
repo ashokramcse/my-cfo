@@ -41,8 +41,12 @@ class BankTxCategory(str, enum.Enum):
     INSURANCE       = "INSURANCE"
     INVESTMENT      = "INVESTMENT"
     BANK_FEE        = "BANK_FEE"
+    WALLET_FEE      = "WALLET_FEE"      # Paytm/PhonePe load/withdrawal charges
     ATM_WITHDRAWAL  = "ATM_WITHDRAWAL"
     UPI             = "UPI"
+    WALLET_LOAD     = "WALLET_LOAD"     # Bank → Wallet top-up (this leg excluded from expense)
+    CC_WALLET_LOAD  = "CC_WALLET_LOAD"  # CC → Wallet top-up (wallet CREDIT leg, excluded)
+    WALLET_TRANSFER = "WALLET_TRANSFER" # Wallet → Wallet (e.g. Paytm → GPay)
     ENTERTAINMENT   = "ENTERTAINMENT"
     HEALTHCARE      = "HEALTHCARE"
     EDUCATION       = "EDUCATION"
@@ -91,6 +95,8 @@ class BankTransaction(Base):
 
     # Cross-entity linking (wealth transfer integrity)
     linked_account_id         = Column(UUID(as_uuid=True), ForeignKey("bank_accounts.id", ondelete="SET NULL"))
+    linked_tx_id              = Column(UUID(as_uuid=True), ForeignKey("bank_transactions.id", ondelete="SET NULL"), nullable=True)
+    # ↑ Points to the PEER transaction in a transfer pair (e.g. bank DEBIT ↔ wallet CREDIT for a top-up)
     linked_investment_tx_id   = Column(UUID(as_uuid=True), nullable=True)   # → investment_transactions.id
     linked_loan_id            = Column(UUID(as_uuid=True), ForeignKey("loans.id", ondelete="SET NULL"), nullable=True)
     linked_card_id            = Column(UUID(as_uuid=True), ForeignKey("credit_cards.id", ondelete="SET NULL"), nullable=True)
@@ -100,6 +106,9 @@ class BankTransaction(Base):
     is_hidden_charge  = Column(Boolean, default=False)           # bank fees, SMS charges
     is_recurring      = Column(Boolean, default=False)
     is_excluded       = Column(Boolean, default=False)
+    is_transfer_leg   = Column(Boolean, default=False)
+    # ↑ True for BOTH legs of an internal transfer (wallet load, own-account transfer).
+    # These are excluded from inflow/outflow totals to avoid double-counting.
 
     # Import metadata
     import_source     = Column(String(20), default="MANUAL")     # MANUAL / CSV / PDF / OCR
