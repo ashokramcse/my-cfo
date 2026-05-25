@@ -273,7 +273,7 @@ export function SettingsView() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { label: 'Username',  value: profile?.username  || '—' },
-                  { label: 'Full Name', value: profile?.full_name || '—' },
+                  { label: 'Full Name', value: profile?.full_name || profile?.username || '—' },
                   { label: 'Email',     value: profile?.email     || '—' },
                   { label: 'Currency',  value: 'INR ₹' },
                   { label: 'Timezone',  value: 'Asia / Kolkata' },
