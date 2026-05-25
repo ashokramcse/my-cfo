@@ -43,10 +43,14 @@ async def _refresh_friend_totals(db: AsyncSession, friend_id: uuid.UUID):
 def _build_payments(emi: EMI, already_paid: int = 0) -> list[EMIPayment]:
     """Build installment schedule.  already_paid pre-marks the first N installments
     as paid so historical/imported EMIs don't start at zero."""
+    from dateutil.relativedelta import relativedelta as _rd
     payments = []
     start = emi.start_date or emi.purchase_date
+    # Use relativedelta (not timedelta) so due dates are exactly month-aligned
+    # and match what create_emi stores in next_due_date.
+    base = start.replace(day=min(start.day, 28))
     for i in range(1, emi.tenure_months + 1):
-        due = start.replace(day=min(start.day, 28)) + timedelta(days=30 * i)
+        due = base + _rd(months=i)
         pre_paid = i <= already_paid
         payments.append(EMIPayment(
             emi_id=emi.id,
@@ -110,7 +114,10 @@ async def create_emi(
 
     total_interest = float(data["total_amount"]) - float(data["purchase_amount"])
     remaining_months = data["tenure_months"] - initial_paid_months
-    amount_remaining = data["monthly_emi"] * remaining_months if "monthly_emi" in data else data["total_amount"]
+    # Use total_amount - pre-paid portion (not monthly_emi * months) to avoid
+    # integer-rounding drift when monthly_emi doesn't divide evenly into total_amount
+    pre_paid_amount = data["monthly_emi"] * initial_paid_months if initial_paid_months > 0 else Decimal(0)
+    amount_remaining = max(Decimal(0), data["total_amount"] - pre_paid_amount)
 
     from dateutil.relativedelta import relativedelta
     end_date = start + relativedelta(months=data["tenure_months"])
@@ -182,7 +189,9 @@ async def update_emi(
 
     if payload.paid_months is not None:
         emi.remaining_months = emi.tenure_months - payload.paid_months
-        emi.amount_remaining = emi.monthly_emi * emi.remaining_months
+        # Derive from total_amount not monthly_emi*months to avoid rounding drift
+        paid_so_far = emi.monthly_emi * payload.paid_months
+        emi.amount_remaining = max(Decimal(0), emi.total_amount - paid_so_far)
         if payload.paid_months >= emi.tenure_months:
             emi.status = EMIStatus.COMPLETED
 
