@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { TableRowSkeleton } from '@/components/ui/Skeleton'
@@ -7,7 +7,7 @@ import { transactionsApi, cardsApi } from '@/lib/api'
 import { Transaction, CreditCard } from '@/types'
 import { formatCurrency, formatDate, CATEGORY_META } from '@/lib/utils'
 import { cn } from '@/lib/utils'
-import { ArrowLeftRight, Search, ChevronLeft, ChevronRight, AlertTriangle, Receipt } from 'lucide-react'
+import { ArrowLeftRight, Search, ChevronLeft, ChevronRight, AlertTriangle, Receipt, X } from 'lucide-react'
 import { Select, SelectOption } from '@/components/ui/Select'
 
 const TX_COLOR: Record<string, string> = {
@@ -33,9 +33,19 @@ const CATEGORY_OPTIONS: SelectOption[] = [
 export function TransactionsView() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
+  const [inputValue, setInputValue] = useState('')
   const [category, setCategory] = useState('ALL')
   const [cardId, setCardId] = useState('')
   const pageSize = 50
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleSearchChange = (val: string) => {
+    setInputValue(val)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => { setSearch(val); setPage(1) }, 300)
+  }
+
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current) }, [])
 
   const { data: cards = [] } = useQuery<CreditCard[]>({
     queryKey: ['cards'],
@@ -67,36 +77,47 @@ export function TransactionsView() {
         />
       <div className="p-3 sm:p-5 xl:p-6 max-w-[1400px] mx-auto">
 
-        {/* Filters — compact single row */}
-        <div className="flex items-center gap-2 mb-4">
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
           {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#A09890' }} />
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#A09890' }} />
             <input
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-              placeholder="Search merchant…"
-              className="w-full pl-8 !py-1.5 !text-[13px] !rounded-lg !border-[#C8C2BB]"
-              style={{ height: '32px' }}
+              value={inputValue}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Search merchant or description…"
+              className="w-full pl-10 pr-9 text-sm rounded-xl border border-[#DDD8D2] bg-white focus:outline-none focus:border-[#F97316] transition-colors"
+              style={{ height: '38px', color: '#18120E' }}
+            />
+            {inputValue && (
+              <button
+                onClick={() => { handleSearchChange(''); setSearch('') }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center hover:bg-[#F0EBE5] transition-colors"
+                style={{ color: '#A09890' }}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2 flex-shrink-0">
+            {/* Category */}
+            <Select
+              value={category}
+              onChange={(v) => { setCategory(v); setPage(1) }}
+              options={CATEGORY_OPTIONS}
+              className="w-[175px]"
+            />
+            {/* Card */}
+            <Select
+              value={cardId}
+              onChange={(v) => { setCardId(v); setPage(1) }}
+              options={[
+                { value: '', label: 'All Cards' },
+                ...cards.map((c) => ({ value: c.id, label: `${c.bank_name} ···${c.last_four}` })),
+              ]}
+              className="w-[165px]"
             />
           </div>
-          {/* Category */}
-          <Select
-            value={category}
-            onChange={(v) => { setCategory(v); setPage(1) }}
-            options={CATEGORY_OPTIONS}
-            className="w-[160px]"
-          />
-          {/* Card */}
-          <Select
-            value={cardId}
-            onChange={(v) => { setCardId(v); setPage(1) }}
-            options={[
-              { value: '', label: 'All Cards' },
-              ...cards.map((c) => ({ value: c.id, label: `${c.bank_name} ···${c.last_four}` })),
-            ]}
-            className="w-[160px]"
-          />
         </div>
 
         {/* Table */}

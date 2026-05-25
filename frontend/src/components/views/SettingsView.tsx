@@ -132,16 +132,31 @@ export function SettingsView() {
   const exportExcel = async () => {
     setExporting(true)
     try {
-      const [nwRes, cardsRes, txRes, loansRes, invRes, assetsRes, bankRes, insRes, goalsRes] = await Promise.all([
+      // Paginate transactions (backend max page_size=200)
+      const fetchAllTransactions = async () => {
+        const PAGE_SIZE = 200
+        let page = 1
+        let all: any[] = []
+        while (true) {
+          const res = await api.get(`/transactions?page=${page}&page_size=${PAGE_SIZE}`)
+          const items = res.data?.items ?? []
+          all = all.concat(items)
+          if (all.length >= (res.data?.total ?? 0) || items.length < PAGE_SIZE) break
+          page++
+        }
+        return all
+      }
+
+      const [nwRes, cardsRes, loansRes, invRes, assetsRes, bankRes, insRes, goalsRes, allTxs] = await Promise.all([
         api.get('/net-worth/current'),
-        api.get('/cards?page_size=200'),
-        api.get('/transactions?page=1&page_size=500'),
+        api.get('/cards'),
         api.get('/loans'),
         api.get('/investments'),
         api.get('/assets'),
         api.get('/bank-accounts'),
         api.get('/insurance'),
         api.get('/goals'),
+        fetchAllTransactions(),
       ])
 
       const wb = XLSX.utils.book_new()
@@ -175,7 +190,7 @@ export function SettingsView() {
       }
 
       // Transactions
-      const txs = txRes.data?.items || []
+      const txs = allTxs
       if (txs.length) {
         const txRows = [['Date', 'Description', 'Merchant', 'Amount', 'Type', 'Category', 'Recurring', 'Suspicious']]
         txs.forEach((t: any) => txRows.push([t.transaction_date, t.description, t.merchant_name, t.amount, t.tx_type, t.category, t.is_recurring, t.is_suspicious]))
@@ -183,7 +198,7 @@ export function SettingsView() {
       }
 
       // Credit Cards
-      const cards = cardsRes.data?.items || []
+      const cards = cardsRes.data?.items ?? cardsRes.data ?? []
       if (cards.length) {
         const cardRows = [['Bank', 'Last Four', 'Type', 'Credit Limit', 'Outstanding', 'Min Due', 'Due Date', 'Utilization %']]
         cards.forEach((c: any) => cardRows.push([c.bank_name, c.last_four, c.card_type, c.credit_limit, c.current_outstanding, c.minimum_due, c.payment_due_date, c.utilization_pct]))
