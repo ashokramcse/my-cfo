@@ -109,20 +109,20 @@ export default function LoginPage() {
         {/* Card */}
         <div className="rounded-2xl p-8"
           style={{
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.10)',
+            background: 'rgba(15,10,40,0.85)',
+            border: '1px solid rgba(255,255,255,0.14)',
             backdropFilter: 'blur(24px)',
             WebkitBackdropFilter: 'blur(24px)',
           }}>
 
           <h2 className="text-lg font-semibold text-white mb-1">Welcome back</h2>
-          <p className="text-sm mb-6" style={{ color: 'rgba(255,255,255,0.45)' }}>
+          <p className="text-sm mb-6" style={{ color: 'rgba(255,255,255,0.6)' }}>
             Sign in to your financial workspace
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(255,255,255,0.75)' }}>
                 Email or Username
               </label>
               <input
@@ -133,16 +133,16 @@ export default function LoginPage() {
                 required
                 className="auth-input w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all"
                 style={{
-                  background: 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(255,255,255,0.10)',
+                  border: '1px solid rgba(255,255,255,0.22)',
                 }}
-                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(249,115,22,0.6)')}
-                onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)')}
+                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(249,115,22,0.7)')}
+                onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.22)')}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(255,255,255,0.75)' }}>
                 Password
               </label>
               <div className="relative">

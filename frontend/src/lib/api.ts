@@ -51,13 +51,13 @@ api.interceptors.response.use(
         // Refresh failed — clear tokens and redirect to login
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
           window.location.href = '/login'
         }
         return Promise.reject(error)
       }
-      // No refresh token — go to login
-      if (typeof window !== 'undefined') {
+      // No refresh token — go to login (skip if already there)
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
         window.location.href = '/login'
       }
     }
