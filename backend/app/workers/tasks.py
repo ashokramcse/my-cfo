@@ -100,6 +100,12 @@ def parse_statement_task(self, statement_id: str, file_path: str, password: Opti
 
         incoming_authority = _authority(parsed.bank_name)
 
+        # Track which existing tx IDs have already been matched in this import
+        # batch. Prevents two identical transactions on the same day (e.g. two
+        # ₹500 Swiggy orders) from both hitting "ambiguous" and inserting fresh
+        # when the second source also has both — they are matched 1-to-1 in order.
+        consumed_ids: set[uuid.UUID] = set()
+
         tx_count = 0
         for ptx in parsed.transactions:
             merchant  = extract_merchant_name(ptx.description)
@@ -137,8 +143,8 @@ def parse_statement_task(self, statement_id: str, file_path: str, password: Opti
             date_lo = ptx.date - timedelta(days=_DATE_WINDOW_DAYS)
             date_hi = ptx.date + timedelta(days=_DATE_WINDOW_DAYS)
 
-            # Fetch all non-duplicate candidates within the date window + amount
-            # tolerance for this card + transaction_type.
+            # Fetch all non-duplicate, not-yet-consumed candidates within the
+            # date window + amount tolerance for this card + transaction_type.
             candidates = db.query(Transaction).filter(
                 and_(
                     Transaction.card_id          == stmt.card_id,
@@ -151,22 +157,21 @@ def parse_statement_task(self, statement_id: str, file_path: str, password: Opti
                 )
             ).all()
 
-            # ── Ambiguity guard ────────────────────────────────────────────
-            # Multiple candidates on nearby dates with same amount (e.g. two
-            # ₹500 Swiggy orders on consecutive days) — only match if there
-            # is exactly one candidate OR exactly one on the same date.
-            existing = None
-            if len(candidates) == 1:
-                existing = candidates[0]
-            elif len(candidates) > 1:
-                # Prefer exact date match to avoid false positives
-                exact = [c for c in candidates if c.transaction_date == ptx.date]
-                if len(exact) == 1:
-                    existing = exact[0]
-                # else: ambiguous — treat as new tx (safe path)
+            # Exclude candidates already matched earlier in this batch
+            candidates = [c for c in candidates if c.id not in consumed_ids]
+
+            # ── Pick best candidate ────────────────────────────────────────
+            # Sort by date proximity (closest first) so same-day exact matches
+            # beat nearby-day fuzzy matches. When two identical transactions
+            # exist on the same day (e.g. two ₹500 Swiggy orders), the first
+            # ptx consumes the first candidate, leaving the second available
+            # for the next ptx — correct 1-to-1 matching.
+            candidates.sort(key=lambda c: abs((c.transaction_date - ptx.date).days))
+
+            existing = candidates[0] if candidates else None
 
             if existing is None:
-                # No unambiguous match → fresh transaction
+                # No match → fresh transaction
                 db.add(Transaction(
                     user_id=uuid.UUID(user_id),
                     card_id=stmt.card_id,
@@ -175,6 +180,9 @@ def parse_statement_task(self, statement_id: str, file_path: str, password: Opti
                 ))
                 tx_count += 1
                 continue
+
+            # Mark candidate consumed so the next ptx doesn't re-match it
+            consumed_ids.add(existing.id)
 
             # ── Authority comparison ───────────────────────────────────────
             existing_auth = _existing_authority(existing)
@@ -185,7 +193,6 @@ def parse_statement_task(self, statement_id: str, file_path: str, password: Opti
                 existing.is_duplicate = True
                 existing.is_excluded  = True
                 db.add(existing)
-                # Insert incoming as the new authoritative record (falls through)
                 db.add(Transaction(
                     user_id=uuid.UUID(user_id),
                     card_id=stmt.card_id,
