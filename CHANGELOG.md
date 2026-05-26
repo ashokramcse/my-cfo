@@ -5,6 +5,63 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased / 2026-05-25]
+
+### Frontend — Transactions View
+- Redesigned search bar: 38px height, left-aligned search icon with proper spacing, X clear button that appears when text is entered, 300ms debounce so every keystroke doesn't fire a network request
+- Responsive filter row: search expands full-width, category + card selectors group together and wrap on small screens
+
+### Frontend — Settings / Excel Export
+- Fixed 422 error on Export Excel: transactions were fetched with `page_size=500` which exceeds the backend max of 200
+- Transactions are now fetched in paginated loops of 200 until all records are collected
+- Removed invalid `?page_size=200` parameter from `/cards` call (cards endpoint does not accept pagination params)
+
+### Frontend — Settings Profile
+- Full Name now falls back to username when no full name has been set, so the field always shows a meaningful value instead of "—"
+
+---
+
+## [1.7.0] — 2026-05-25
+
+### Backend — Wallet / UPI Reconciliation Engine (`wallet_reconciler.py`)
+Solves three double-counting problems that arise when users import both bank and wallet/UPI exports:
+
+**Problem 1 — UPI dedup**: Same ₹500 UPI payment appearing in both the bank statement and the PhonePe/GPay export. Fix: same UTR (reference_no) + same amount across different accounts = duplicate. Wallet/UPI side marked `is_excluded=True`, `is_duplicate=True`, `linked_tx_id` → bank side.
+
+**Problem 2 — Wallet load**: Bank DEBIT ₹5,000 "Transfer to Paytm" + Wallet CREDIT ₹5,000 "Loaded from HDFC". Without fix: shows as both an expense and income. Fix: both legs marked `is_transfer_leg=True`, `is_excluded=True`, categories updated to `WALLET_LOAD` / `TRANSFER_IN`.
+
+**Problem 3 — CC → Wallet load**: CC transaction ₹5,000 "Paytm" + Wallet CREDIT ₹5,000. Wallet CREDIT marked `is_transfer_leg=True`, category → `CC_WALLET_LOAD`.
+
+Four reconciliation passes:
+- **Pass 1**: UTR/reference_no exact match — bank is authoritative, wallet/UPI side excluded
+- **Pass 2**: Fuzzy match (amount ± ₹1, date ± 3 days, wallet keyword in description)
+- **Pass 3**: Wallet fee tagging — `WALLET_FEE` category + `is_hidden_charge=True`
+- **Pass 4**: CC→wallet credit detection → `CC_WALLET_LOAD` + `is_transfer_leg=True`
+
+Reconciliation runs automatically: after every bulk import, after every manual transaction add, and via explicit `POST /bank-accounts/reconcile`.
+
+### Backend — BankTransaction model additions
+- New `BankTxCategory` values: `WALLET_LOAD`, `CC_WALLET_LOAD`, `WALLET_TRANSFER`, `WALLET_FEE`
+- New column `linked_tx_id UUID FK → bank_transactions(id) ON DELETE SET NULL`
+- New column `is_transfer_leg BOOLEAN DEFAULT FALSE`
+- New index `ix_bank_tx_user_refno` on `(user_id, reference_no)` for fast UTR lookups
+
+### Backend — Cashflow analytics updated
+- All cashflow/inflow/outflow totals now filter out `is_transfer_leg=True` rows — wallet loads no longer inflate expense totals
+
+### Backend — Migration `0012_wallet_upi_reconciliation`
+- Adds new enum values with `ADD VALUE IF NOT EXISTS` (safe for re-run)
+- Adds `linked_tx_id` and `is_transfer_leg` columns
+- Creates the UTR reference index
+
+### Frontend — Recurring View
+- Removed double ₹ symbol from all `formatCurrencyCompact()` call sites — the helper already prepends ₹, so hardcoded `₹${...}` was producing `₹₹`
+- Fixed duplicate items in Upcoming Payments: added dedup by `(name.lower(), round(amount, 0), date_str)` triple before rendering
+- Cross-group dedup: bank-detected subscriptions and utilities are now excluded if they already appear in structured groups (investments, liabilities, insurance, lending)
+- Subscriptions take priority over utilities when a recurring item matches both detectors
+
+---
+
 ## [1.6.0] — 2026-05-24
 
 ### Security — full secret purge
@@ -17,8 +74,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added `.env`, `.env.local`, `.env.production`, `*.pem`, `*.key` to `.gitignore`
 
 ### Security — login page & API call fixes
-- `globals.css`: scoped white-background input rule to dashboard only using `input:not(.auth-input)` — prevented login form inputs being invisible (white-on-dark) 
+- `globals.css`: scoped white-background input rule to dashboard only using `input:not(.auth-input)` — prevented login form inputs being invisible (white-on-dark)
 - `login/page.tsx` + `signup/page.tsx`: added `auth-input` class to all form inputs so they keep dark glassmorphism styling
+- `api.ts`: pathname guard in 401 interceptor — no longer redirects to `/login` when already on login or signup pages, stopping the cascade of 14 spurious API calls from Next.js RSC prefetch
 - `Providers.tsx` DataPrefetcher: validates token with `/auth/me` before firing 14 bulk prefetch queries — stale tokens now produce 1 clean 401 instead of a cascade of 14
 
 ### Backend — P0 Investment Transaction Ledger
@@ -51,8 +109,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - New `AssetType.RECEIVABLE` — Director's loan to own company tracked as net-worth positive asset
 - `counterparty_name`, `counterparty_entity_id`, `due_date`, `interest_rate` on assets
 
+### Backend — Card EMI fixes
+- `_build_payments()`: switched from `timedelta(days=30*i)` to `relativedelta(months=i)` for month-aligned due dates (no more January 31 → March 2 drift)
+- `create_emi()` and `update_emi()`: `amount_remaining` now computed as `total_amount − amount_paid` instead of `monthly_emi × months_left` — eliminates rounding drift when EMI doesn't divide evenly
+
 ### Migration
 - `0009_investment_ledger_entity_isolation` — idempotent (`IF NOT EXISTS` throughout)
+- `0010_emi_fixes` — relativedelta and amount_remaining corrections
+- `0011_bank_transaction_enrichment` — status, gross_amount, tds fields, linked FKs
+- `0012_wallet_upi_reconciliation` — wallet/UPI reconciliation columns and index
 
 ---
 
@@ -75,6 +140,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Frontend — Settings Excel export
 - Export all financial data to `.xlsx` using `xlsx` library
+- Separate sheets for: Net Worth, Bank Accounts, Transactions, Credit Cards, Loans, Investments, Assets, Insurance, Goals
 - Uses same TanStack Query keys as VisualizationView — data shared from cache
 
 ### Bug fixes
@@ -115,7 +181,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [1.3.0] — 2026-05-21
 
 ### Backend — Financial OS modules
-- **Banking**: `BankAccount` model (current, savings, salary, FD, wallet, NRE, NRO), balance history
+- **Banking**: `BankAccount` model (current, savings, salary, FD, wallet, UPI, NRE, NRO), balance history
 - **Investments**: `Investment` model with 13 types (STOCKS, MUTUAL_FUND, ETF, CRYPTO, GOLD, SILVER, SGB, PPF, EPF, NPS, BONDS, REITS, OTHER), SIP tracking, PnL, XIRR, CAGR
 - **Loans**: `Loan` model (HOME, PERSONAL, VEHICLE, EDUCATION, GOLD, BUSINESS, BNPL, INFORMAL, OTHER), floating-rate reset, amortization schedule endpoint
 - **Assets**: `Asset` model (REAL_ESTATE, VEHICLE, JEWELRY, ELECTRONICS, FURNITURE, ARTWORK, OTHER), depreciation (straight-line / declining balance)
@@ -153,35 +219,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - backend (internal): **8090**
   - postgres (host-exposed): **5555**
   - redis (host-exposed): **6666**
-- **Fixed `docker compose down && docker compose up --build`** so all 6 services always start in correct order
-- Added `healthcheck` to `frontend` service using `node` HTTP check (wget not available in node:alpine)
-- nginx now depends on `frontend: service_healthy` + `backend: service_healthy` — starts only when both are truly ready
+- Added `healthcheck` to all services; nginx depends on both `backend: healthy` and `frontend: healthy`
 - Tightened healthcheck intervals: postgres/redis every 5s, backend/frontend every 10s
-- Added `start_period` to backend (20s) and frontend (60s) to allow boot time before health checks count
-- Removed `NEXT_PUBLIC_API_URL` from docker-compose.yml build args — was overriding empty Dockerfile ARG default causing all API calls to fail in production
-- Removed `NEXT_PUBLIC_API_URL` fallback `http://localhost:8000` from `frontend/Dockerfile` ARG — now defaults to empty string so nginx proxying works correctly
 
 ### Frontend — UI/UX Overhaul
 - Complete design system rewrite (`globals.css`) with warm-tan palette
   - Page background: `#E6E0D8`, cards: `#FFFFFF` with visible shadows
   - All border colors darkened to `#C8C2BB` for clear visibility on white
-  - Inputs, cards, tables, dividers use consistent stronger borders
-- Replaced purple/violet icon boxes across EMI and statements pages with warm orange gradient
-- Fixed statements dropzone: was using invisible `border-border` Tailwind class — replaced with explicit `2px dashed #CCC7C0` + orange icon
-- Strengthened card and kpi-card box-shadows for better depth perception
-- Added `.table-responsive` CSS class with `overflow-x-auto` and `min-width: 480px` for mobile table scroll
+- Replaced purple/violet icon boxes with warm orange gradient across EMI and statements pages
+- Added `.table-responsive` CSS class with `overflow-x-auto` and `min-width: 480px`
 
 ### Frontend — Mobile Responsiveness
-- Added `useIsMobile()` hook (`src/hooks/useIsMobile.ts`) for runtime breakpoint detection at 1024px
-- **Sidebar**: slide-out drawer overlay on mobile with dark backdrop and X close button; desktop collapse/expand unchanged
-- **AppShell**: `marginLeft = 0` on mobile (sidebar overlays), framer-motion animation only on desktop
-- **PageHeader**: hamburger `Menu` icon on mobile left that opens the sidebar drawer
+- Added `useIsMobile()` hook for runtime breakpoint detection at 1024px
+- Sidebar: slide-out drawer overlay on mobile with dark backdrop and X close button
 - All pages: responsive padding `p-3 sm:p-5 xl:p-6`
-- Dashboard/Reports charts: `lg:grid-cols-3` instead of `xl:` for earlier side-by-side breakpoint
-- Transactions filter bar: `flex-col sm:flex-row` for mobile stacking
-- EMI status filter tabs: `overflow-x-auto` for small screen scrolling
-- Table wrappers added to statements and reports pages
-- Added `mobileSidebarOpen` / `openMobileSidebar` / `closeMobileSidebar` to Zustand `useUIStore`
 
 ---
 
@@ -189,44 +240,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Frontend — Design System
 - Full UI/UX redesign with warm-tan color palette replacing previous dark/neon theme
-- New `StatCard` component with variant system (default, success, warning, danger, violet, info, orange)
-- New `PageHeader` component as sticky top bar with orange gradient icon
-- Redesigned `Sidebar` with dark background (`#16100C`) and orange-accented active states
+- New `StatCard`, `PageHeader` components
+- Redesigned `Sidebar` with dark background and orange-accented active states
 - `AppShell` width animation using Framer Motion (64px collapsed, 232px expanded)
-- `SpendingChart` and `EMIForecastChart` with warm color fills
-- Warm shimmer skeleton loading states
-- All pages restructured: sticky PageHeader outside padded content div
-
-### Infrastructure
-- `api.ts`: changed `|| 'http://localhost:8000'` to `?? ''` so empty env var uses relative URLs
-- Fixed nginx proxy correctly routing `/api/*` to backend and `/*` to frontend
 
 ---
 
 ## [1.0.0] — 2026-05-15
 
 ### Initial Release
-
-#### Backend (FastAPI + Python 3.12)
 - Full REST API: cards, transactions, EMIs, friends, statements, reports, insights
-- SQLAlchemy 2.0 async ORM with PostgreSQL 16
+- SQLAlchemy 2.0 async ORM with PostgreSQL
 - Celery workers for background PDF parsing and insight generation
 - PDF parsing pipeline: pdfplumber → PyMuPDF → Tesseract OCR
-- Cred screenshot parser (PIL + Tesseract)
 - 18-category merchant classifier with 60+ regex rules
-- AES-256-GCM field encryption
-- JWT authentication (access + refresh tokens)
-- Alembic database migrations
-
-#### Frontend (Next.js 15 + Node.js 20)
-- App Router pages: Dashboard, Cards, Transactions, EMI Tracker, Friend EMIs, Statements, Reports, Settings
-- TanStack Query v5 for server state management
-- Recharts for area/pie/bar charts
-- react-dropzone for PDF/image upload
-- Framer Motion animations
-
-#### Infrastructure
+- AES-256-GCM field encryption + JWT authentication
 - Docker Compose with 6 services: postgres, redis, backend, worker, frontend, nginx
-- nginx reverse proxy on port 80 (later changed to 4000)
-- Health checks on postgres, redis, backend
-- Celery task queue for async parsing

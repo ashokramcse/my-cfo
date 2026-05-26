@@ -11,7 +11,7 @@
   A complete, privacy-first financial operating system — track your net worth, investments,<br/>
   loans, banking, credit cards, income, insurance, and goals, all on your own infrastructure.<br/>
   Built for Indian users with first-class support for MF NAVs, SGBs, LTCG/STCG tax,<br/>
-  floating-rate loans, and multi-entity (personal + business) finance.
+  floating-rate loans, wallet/UPI reconciliation, and multi-entity (personal + business) finance.
 </p>
 
 <br/>
@@ -36,6 +36,7 @@
 - [Module Reference](#module-reference)
 - [Architecture](#architecture)
 - [Investment Ledger & Tax Engine](#investment-ledger--tax-engine)
+- [Wallet & UPI Reconciliation](#wallet--upi-reconciliation)
 - [Multi-Entity Finance](#multi-entity-finance)
 - [Supported Banks](#supported-banks)
 - [Tech Stack](#tech-stack)
@@ -43,6 +44,7 @@
 - [Commands Reference](#commands-reference)
 - [Security](#security)
 - [Local Development](#local-development)
+- [Migration History](#migration-history)
 
 ---
 
@@ -56,6 +58,7 @@ Most personal finance apps are cloud-first — your salary slips, investment sta
 | Investment transaction ledger | ✅ | partial |
 | LTCG / STCG tax computation | ✅ | ❌ |
 | SGB maturity tax-free tracking | ✅ | ❌ |
+| Wallet / UPI double-count reconciliation | ✅ | ❌ |
 | Dual-pocket (personal + business) | ✅ | ❌ |
 | Multi-user sharing with permissions | ✅ | ❌ |
 | Open source & self-hostable | ✅ | ❌ |
@@ -99,6 +102,11 @@ open http://localhost:4000
 
 Create your account at `/signup`, then sign in. Your data never leaves `localhost`.
 
+> **Note:** After changing backend Python code, you must rebuild the container — code is baked into the image, not volume-mounted:
+> ```bash
+> docker compose build backend && docker compose up -d backend
+> ```
+
 ---
 
 ## Port Reference
@@ -121,43 +129,50 @@ Create your account at `/signup`, then sign in. Your data never leaves `localhos
 My CFO is organized into themed modules, accessible from the left sidebar.
 
 ### 🏠 Command Center
+
 | View | Description |
 |------|-------------|
 | **Dashboard** | KPI summary: net worth, liquid assets, debt ratio, health score, EMI forecast chart, AI insights feed |
 
 ### 📊 Financial OS
+
 | View | Description |
 |------|-------------|
 | **Net Worth** | Real-time net worth = assets − liabilities. Historical trend chart. Breakdown by category (banking, investments, assets, loans, cards). |
-| **Banking** | All bank accounts with balances, account type, and interest rate. Balance history. |
+| **Banking** | All bank accounts with balances, account type, and interest rate. Balance history. Supports SAVINGS, CURRENT, SALARY, WALLET, UPI, FD, RD, CASH. |
 | **Investments** | Full portfolio — stocks, mutual funds, ETFs, gold, SGB, PPF, EPF, NPS, bonds, crypto. Per-investment PnL, XIRR, CAGR. |
 | **Loans & Debt** | Home, personal, vehicle, education, gold, business, BNPL, informal loans. Amortization schedule. Floating-rate reset tracking. |
 | **Assets** | Real estate, vehicles, jewelry, electronics, artwork, receivables (Director's loans). Depreciation tracking. |
 
 ### 💰 Money Flow
+
 | View | Description |
 |------|-------------|
 | **Income** | Salary, business income, rental, interest — all income sources with monthly analytics. |
-| **Recurring** | Subscriptions and recurring charges — Netflix, SIPs, insurance premiums. |
+| **Recurring** | Subscriptions, SIPs, insurance premiums — auto-detected from transaction patterns, deduplicated across structured + bank sources. |
 | **Insurance** | Life, health, vehicle, property, term policies with premium tracking and expiry alerts. |
 | **Goals** | Financial goals (emergency fund, house down-payment, retirement) with progress tracking. |
 
 ### 💳 Credit & Cards
+
 | View | Description |
 |------|-------------|
 | **Cards** | Credit cards with utilization gauge, limit, outstanding, reward points. |
-| **Transactions** | All card transactions with category tagging, merchant classification, search and filters. |
-| **Card EMIs** | EMIs created from card transactions — tenure, interest rate, monthly installment, 6-month forecast. |
+| **Transactions** | All card transactions with category tagging, merchant classification, debounced search with clear button, category and card filters. |
+| **Card EMIs** | EMIs created from card transactions — tenure, interest rate, monthly installment, 6-month forecast. Month-aligned due dates. |
 | **Lending** | Money lent to friends — risk scoring, repayment tracking, overdue flagging. |
 
 ### 🔭 Reports & Data
+
 | View | Description |
 |------|-------------|
 | **Visualize** | 4-tab financial visualization suite (see below) |
 | **Statements** | Upload and parse bank/card PDF statements (HDFC, ICICI, SBI, Axis + 8 more) |
 | **Reports** | Spending trends, category breakdown, cash flow analysis |
+| **Settings** | Profile, sessions, notifications, password change, and full Excel export of all financial data |
 
 #### Visualize — 4 Tabs
+
 | Tab | What it shows |
 |-----|---------------|
 | **Universe** | D3 force-directed graph: Net Worth → Category Hubs → Individual items (3-level radial layout) |
@@ -205,54 +220,46 @@ Every service waits for its dependencies to pass health checks. `docker compose 
 All backend routes live under `/api/v1/`:
 
 ```
-/auth/*             Login, register, refresh, logout, sessions
-/net-worth/*        Current snapshot, history, intelligence report
-/bank-accounts/*    CRUD + balance history
-/investments/*      CRUD + summary + intelligence
-/investments/{id}/transactions   Investment ledger (BUY/SELL/BONUS/SPLIT…)
-/investments/transactions/tax-summary   LTCG/STCG annual tax report
-/loans/*            CRUD + summary + amortization schedule
-/assets/*           CRUD (includes RECEIVABLE type for Director's loans)
-/cards/*            CRUD + utilization
-/transactions/*     Card transactions + analytics
-/emis/*             Card EMI tracking + 6-month forecast
-/income/*           Income sources + intelligence
-/recurring/*        Recurring payment summary
-/insurance/*        Insurance policy intelligence
-/goals/*            Goal tracking + intelligence
-/reports/*          Dashboard + spending analytics
-/statements/*       Upload + parse PDF statements
-/sharing/*          Share permissions, invitations, relationships
-/insights/*         AI-generated financial alerts
+/auth/*                               Login, register, refresh, logout, sessions, profile
+/net-worth/*                          Current snapshot, history, intelligence report
+/bank-accounts/*                      CRUD + balance history
+/bank-accounts/reconcile              POST — run wallet/UPI reconciliation for current user
+/investments/*                        CRUD + summary + intelligence
+/investments/{id}/transactions        Investment ledger (BUY/SELL/BONUS/SPLIT…)
+/investments/transactions/tax-summary LTCG/STCG annual tax report
+/loans/*                              CRUD + summary + amortization schedule
+/assets/*                             CRUD (includes RECEIVABLE type for Director's loans)
+/cards/*                              CRUD + utilization
+/transactions/*                       Card transactions + analytics
+/emis/*                               Card EMI tracking + 6-month forecast
+/income/*                             Income sources + intelligence
+/recurring/*                          Recurring payment summary + upcoming (deduplicated)
+/insurance/*                          Insurance policy intelligence
+/goals/*                              Goal tracking + intelligence
+/reports/*                            Dashboard + spending analytics
+/statements/*                         Upload + parse PDF statements
+/sharing/*                            Share permissions, invitations, relationships
+/insights/*                           AI-generated financial alerts
 ```
 
 ---
 
 ## Investment Ledger & Tax Engine
 
-The investment module goes beyond simple "current value" tracking. Every trade is recorded in an auditable ledger, and Indian tax rules are applied automatically.
+Every trade is recorded in an auditable ledger and Indian tax rules are applied automatically.
 
 ### Transaction types
 
 | Type | Description |
 |------|-------------|
 | `BUY` | Purchase (lump sum or SIP instalment) |
-| `SELL` | Redemption or sale |
+| `SELL` | Redemption or sale — triggers FIFO cost basis |
 | `BONUS` | Bonus shares / bonus units (zero cost, parent lot avg preserved) |
 | `SPLIT` | Stock split (units scale, cost pool unchanged, avg price recalculates) |
 | `DIVIDEND` | Dividend credit |
 | `COUPON` | SGB / bond coupon interest |
 | `SWITCH_IN / SWITCH_OUT` | Mutual fund switch |
 | `MATURITY` | Bond / SGB maturity redemption |
-
-### What's auto-computed on every transaction
-
-- **FIFO cost basis** — for SELL: matches oldest BUY lots first
-- **Holding days** — exact calendar days from first matched BUY
-- **Realized gain** — `sale_amount − cost_basis`
-- **Tax category** — applies the correct Indian rule (see below)
-- **Estimated tax** — `realized_gain × rate`
-- **Aggregate recalculation** — `Investment.units`, `avg_buy_price`, `invested_amount`, `unrealized_pnl`, `realized_pnl` are all re-derived from the ledger automatically
 
 ### Indian tax matrix
 
@@ -267,43 +274,31 @@ The investment module goes beyond simple "current value" tracking. Every trade i
 | Crypto / VDA | — | **30% flat** | **30% flat** |
 | Bonds / NPS | 12 months | **12.5%** | Slab |
 
-### Tax summary endpoint
+Tax summary endpoint: `GET /api/v1/investments/transactions/tax-summary?financial_year=2025-26`
 
-`GET /api/v1/investments/transactions/tax-summary?financial_year=2025-26`
+---
 
-Returns a complete LTCG/STCG breakdown for the financial year with the ₹1.25L equity exemption applied, broken down by category.
+## Wallet & UPI Reconciliation
 
-### Bank transaction enrichment
+When users import transactions from both their bank account **and** UPI/wallet apps (PhonePe, GPay, Paytm), the same money appears twice. The reconciliation engine fixes three double-counting classes:
 
-Every bank transaction can now be linked to the event that caused it:
+| Problem | Symptom | Fix |
+|---------|---------|-----|
+| **UPI duplicate** | ₹500 UPI payment in bank + PhonePe export = ₹1,000 shown | Wallet side marked `is_excluded`, `is_duplicate` |
+| **Wallet load** | Bank DEBIT ₹5k "Transfer to Paytm" + Wallet CREDIT ₹5k | Both legs `is_transfer_leg=True`, excluded from cashflow |
+| **CC → Wallet** | CC charge ₹5k "Paytm" + Wallet CREDIT ₹5k | Wallet CREDIT marked `CC_WALLET_LOAD`, excluded |
 
-| New field | Purpose |
-|---|---|
-| `status` | `PENDING` / `SETTLED` / `RECONCILED` — models MF T+3 settlement gap |
-| `gross_amount` + `tds_amount` + `tds_section` | ITR-ready income reporting (194A, 194N…) |
-| `linked_investment_tx_id` | Links a bank credit/debit to the investment event that caused it |
-| `linked_loan_id` | Links an EMI bank debit to the loan it repays |
-| `linked_card_id` | Links a payment debit to the card it settles |
+**Reconciliation passes:** UTR exact match → fuzzy (amount ± ₹1, date ± 3 days) → wallet fee tagging → CC→wallet detection.
+
+Runs automatically on every import and manual add. Manual trigger: `POST /api/v1/bank-accounts/reconcile`.
 
 ---
 
 ## Multi-Entity Finance
 
-My CFO supports **financial entity isolation** — separate your personal finances from business entities cleanly.
+Supported entity types: `PERSONAL` · `SOLE_PROP` · `PRIVATE_LTD` · `LLP` · `HUF` · `PARTNERSHIP` · `TRUST`
 
-### Supported entity types
-
-`PERSONAL` · `SOLE_PROP` · `PRIVATE_LTD` · `LLP` · `HUF` · `PARTNERSHIP` · `TRUST`
-
-Every new user automatically gets a default `PERSONAL` entity. You can create additional entities (e.g. "Ashok Traders — Sole Prop") and tag bank accounts, investments, loans, and assets to the correct entity.
-
-### Director's loan / receivable tracking
-
-Use `AssetType = RECEIVABLE` to record money lent to your own company:
-
-- Counterparty name and entity link
-- Due date and interest rate
-- Counted as a net-worth positive asset (not an invisible debit)
+Every user starts with a default `PERSONAL` entity. Bank accounts, investments, loans, and assets can each be tagged to the correct entity. Use `AssetType = RECEIVABLE` to track Director's loans to your own company as a net-worth positive asset.
 
 ---
 
@@ -348,6 +343,7 @@ Use `AssetType = RECEIVABLE` to record money lent to your own company:
 | psycopg2 | 2.9 | PostgreSQL sync driver (Alembic) |
 | Alembic | 1.14 | Schema migrations |
 | Celery | 5.4 | Background task queue |
+| python-dateutil | 2.9 | `relativedelta` for month-aligned EMI dates |
 | pdfplumber | 0.11 | PDF text extraction (primary) |
 | PyMuPDF | 1.24 | PDF text extraction (secondary) |
 | pytesseract | 0.3 | OCR fallback |
@@ -377,7 +373,7 @@ Use `AssetType = RECEIVABLE` to record money lent to your own company:
 | Axios | 1.7 | HTTP client with JWT interceptors |
 | react-hook-form | 7 | Form handling |
 | Zod | 3.24 | Schema validation |
-| xlsx | 0.18 | Excel export (Settings → Export) |
+| xlsx | 0.18 | Excel export (Settings → Export Excel) |
 | Radix UI | various | Accessible headless components |
 | Lucide React | 0.469 | Icons |
 
@@ -385,11 +381,10 @@ Use `AssetType = RECEIVABLE` to record money lent to your own company:
 
 ## Configuration
 
-All configuration is via `.env`. Copy `.env.example` to start. **There are no insecure default fallbacks** — every required variable must be explicitly set.
+All configuration is via `.env`. Copy `.env.example` to start. **There are no insecure default fallbacks.**
 
 ```bash
 cp .env.example .env
-# Then edit .env — generate values with the commands shown in each comment
 ```
 
 ### Required variables
@@ -427,6 +422,10 @@ docker compose up -d                # Start (no rebuild)
 docker compose down                 # Stop containers (data preserved)
 docker compose restart backend      # Restart a single service
 
+# ── Rebuild after backend code changes ───────────────────────────
+# Backend code is baked into the Docker image — must rebuild after any Python change
+docker compose build backend && docker compose up -d backend
+
 # ── Logs ────────────────────────────────────────────────────────
 docker compose logs -f              # All services
 docker compose logs -f backend      # Backend only
@@ -441,7 +440,7 @@ docker compose exec backend alembic current                   # Show current ver
 docker compose exec backend alembic history                   # Show migration history
 docker compose exec backend alembic revision --autogenerate -m "description"  # New migration
 
-# Connect with a DB tool: host=localhost port=5555 user=mycfo db=mycfo
+# Connect with a DB tool: host=localhost  port=5555  user=mycfo  db=mycfo
 
 # ── Shells ──────────────────────────────────────────────────────
 docker compose exec backend bash    # Backend (Python 3.13)
@@ -458,51 +457,23 @@ docker compose exec backend alembic upgrade head
 
 ## Security
 
-### Secrets management
-
-- **`.env` is git-ignored** — never committed to the repository
-- **No insecure fallback defaults** in `docker-compose.yml` — the stack fails to start if `.env` is missing required variables
-- **`backend/app/config.py`** validates credentials on startup and exits with a fatal error in production if placeholder values are detected
-
-### Authentication
-
-- JWT access tokens (configurable expiry, default 24 hours)
-- Refresh token rotation — each refresh issues a new refresh token and invalidates the old one
-- Per-device sessions — view and revoke active sessions from Settings
-- bcrypt password hashing (cost factor 12)
-
-### Data protection
-
-- AES-256-GCM encryption on sensitive fields (card numbers, account details)
-- Row-level user isolation — every query is scoped to `user_id`
-- Share permissions model — granular module-level read/write access for shared users
-
-### Sharing model
-
-My CFO supports sharing your financial data with a spouse, family member, or accountant:
-
-1. Send an invite link from **Settings → Sharing**
-2. Recipient accepts — a `SharePermission` record is created
-3. You control which modules (investments, cards, loans…) they can read or write
-4. Revoke access any time — their session is invalidated immediately
+- **No insecure fallback defaults** — stack refuses to start without proper `.env`
+- **JWT access tokens** with refresh token rotation and per-device session management
+- **bcrypt** password hashing (cost factor 12)
+- **AES-256-GCM** encryption on sensitive fields
+- **Row-level user isolation** — every query scoped to `user_id`
+- **401 interceptor guard** — no redirect loop when already on `/login` or `/signup`
+- **Share permissions** — granular module-level read/write access for shared users
 
 ---
 
 ## Local Development
 
-Run without Docker for faster iteration (requires local PostgreSQL + Redis):
-
 ```bash
 # Backend
 cd backend
 pip install -r requirements.txt
-cp ../.env .env                      # backend reads .env from its own directory
-
-# Update DATABASE_URL and REDIS_URL to use localhost:
-# DATABASE_URL=postgresql+asyncpg://mycfo:yourpassword@localhost:5432/mycfo
-# SYNC_DATABASE_URL=postgresql://mycfo:yourpassword@localhost:5432/mycfo
-# REDIS_URL=redis://:yourpassword@localhost:6379/0
-
+# Set DATABASE_URL and REDIS_URL to localhost in .env
 uvicorn app.main:app --reload --port 8090
 
 # Celery worker (separate terminal)
@@ -512,19 +483,14 @@ celery -A app.workers.celery_app worker --loglevel=info
 cd frontend
 npm install --legacy-peer-deps
 NEXT_PUBLIC_API_URL=http://localhost:8090 npm run dev
-# → http://localhost:3000
 ```
 
-### Database migrations (dev workflow)
+### Migrations (dev)
 
 ```bash
-# After changing a SQLAlchemy model:
 docker compose exec backend alembic revision --autogenerate -m "add_field_xyz"
-# Review the generated file in backend/alembic/versions/
 docker compose exec backend alembic upgrade head
-
-# Roll back one step:
-docker compose exec backend alembic downgrade -1
+docker compose exec backend alembic downgrade -1   # roll back one step
 ```
 
 ---
@@ -541,7 +507,10 @@ docker compose exec backend alembic downgrade -1
 | `0006` | Floating rate fields on loans, bank_account_id on statements |
 | `0007` | Recurring payments |
 | `0008` | Auth + sharing — UserSession, UserRelationship, SharePermission, ShareInvitation |
-| `0009` | Investment ledger, entity isolation, bank transaction enrichment (P0-P2 audit fixes) |
+| `0009` | Investment ledger, entity isolation, bank transaction enrichment |
+| `0010` | Card EMI fixes — month-aligned dates (relativedelta), amount_remaining from total |
+| `0011` | Bank transaction enrichment — status, gross_amount, tds_amount, linked FKs |
+| `0012` | Wallet/UPI reconciliation — linked_tx_id, is_transfer_leg, UTR index, new categories |
 
 ---
 
