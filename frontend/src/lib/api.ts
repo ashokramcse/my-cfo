@@ -83,6 +83,14 @@ export const transactionsApi = {
   delete: (id: string) => api.delete(`/transactions/${id}`),
   categoryBreakdown: (params?: Record<string, unknown>) => api.get('/transactions/analytics/category-breakdown', { params }),
   monthlyTrend: (months?: number) => api.get('/transactions/analytics/monthly-trend', { params: { months } }),
+  spendByCard: (params?: Record<string, unknown>) => api.get('/transactions/analytics/spend-by-card', { params }),
+  merchantBreakdown: (params?: Record<string, unknown>) => api.get('/transactions/analytics/merchant-breakdown', { params }),
+  dayOfWeek: (params?: Record<string, unknown>) => api.get('/transactions/analytics/day-of-week', { params }),
+  weekendVsWeekday: (params?: Record<string, unknown>) => api.get('/transactions/analytics/weekend-vs-weekday', { params }),
+  monthOverMonth: (params?: Record<string, unknown>) => api.get('/transactions/analytics/month-over-month', { params }),
+  largeTransactions: (params?: Record<string, unknown>) => api.get('/transactions/analytics/large-transactions', { params }),
+  refunds: (params?: Record<string, unknown>) => api.get('/transactions/analytics/refunds', { params }),
+  hiddenCharges: (params?: Record<string, unknown>) => api.get('/transactions/analytics/hidden-charges', { params }),
 }
 
 export const emisApi = {

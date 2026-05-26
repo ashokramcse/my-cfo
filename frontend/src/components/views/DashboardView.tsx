@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { SpendingChart } from '@/components/charts/SpendingChart'
 import { EMIForecastChart } from '@/components/charts/EMIForecastChart'
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
-import { reportsApi, emisApi, insightsApi, netWorthApi, incomeApi, goalsApi, loansApi } from '@/lib/api'
+import { reportsApi, emisApi, insightsApi, netWorthApi, incomeApi, goalsApi, loansApi, transactionsApi } from '@/lib/api'
 import { formatCurrencyCompact, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import {
@@ -118,6 +118,23 @@ export function DashboardView() {
   const { data: loanSummary } = useQuery({
     queryKey: ['loans-summary'],
     queryFn: async () => (await loansApi.summary()).data,
+  })
+
+  const { data: momData = [] } = useQuery({
+    queryKey: ['mom', 2],
+    queryFn: async () => (await transactionsApi.monthOverMonth({ months: 2 })).data,
+  })
+
+  const { data: topCats = [] } = useQuery({
+    queryKey: ['cat-breakdown', 1, ''],
+    queryFn: async () => {
+      const now = new Date()
+      const from = new Date(now.getFullYear(), now.getMonth(), 1)
+      return (await transactionsApi.categoryBreakdown({
+        date_from: from.toISOString().split('T')[0],
+        date_to: now.toISOString().split('T')[0],
+      })).data
+    },
   })
 
   const completeness = (netWorth as any)?.profile_completeness
@@ -333,9 +350,22 @@ export function DashboardView() {
                 <StatCard
                   title="Monthly Spend"
                   value={formatCurrencyCompact(stats.monthly_spend)}
-                  subtitle="this month"
+                  subtitle={(() => {
+                    const last = momData as any[]
+                    if (last.length >= 2) {
+                      const pct = last[last.length - 1]?.change_pct
+                      if (pct !== null && pct !== undefined) {
+                        return pct > 0 ? `↑${pct}% vs last month` : pct < 0 ? `↓${Math.abs(pct)}% vs last month` : 'same as last month'
+                      }
+                    }
+                    return 'this month'
+                  })()}
                   icon={ArrowUpRight}
-                  variant="default"
+                  variant={(() => {
+                    const last = momData as any[]
+                    const pct = last[last.length - 1]?.change_pct
+                    return pct > 20 ? 'danger' : pct > 10 ? 'warning' : 'default'
+                  })()}
                   delay={0.08}
                 />
                 <StatCard
@@ -365,6 +395,45 @@ export function DashboardView() {
               </>
             )}
         </div>
+
+        {/* ── Top 3 categories this month ── */}
+        {(topCats as any[]).length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+            className="card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="section-title">Top Spend Categories</h2>
+                <p className="section-sub">This month</p>
+              </div>
+              <button onClick={() => setView('reports')}
+                className="text-xs font-semibold transition-colors hover:opacity-70"
+                style={{ color: '#F97316' }}>
+                Full report →
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {(topCats as any[]).slice(0, 3).map((cat: any, i: number) => {
+                const EMOJI: Record<string, string> = {
+                  FOOD: '🍔', SHOPPING: '🛍️', TRAVEL: '✈️', SUBSCRIPTION: '📺',
+                  UTILITIES: '💡', ENTERTAINMENT: '🎬', FUEL: '⛽', GROCERIES: '🛒',
+                  HEALTH: '💊', EDUCATION: '📚', FEES: '🏦', OTHER: '📦',
+                }
+                const COLORS = ['#F97316', '#3B82F6', '#10B981']
+                return (
+                  <div key={cat.category} className="rounded-xl p-3 text-center"
+                    style={{ background: COLORS[i] + '12', border: `1.5px solid ${COLORS[i]}30` }}>
+                    <div className="text-xl mb-1">{EMOJI[cat.category] || '📦'}</div>
+                    <div className="text-xs font-bold truncate" style={{ color: '#18120E' }}>{cat.category}</div>
+                    <div className="text-sm font-mono font-bold mt-0.5" style={{ color: COLORS[i] }}>
+                      {formatCurrencyCompact(cat.amount)}
+                    </div>
+                    <div className="text-[10px] mt-0.5" style={{ color: '#A09890' }}>{cat.percentage}% of spend</div>
+                  </div>
+                )
+              })}
+            </div>
+          </motion.div>
+        )}
 
         {/* ── Charts row ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

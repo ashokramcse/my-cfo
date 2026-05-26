@@ -248,3 +248,403 @@ async def monthly_trend(
         }
         for r in rows
     ]
+
+
+# ── New Analytics Endpoints ────────────────────────────────────────────────────
+
+@router.get("/analytics/spend-by-card")
+async def spend_by_card(
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Total spend grouped by card for the given date range."""
+    filters = [
+        Transaction.user_id == current_user.id,
+        Transaction.is_excluded == False,
+        Transaction.transaction_type == TransactionType.PURCHASE,
+    ]
+    if date_from:
+        filters.append(Transaction.transaction_date >= date_from)
+    if date_to:
+        filters.append(Transaction.transaction_date <= date_to)
+
+    q = (
+        select(
+            Transaction.card_id,
+            CreditCard.nickname,
+            CreditCard.bank_name,
+            func.sum(Transaction.amount).label("total"),
+            func.count().label("count"),
+        )
+        .join(CreditCard, CreditCard.id == Transaction.card_id)
+        .where(and_(*filters))
+        .group_by(Transaction.card_id, CreditCard.nickname, CreditCard.bank_name)
+        .order_by(func.sum(Transaction.amount).desc())
+    )
+    result = await db.execute(q)
+    rows = result.all()
+    grand_total = sum(r.total for r in rows) or Decimal(1)
+    return [
+        {
+            "card_id": str(r.card_id),
+            "card_name": r.nickname or r.bank_name or "Card",
+            "bank_name": r.bank_name,
+            "total": float(r.total),
+            "count": r.count,
+            "percentage": round(float(r.total / grand_total * 100), 1),
+        }
+        for r in rows
+    ]
+
+
+@router.get("/analytics/merchant-breakdown")
+async def merchant_breakdown(
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    card_id: Optional[uuid.UUID] = None,
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Top merchants by spend with optional card + date filters."""
+    filters = [
+        Transaction.user_id == current_user.id,
+        Transaction.is_excluded == False,
+        Transaction.transaction_type == TransactionType.PURCHASE,
+        Transaction.merchant_name != None,
+        Transaction.merchant_name != "",
+    ]
+    if date_from:
+        filters.append(Transaction.transaction_date >= date_from)
+    if date_to:
+        filters.append(Transaction.transaction_date <= date_to)
+    if card_id:
+        filters.append(Transaction.card_id == card_id)
+
+    q = (
+        select(
+            Transaction.merchant_name,
+            Transaction.category,
+            func.sum(Transaction.amount).label("total"),
+            func.count().label("count"),
+        )
+        .where(and_(*filters))
+        .group_by(Transaction.merchant_name, Transaction.category)
+        .order_by(func.sum(Transaction.amount).desc())
+        .limit(limit)
+    )
+    result = await db.execute(q)
+    rows = result.all()
+    grand_total = sum(r.total for r in rows) or Decimal(1)
+    return [
+        {
+            "merchant": r.merchant_name,
+            "category": r.category,
+            "total": float(r.total),
+            "count": r.count,
+            "percentage": round(float(r.total / grand_total * 100), 1),
+        }
+        for r in rows
+    ]
+
+
+@router.get("/analytics/day-of-week")
+async def day_of_week_spend(
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    card_id: Optional[uuid.UUID] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Spend aggregated by day of week (0=Mon … 6=Sun)."""
+    from sqlalchemy import text, bindparam
+    filters = [
+        Transaction.user_id == current_user.id,
+        Transaction.is_excluded == False,
+        Transaction.transaction_type == TransactionType.PURCHASE,
+    ]
+    if date_from:
+        filters.append(Transaction.transaction_date >= date_from)
+    if date_to:
+        filters.append(Transaction.transaction_date <= date_to)
+    if card_id:
+        filters.append(Transaction.card_id == card_id)
+
+    q = (
+        select(
+            func.extract("dow", Transaction.transaction_date).label("dow"),
+            func.sum(Transaction.amount).label("total"),
+            func.count().label("count"),
+        )
+        .where(and_(*filters))
+        .group_by(func.extract("dow", Transaction.transaction_date))
+        .order_by(func.extract("dow", Transaction.transaction_date))
+    )
+    result = await db.execute(q)
+    rows = result.all()
+    day_names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    data = {int(r.dow): {"total": float(r.total), "count": r.count} for r in rows}
+    return [
+        {
+            "dow": i,
+            "day": day_names[i],
+            "total": data.get(i, {}).get("total", 0),
+            "count": data.get(i, {}).get("count", 0),
+        }
+        for i in range(7)
+    ]
+
+
+@router.get("/analytics/weekend-vs-weekday")
+async def weekend_vs_weekday(
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    card_id: Optional[uuid.UUID] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Compare weekend spend vs weekday spend."""
+    filters = [
+        Transaction.user_id == current_user.id,
+        Transaction.is_excluded == False,
+        Transaction.transaction_type == TransactionType.PURCHASE,
+    ]
+    if date_from:
+        filters.append(Transaction.transaction_date >= date_from)
+    if date_to:
+        filters.append(Transaction.transaction_date <= date_to)
+    if card_id:
+        filters.append(Transaction.card_id == card_id)
+
+    # dow: 0=Sun, 6=Sat in PostgreSQL extract
+    from sqlalchemy import case
+    q = (
+        select(
+            func.sum(case(
+                (func.extract("dow", Transaction.transaction_date).in_([0, 6]), Transaction.amount),
+                else_=0
+            )).label("weekend_total"),
+            func.count(case(
+                (func.extract("dow", Transaction.transaction_date).in_([0, 6]), 1),
+                else_=None
+            )).label("weekend_count"),
+            func.sum(case(
+                (func.extract("dow", Transaction.transaction_date).in_([1, 2, 3, 4, 5]), Transaction.amount),
+                else_=0
+            )).label("weekday_total"),
+            func.count(case(
+                (func.extract("dow", Transaction.transaction_date).in_([1, 2, 3, 4, 5]), 1),
+                else_=None
+            )).label("weekday_count"),
+        )
+        .where(and_(*filters))
+    )
+    result = await db.execute(q)
+    r = result.one()
+    wknd = float(r.weekend_total or 0)
+    wkdy = float(r.weekday_total or 0)
+    wknd_cnt = r.weekend_count or 0
+    wkdy_cnt = r.weekday_count or 0
+    total = wknd + wkdy or 1
+    return {
+        "weekend": {
+            "total": wknd,
+            "count": wknd_cnt,
+            "avg_per_tx": round(wknd / wknd_cnt, 2) if wknd_cnt else 0,
+            "percentage": round(wknd / total * 100, 1),
+        },
+        "weekday": {
+            "total": wkdy,
+            "count": wkdy_cnt,
+            "avg_per_tx": round(wkdy / wkdy_cnt, 2) if wkdy_cnt else 0,
+            "percentage": round(wkdy / total * 100, 1),
+        },
+    }
+
+
+@router.get("/analytics/month-over-month")
+async def month_over_month(
+    months: int = Query(6, ge=2, le=24),
+    card_id: Optional[uuid.UUID] = None,
+    category: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Month-over-month spend comparison with % change."""
+    from sqlalchemy import text
+    filters = [
+        Transaction.user_id == current_user.id,
+        Transaction.is_excluded == False,
+        Transaction.transaction_type == TransactionType.PURCHASE,
+    ]
+    if card_id:
+        filters.append(Transaction.card_id == card_id)
+    if category:
+        filters.append(Transaction.category == category)
+
+    q = (
+        select(
+            func.to_char(Transaction.transaction_date, "YYYY-MM").label("month"),
+            func.sum(Transaction.amount).label("total"),
+            func.count().label("count"),
+        )
+        .where(and_(*filters))
+        .group_by(func.to_char(Transaction.transaction_date, "YYYY-MM"))
+        .order_by(func.to_char(Transaction.transaction_date, "YYYY-MM").desc())
+        .limit(months)
+    )
+    result = await db.execute(q)
+    rows = list(reversed(result.all()))
+    out = []
+    for i, r in enumerate(rows):
+        prev = rows[i - 1].total if i > 0 else None
+        change_pct = round(float((r.total - prev) / prev * 100), 1) if prev else None
+        out.append({
+            "month": r.month,
+            "total": float(r.total),
+            "count": r.count,
+            "change_pct": change_pct,
+        })
+    return out
+
+
+@router.get("/analytics/large-transactions")
+async def large_transactions(
+    min_amount: float = Query(5000, ge=0),
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    card_id: Optional[uuid.UUID] = None,
+    limit: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Transactions above a threshold amount."""
+    filters = [
+        Transaction.user_id == current_user.id,
+        Transaction.is_excluded == False,
+        Transaction.amount >= Decimal(str(min_amount)),
+        Transaction.transaction_type == TransactionType.PURCHASE,
+    ]
+    if date_from:
+        filters.append(Transaction.transaction_date >= date_from)
+    if date_to:
+        filters.append(Transaction.transaction_date <= date_to)
+    if card_id:
+        filters.append(Transaction.card_id == card_id)
+
+    q = (
+        select(Transaction)
+        .where(and_(*filters))
+        .order_by(Transaction.amount.desc())
+        .limit(limit)
+    )
+    result = await db.execute(q)
+    txs = result.scalars().all()
+    return [
+        {
+            "id": str(t.id),
+            "date": t.transaction_date.isoformat() if t.transaction_date else None,
+            "description": t.description,
+            "merchant_name": t.merchant_name,
+            "amount": float(t.amount),
+            "category": t.category,
+            "card_id": str(t.card_id) if t.card_id else None,
+        }
+        for t in txs
+    ]
+
+
+@router.get("/analytics/refunds")
+async def refunds_report(
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    card_id: Optional[uuid.UUID] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """All refund and reversal transactions."""
+    filters = [
+        Transaction.user_id == current_user.id,
+        Transaction.is_excluded == False,
+        Transaction.transaction_type == TransactionType.REFUND,
+    ]
+    if date_from:
+        filters.append(Transaction.transaction_date >= date_from)
+    if date_to:
+        filters.append(Transaction.transaction_date <= date_to)
+    if card_id:
+        filters.append(Transaction.card_id == card_id)
+
+    q = (
+        select(Transaction)
+        .where(and_(*filters))
+        .order_by(Transaction.transaction_date.desc())
+    )
+    result = await db.execute(q)
+    txs = result.scalars().all()
+    total = sum(float(t.amount) for t in txs)
+    return {
+        "total_refunded": total,
+        "count": len(txs),
+        "transactions": [
+            {
+                "id": str(t.id),
+                "date": t.transaction_date.isoformat() if t.transaction_date else None,
+                "description": t.description,
+                "merchant_name": t.merchant_name,
+                "amount": float(t.amount),
+                "category": t.category,
+                "card_id": str(t.card_id) if t.card_id else None,
+            }
+            for t in txs
+        ],
+    }
+
+
+@router.get("/analytics/hidden-charges")
+async def hidden_charges_report(
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    card_id: Optional[uuid.UUID] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Fee, interest and hidden charge transactions."""
+    filters = [
+        Transaction.user_id == current_user.id,
+        Transaction.is_excluded == False,
+        Transaction.transaction_type.in_([TransactionType.FEE, TransactionType.INTEREST]),
+    ]
+    if date_from:
+        filters.append(Transaction.transaction_date >= date_from)
+    if date_to:
+        filters.append(Transaction.transaction_date <= date_to)
+    if card_id:
+        filters.append(Transaction.card_id == card_id)
+
+    q = (
+        select(Transaction)
+        .where(and_(*filters))
+        .order_by(Transaction.amount.desc())
+    )
+    result = await db.execute(q)
+    txs = result.scalars().all()
+    total = sum(float(t.amount) for t in txs)
+    return {
+        "total_charges": total,
+        "count": len(txs),
+        "transactions": [
+            {
+                "id": str(t.id),
+                "date": t.transaction_date.isoformat() if t.transaction_date else None,
+                "description": t.description,
+                "merchant_name": t.merchant_name,
+                "amount": float(t.amount),
+                "transaction_type": t.transaction_type,
+                "card_id": str(t.card_id) if t.card_id else None,
+            }
+            for t in txs
+        ],
+    }
