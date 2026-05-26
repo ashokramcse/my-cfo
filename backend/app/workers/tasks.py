@@ -58,14 +58,16 @@ def parse_statement_task(self, statement_id: str, file_path: str, password: Opti
         }
 
         # Persist transactions
-        from sqlalchemy import and_
+        from sqlalchemy import and_, func, cast, Date
         from decimal import Decimal as _D
+        from datetime import timedelta
         from app.models.statement import Statement as StmtModel
 
-        _AMOUNT_TOLERANCE = _D("1.00")  # ±₹1 for rounding differences between sources
+        _AMOUNT_TOLERANCE  = _D("1.00")  # ±₹1 — rounding differences between sources
+        _DATE_WINDOW_DAYS  = 2           # ±2 days — billing date vs transaction date skew
 
         # Authority ranking: official bank parsers beat CC-app / generic PDFs.
-        # A higher number = more authoritative. Bank statement always wins.
+        # Higher number = more authoritative. Bank statement always wins over CC app.
         _AUTHORITY: dict[str, int] = {
             "HDFC": 10, "ICICI": 10, "SBI": 10, "AXIS": 10,
             "AMEX": 10, "KOTAK": 10, "IDFC": 10, "AU": 10,
@@ -78,88 +80,124 @@ def parse_statement_task(self, statement_id: str, file_path: str, password: Opti
                 return 1
             return _AUTHORITY.get(bank.upper(), 1)
 
+        def _existing_authority(tx: Transaction) -> int:
+            """Resolve the authority of an already-stored transaction."""
+            if not tx.statement_id:
+                return 1
+            s = db.get(StmtModel, tx.statement_id)
+            return _authority(s.bank_detected if s else None)
+
+        def _build_dup_tx(**kwargs) -> Transaction:
+            """Return a Transaction pre-flagged as duplicate + excluded."""
+            return Transaction(
+                user_id=uuid.UUID(user_id),
+                card_id=stmt.card_id,
+                statement_id=stmt.id,
+                is_duplicate=True,
+                is_excluded=True,
+                **kwargs,
+            )
+
         incoming_authority = _authority(parsed.bank_name)
 
         tx_count = 0
         for ptx in parsed.transactions:
-            merchant = extract_merchant_name(ptx.description)
-            category = categorize(ptx.description, merchant)
+            merchant  = extract_merchant_name(ptx.description)
+            category  = categorize(ptx.description, merchant)
+
+            # ── Common tx fields (reused for both authoritative + dup inserts) ──
+            tx_fields = dict(
+                transaction_date  = ptx.date,
+                description       = ptx.description,
+                merchant_name     = merchant,
+                amount            = ptx.amount,
+                currency          = ptx.currency,
+                transaction_type  = ptx.transaction_type,
+                category          = category,
+                is_emi            = ptx.is_emi,
+                gst_amount        = ptx.gst_amount,
+                cashback_amount   = ptx.cashback_amount,
+                reward_points     = ptx.reward_points,
+                raw_description   = ptx.raw_text,
+            )
 
             # ── Duplicate detection ──────────────────────────────────────────
-            # Match key: same card + same date + transaction_type + amount ±₹1
-            # card_id may be None for bank-account-linked uploads — skip dedup.
-            if stmt.card_id is not None:
-                existing = db.query(Transaction).filter(
-                    and_(
-                        Transaction.card_id == stmt.card_id,
-                        Transaction.transaction_date == ptx.date,
-                        Transaction.transaction_type == ptx.transaction_type,
-                        Transaction.amount >= ptx.amount - _AMOUNT_TOLERANCE,
-                        Transaction.amount <= ptx.amount + _AMOUNT_TOLERANCE,
-                        Transaction.is_duplicate == False,  # don't re-match already-duped rows
-                    )
-                ).first()
+            # Skip dedup when card_id is None (bank-account uploads have no
+            # shared key to match CC transactions against).
+            if stmt.card_id is None:
+                db.add(Transaction(
+                    user_id=uuid.UUID(user_id),
+                    card_id=stmt.card_id,
+                    statement_id=stmt.id,
+                    **tx_fields,
+                ))
+                tx_count += 1
+                continue
 
-                if existing:
-                    # Determine which source is more authoritative.
-                    # Look up the existing tx's statement to get its bank_detected.
-                    existing_bank = None
-                    if existing.statement_id:
-                        existing_stmt = db.get(StmtModel, existing.statement_id)
-                        existing_bank = existing_stmt.bank_detected if existing_stmt else None
-                    existing_authority = _authority(existing_bank)
+            date_lo = ptx.date - timedelta(days=_DATE_WINDOW_DAYS)
+            date_hi = ptx.date + timedelta(days=_DATE_WINDOW_DAYS)
 
-                    if incoming_authority > existing_authority:
-                        # Incoming (bank statement) beats existing (CC app PDF).
-                        # Demote the existing record to duplicate, promote incoming.
-                        existing.is_duplicate = True
-                        existing.is_excluded = True
-                        db.add(existing)
-                        # Fall through — incoming tx will be inserted as authoritative below
-                    else:
-                        # Existing is equal or more authoritative — incoming is the duplicate.
-                        # Still insert for audit trail but suppress from all totals.
-                        tx = Transaction(
-                            user_id=uuid.UUID(user_id),
-                            card_id=stmt.card_id,
-                            statement_id=stmt.id,
-                            transaction_date=ptx.date,
-                            description=ptx.description,
-                            merchant_name=merchant,
-                            amount=ptx.amount,
-                            currency=ptx.currency,
-                            transaction_type=ptx.transaction_type,
-                            category=category,
-                            is_emi=ptx.is_emi,
-                            gst_amount=ptx.gst_amount,
-                            cashback_amount=ptx.cashback_amount,
-                            reward_points=ptx.reward_points,
-                            raw_description=ptx.raw_text,
-                            is_duplicate=True,
-                            is_excluded=True,
-                        )
-                        db.add(tx)
-                        continue  # do NOT count as a new transaction
+            # Fetch all non-duplicate candidates within the date window + amount
+            # tolerance for this card + transaction_type.
+            candidates = db.query(Transaction).filter(
+                and_(
+                    Transaction.card_id          == stmt.card_id,
+                    Transaction.transaction_type == ptx.transaction_type,
+                    Transaction.amount           >= ptx.amount - _AMOUNT_TOLERANCE,
+                    Transaction.amount           <= ptx.amount + _AMOUNT_TOLERANCE,
+                    Transaction.transaction_date >= date_lo,
+                    Transaction.transaction_date <= date_hi,
+                    Transaction.is_duplicate     == False,
+                )
+            ).all()
 
-            tx = Transaction(
-                user_id=uuid.UUID(user_id),
-                card_id=stmt.card_id,
-                statement_id=stmt.id,
-                transaction_date=ptx.date,
-                description=ptx.description,
-                merchant_name=merchant,
-                amount=ptx.amount,
-                currency=ptx.currency,
-                transaction_type=ptx.transaction_type,
-                category=category,
-                is_emi=ptx.is_emi,
-                gst_amount=ptx.gst_amount,
-                cashback_amount=ptx.cashback_amount,
-                reward_points=ptx.reward_points,
-                raw_description=ptx.raw_text,
-            )
-            db.add(tx)
-            tx_count += 1
+            # ── Ambiguity guard ────────────────────────────────────────────
+            # Multiple candidates on nearby dates with same amount (e.g. two
+            # ₹500 Swiggy orders on consecutive days) — only match if there
+            # is exactly one candidate OR exactly one on the same date.
+            existing = None
+            if len(candidates) == 1:
+                existing = candidates[0]
+            elif len(candidates) > 1:
+                # Prefer exact date match to avoid false positives
+                exact = [c for c in candidates if c.transaction_date == ptx.date]
+                if len(exact) == 1:
+                    existing = exact[0]
+                # else: ambiguous — treat as new tx (safe path)
+
+            if existing is None:
+                # No unambiguous match → fresh transaction
+                db.add(Transaction(
+                    user_id=uuid.UUID(user_id),
+                    card_id=stmt.card_id,
+                    statement_id=stmt.id,
+                    **tx_fields,
+                ))
+                tx_count += 1
+                continue
+
+            # ── Authority comparison ───────────────────────────────────────
+            existing_auth = _existing_authority(existing)
+
+            if incoming_authority > existing_auth:
+                # Incoming (bank PDF) beats existing (CC app PDF).
+                # Demote existing → duplicate, promote incoming → authoritative.
+                existing.is_duplicate = True
+                existing.is_excluded  = True
+                db.add(existing)
+                # Insert incoming as the new authoritative record (falls through)
+                db.add(Transaction(
+                    user_id=uuid.UUID(user_id),
+                    card_id=stmt.card_id,
+                    statement_id=stmt.id,
+                    **tx_fields,
+                ))
+                tx_count += 1
+            else:
+                # Existing is equal or more authoritative — incoming is the dup.
+                # Persist for audit trail but fully suppress from all totals.
+                db.add(_build_dup_tx(**tx_fields))
+                # do NOT increment tx_count
 
         stmt.status = StatementStatus.PARSED
         db.commit()
