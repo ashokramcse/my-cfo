@@ -331,6 +331,135 @@ print("  Consumed: each CC app row matched its bank counterpart 1-to-1 ✅")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# EDGE CASE SCENARIOS — amount tolerance boundary conditions
+# All use: bank PDF (AXIS, authority=10) uploaded first,
+#          CC app PDF (GENERIC, authority=1) uploaded second.
+# Expected: bank rows stay clean, CC app rows become duplicates.
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _edge_case(label: str, bank_amounts: list, cc_amounts: list,
+               expected_clean: int, expected_dupes: int, note: str = ""):
+    """Helper: upload bank amounts first, then CC app amounts, assert result."""
+    CARD  = uuid.uuid4()
+    STMT_B = uuid.uuid4()
+    STMT_C = uuid.uuid4()
+    sm = {STMT_B: "AXIS", STMT_C: "GENERIC"}
+    D  = date(2026, 1, 10)
+
+    bank_txs = [
+        FakeTx(card_id=CARD, statement_id=STMT_B, transaction_date=D,
+               amount=Decimal(str(a)), transaction_type="PURCHASE",
+               description=f"Cafe ₹{a}", source="bank")
+        for a in bank_amounts
+    ]
+    cc_txs = [
+        FakeTx(transaction_date=D, amount=Decimal(str(a)),
+               transaction_type="PURCHASE", description=f"Cafe ₹{a}", source="cc_app")
+        for a in cc_amounts
+    ]
+    db = run_dedup(bank_txs, cc_txs, "GENERIC", sm, CARD, STMT_C)
+    clean, dupes = report(f"{label} | bank={bank_amounts} cc={cc_amounts}{' | ' + note if note else ''}", db)
+    assert_result(label, clean, dupes, expected_clean, expected_dupes)
+
+
+print("\n" + "═"*64)
+print("EDGE CASES — Amount tolerance boundary conditions")
+print("═"*64)
+
+# ── Edge Case 1 ───────────────────────────────────────────────────────────────
+# Bank: ₹249 + ₹250  |  CC app: ₹249 + ₹250
+# Risk: Both amounts are within ±₹1 of EACH OTHER (diff = ₹1).
+# Cross-match is possible (₹249 could match bank's ₹250 and vice versa),
+# but consumed_ids + stable sort ensures 1-to-1. Result is still correct:
+# both bank rows clean, both CC app rows suppressed.
+print("\n── Edge Case 1 — ₹249 and ₹250 (within ±₹1 of each other) ──")
+_edge_case("EC1: ₹249+₹250", [249, 250], [249, 250],
+           expected_clean=2, expected_dupes=2,
+           note="cross-match safe because both bank rows stay clean regardless")
+
+# ── Edge Case 2 ───────────────────────────────────────────────────────────────
+# Bank: ₹265 + ₹263 + ₹264  |  CC app: same
+# ₹265↔₹264 overlap (diff=₹1), ₹263↔₹264 overlap (diff=₹1).
+# ₹265↔₹263 do NOT overlap (diff=₹2 > tolerance).
+# consumed_ids handles the chain: each CC app row grabs its closest bank row.
+print("\n── Edge Case 2 — ₹265, ₹263, ₹264 (partial overlap chain) ──")
+_edge_case("EC2: ₹265+₹263+₹264", [265, 263, 264], [265, 263, 264],
+           expected_clean=3, expected_dupes=3,
+           note="265↔264 and 263↔264 overlap but 265↔263 don't (diff=2)")
+
+# ── Edge Case 3 ───────────────────────────────────────────────────────────────
+# Bank: ₹265 + ₹265 + ₹268  |  CC app: same
+# Two IDENTICAL ₹265 transactions (same-day same-amount, two real purchases).
+# ₹268 is isolated (diff from ₹265 = ₹3, outside tolerance).
+# consumed_ids handles the two ₹265 via 1-to-1 matching.
+print("\n── Edge Case 3 — ₹265, ₹265, ₹268 (two identical + one isolated) ──")
+_edge_case("EC3: ₹265+₹265+₹268", [265, 265, 268], [265, 265, 268],
+           expected_clean=3, expected_dupes=3,
+           note="two identical ₹265 matched 1-to-1; ₹268 isolated (diff=3)")
+
+# ── Edge Case 4 ───────────────────────────────────────────────────────────────
+# Bank: ₹275 + ₹200 + ₹264  |  CC app: same
+# All well-separated — no pair is within ±₹1 of another.
+# Simplest case: straightforward 1-to-1 matching, no ambiguity.
+print("\n── Edge Case 4 — ₹275, ₹200, ₹264 (all well-separated) ──")
+_edge_case("EC4: ₹275+₹200+₹264", [275, 200, 264], [275, 200, 264],
+           expected_clean=3, expected_dupes=3,
+           note="no overlap — each CC row matches exactly one bank row")
+
+# ── Edge Case 5 ───────────────────────────────────────────────────────────────
+# Bank: ₹2 + ₹263 + ₹264  |  CC app: same
+# ₹2 is tiny — isolated (nothing else near ₹1–₹3).
+# ₹263↔₹264 overlap (diff=₹1) — handled by consumed_ids.
+print("\n── Edge Case 5 — ₹2, ₹263, ₹264 (tiny amount + overlap pair) ──")
+_edge_case("EC5: ₹2+₹263+₹264", [2, 263, 264], [2, 263, 264],
+           expected_clean=3, expected_dupes=3,
+           note="₹2 isolated; ₹263↔₹264 overlap handled by consumed_ids")
+
+# ── Edge Case 6 ───────────────────────────────────────────────────────────────
+# Bank: ₹20 + ₹275 + ₹264  |  CC app: same
+# All well-separated — no pair within ±₹1 of another.
+print("\n── Edge Case 6 — ₹20, ₹275, ₹264 (all well-separated) ──")
+_edge_case("EC6: ₹20+₹275+₹264", [20, 275, 264], [20, 275, 264],
+           expected_clean=3, expected_dupes=3,
+           note="no overlap — straightforward matching")
+
+# ── Edge Case 7 (bonus) ───────────────────────────────────────────────────────
+# The "phantom fresh insert" trap:
+# Bank has ONE ₹250 transaction.
+# CC app has TWO transactions: ₹249 AND ₹251.
+# CC app ₹249 matches the bank's ₹250 (within ±₹1) → consumed.
+# CC app ₹251 has NO remaining candidate → inserted FRESH as clean.
+# Result: bank ₹250 (clean) + CC app ₹251 (clean) = 2 clean rows.
+# This is CORRECT: ₹249 and ₹251 could be two genuinely different purchases
+# that happen to both be close to ₹250. The system cannot know — it conservatively
+# keeps the unmatched row rather than silently discarding it.
+print("\n── Edge Case 7 (bonus) — 1 bank row vs 2 CC app rows within ±₹1 ──")
+CARD7  = uuid.uuid4()
+STMT7B = uuid.uuid4()
+STMT7C = uuid.uuid4()
+sm7    = {STMT7B: "AXIS", STMT7C: "GENERIC"}
+D7     = date(2026, 1, 10)
+
+bank7 = [FakeTx(card_id=CARD7, statement_id=STMT7B, transaction_date=D7,
+                amount=Decimal("250"), transaction_type="PURCHASE",
+                description="Cafe ₹250", source="bank")]
+cc7   = [
+    FakeTx(transaction_date=D7, amount=Decimal("249"),
+           transaction_type="PURCHASE", description="Cafe ₹249", source="cc_app"),
+    FakeTx(transaction_date=D7, amount=Decimal("251"),
+           transaction_type="PURCHASE", description="Cafe ₹251", source="cc_app"),
+]
+db7 = run_dedup(bank7, cc7, "GENERIC", sm7, CARD7, STMT7C)
+clean7, dupes7 = report(
+    "EC7: bank=[₹250] vs cc=[₹249, ₹251] — only one bank row to absorb one CC row", db7)
+# Expected: ₹249 absorbed by bank ₹250, ₹251 inserted fresh (2 clean, 1 dup)
+assert_result("EC7: phantom fresh insert", clean7, dupes7,
+              expected_clean=2, expected_dupes=1)
+print("  ⚠️  ₹251 inserted as fresh — system cannot distinguish real vs near-dup")
+print("      Conservative choice: keep it rather than silently discard")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 
 print("\n" + "═"*64)
 print("ALL SCENARIOS PASSED ✅")
