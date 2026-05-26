@@ -304,20 +304,20 @@ Every user starts with a default `PERSONAL` entity. Bank accounts, investments, 
 
 ## Supported Banks (PDF Parsing)
 
-| Bank | PDF | Cred Screenshot |
-|------|:---:|:---:|
-| HDFC | ✅ | ✅ |
-| ICICI | ✅ | ✅ |
-| SBI | ✅ | ✅ |
-| Axis | ✅ | ✅ |
-| Amex | ✅ | — |
-| IDFC First | ✅ | — |
-| Kotak | ✅ | — |
-| Standard Chartered | ✅ | — |
-| OneCard | ✅ | — |
-| AU Small Finance | ✅ | — |
-| Federal Bank | ✅ | — |
-| **Generic OCR fallback** | ✅ | — |
+| Bank | PDF |
+|------|:---:|
+| HDFC | ✅ |
+| ICICI | ✅ |
+| SBI | ✅ |
+| Axis | ✅ |
+| Amex | ✅ |
+| IDFC First | ✅ |
+| Kotak | ✅ |
+| Standard Chartered | ✅ |
+| OneCard | ✅ |
+| AU Small Finance | ✅ |
+| Federal Bank | ✅ |
+| **Generic fallback** | ✅ |
 
 ---
 
@@ -346,9 +346,7 @@ Every user starts with a default `PERSONAL` entity. Bank accounts, investments, 
 | python-dateutil | 2.9 | `relativedelta` for month-aligned EMI dates |
 | pdfplumber | 0.11 | PDF text extraction (primary) |
 | PyMuPDF | 1.24 | PDF text extraction (secondary) |
-| pytesseract | 0.3 | OCR fallback |
 | pikepdf | 9.4 | Password-protected PDF decryption |
-| Pillow | 11.0 | Image preprocessing |
 | pydantic | 2.10 | Request/response validation |
 | pydantic-settings | 2.6 | `.env` configuration |
 | python-jose | 3.3 | JWT signing / verification |

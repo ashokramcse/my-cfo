@@ -485,36 +485,27 @@ Three-layer deduplication for recurring payments:
 
 ---
 
-## 8. OCR + Ingestion Pipeline
+## 8. PDF Ingestion Pipeline
 
 ```
-Document Upload (PDF / Image)
-         │
-         ▼
+PDF Upload
+    │
+    ▼
 ┌─────────────────────┐
-│  Document Classifier │  ← What type is this?
-│  (bank stmt / CC /   │
-│   loan / CAS / tax)  │
+│  Text Extraction     │  pdfplumber → PyMuPDF (fallback)
+│  pikepdf decrypt     │  for password-protected PDFs
 └──────────┬──────────┘
-           │
-    ┌──────┴──────┐
-    │              │
-    ▼              ▼
-PDF Parser      Image OCR
-(pdfplumber)   (Tesseract / PyMuPDF)
-    │              │
-    └──────┬───────┘
            │
            ▼
 ┌─────────────────────┐
 │  Bank Detector       │  ← HDFC/ICICI/SBI/Axis/Kotak/IDFC/AU/Amex/SC
-│  (header patterns)  │
+│  (header patterns)  │     → GenericParser fallback
 └──────────┬──────────┘
            │
            ▼
 ┌─────────────────────┐
 │  Transaction Parser  │
-│  (regex + LLM)       │
+│  (regex rules)       │
 └──────────┬──────────┘
            │
            ▼
@@ -524,7 +515,7 @@ PDF Parser      Image OCR
            │
            ▼
 ┌─────────────────────┐
-│  Duplicate Detector  │  ← (account, date, amount, desc) hash
+│  Duplicate Detector  │  ← (card, date, amount, desc) hash
 └──────────┬──────────┘
            │
            ▼
@@ -535,6 +526,8 @@ PDF Parser      Image OCR
            ▼
     DB Insert + Event
 ```
+
+> **Note:** Screenshot / image-based parsing (Cred OCR via Tesseract + Pillow) has been removed. Only PDF uploads are supported. Image import will be re-added when a dedicated OCR module is available.
 
 ---
 

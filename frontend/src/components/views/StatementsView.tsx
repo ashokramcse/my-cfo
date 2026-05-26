@@ -8,7 +8,7 @@ import { statementsApi, cardsApi } from '@/lib/api'
 import { Statement, CreditCard } from '@/types'
 import { formatCurrencyCompact, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
-import { FileText, Upload, X, CheckCircle, Clock, AlertCircle, Loader2, Image } from 'lucide-react'
+import { FileText, Upload, X, CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react'
 import { Select } from '@/components/ui/Select'
 import { toast } from '@/components/ui/Toast'
 
@@ -47,7 +47,7 @@ export function StatementsView() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'application/pdf': ['.pdf'], 'image/png': ['.png'], 'image/jpeg': ['.jpg', '.jpeg'], 'image/webp': ['.webp'] },
+    accept: { 'application/pdf': ['.pdf'] },
     maxFiles: 1,
   })
 
@@ -72,8 +72,6 @@ export function StatementsView() {
       setUploading(false)
     }
   }
-
-  const isImage = pendingFile?.type.startsWith('image/')
 
   return (
     <>
@@ -107,7 +105,7 @@ export function StatementsView() {
             {isDragActive ? 'Drop it here!' : 'Drag & drop your statement'}
           </p>
           <p className="text-xs" style={{ color: '#A09890' }}>
-            Supports PDF (all major banks) and images (PNG, JPG, WebP — Cred screenshots)
+            Supports PDF statements from all major banks (HDFC, ICICI, SBI, Axis, Kotak, IDFC and more)
           </p>
         </div>
 
@@ -137,23 +135,17 @@ export function StatementsView() {
                   const cfg = STATUS_CFG[s.status as keyof typeof STATUS_CFG] ?? STATUS_CFG.PENDING
                   const StatusIcon = cfg.icon
                   const card = cards.find((c) => c.id === s.card_id)
-                  const isImg = s.filename?.match(/\.(png|jpg|jpeg|webp)$/i)
                   return (
                     <tr key={s.id}>
                       <td>
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#FFF1E6]">
-                            {isImg
-                              ? <Image className="w-4 h-4 text-sky-400" />
-                              : <FileText className="w-4 h-4 text-orange-500" />
-                            }
+                            <FileText className="w-4 h-4 text-orange-500" />
                           </div>
                           <div>
                             <div className="text-sm font-medium text-foreground truncate max-w-[180px]">{s.filename}</div>
                             {s.bank_detected && (
-                              <div className="text-xs text-muted-foreground">
-                                {s.bank_detected === 'CRED' ? '🟣 Cred Screenshot' : s.bank_detected}
-                              </div>
+                              <div className="text-xs text-muted-foreground">{s.bank_detected}</div>
                             )}
                           </div>
                         </div>
@@ -191,7 +183,7 @@ export function StatementsView() {
             </div>
             <div className="text-center">
               <p className="text-sm font-semibold" style={{ color: '#18120E' }}>No statements uploaded yet</p>
-              <p className="text-xs mt-1" style={{ color: '#A09890' }}>Upload a PDF or screenshot to get started</p>
+              <p className="text-xs mt-1" style={{ color: '#A09890' }}>Upload a PDF statement to get started</p>
             </div>
           </div>
         )}
@@ -221,10 +213,7 @@ export function StatementsView() {
 
                 {pendingFile ? (
                   <div className="flex items-center gap-3 p-3 rounded-xl bg-[#FFF1E6] border border-border mb-5">
-                    {isImage
-                      ? <Image className="w-5 h-5 text-sky-400 flex-shrink-0" />
-                      : <FileText className="w-5 h-5 text-orange-500 flex-shrink-0" />
-                    }
+                    <FileText className="w-5 h-5 text-orange-500 flex-shrink-0" />
                     <span className="text-sm text-foreground truncate flex-1">{pendingFile.name}</span>
                     <button onClick={() => setPendingFile(null)} className="hover:opacity-70 transition-opacity" style={{ color: '#18120E' }}>
                       <X className="w-4 h-4" />
@@ -235,7 +224,7 @@ export function StatementsView() {
                     style={{ border: '2px dashed #CCC7C0', background: '#FFF8F4' }}>
                     <input {...getInputProps()} />
                     <Upload className="w-6 h-6 mx-auto mb-2" style={{ color: '#F97316' }} />
-                    <p className="text-sm" style={{ color: '#6B6460' }}>Click or drag file here</p>
+                    <p className="text-sm" style={{ color: '#6B6460' }}>Click or drag PDF here</p>
                   </div>
                 )}
 
@@ -249,7 +238,7 @@ export function StatementsView() {
                     />
                   </div>
 
-                  {pendingFile && !isImage && (
+                  {pendingFile && (
                     <div>
                       <label className="field-label">PDF Password (if protected)</label>
                       <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Leave blank if none" />
@@ -272,4 +261,3 @@ export function StatementsView() {
     </>
   )
 }
-

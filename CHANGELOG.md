@@ -5,7 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased / 2026-05-25]
+## [Unreleased / 2026-05-26]
+
+### Removed — Screenshot / OCR-based entry
+- Removed `app/services/image_parser.py` — PIL + Tesseract pipeline for Cred screenshots
+- Removed `app/parsers/cred.py` — Cred-specific transaction parser
+- Removed `pdf2image`, `pytesseract`, `Pillow` from `requirements.txt` (OCR dependencies)
+- `app/services/pdf_parser.py`: removed `extract_text_ocr()` function and OCR fallback pass — PDF extraction now stops at pdfplumber → PyMuPDF
+- `app/api/statements.py`: upload endpoint now only accepts `.pdf` files (previously also PNG, JPG, WEBP)
+- `app/workers/tasks.py`: removed image-detection branch — all uploads go through `parse_statement_pdf()`
+- `app/parsers/__init__.py`: removed `CredParser` import and export
+- `StatementsView.tsx`: dropzone now only accepts `application/pdf`; removed `Image` icon import, removed image-specific UI branches, updated copy to "PDF only"
+- Screenshot import will be re-added when a dedicated OCR module is available
 
 ### Frontend — Transactions View
 - Redesigned search bar: 38px height, left-aligned search icon with proper spacing, X clear button that appears when text is entered, 300ms debounce so every keystroke doesn't fire a network request

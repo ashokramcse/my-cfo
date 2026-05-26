@@ -1,7 +1,7 @@
 """
-Multi-bank PDF parsing service with OCR fallback and password support.
+Multi-bank PDF parsing service with password support.
+Extraction pipeline: pdfplumber → PyMuPDF → fail (no OCR).
 """
-import io
 import os
 import tempfile
 import logging
@@ -37,24 +37,6 @@ def extract_text_pymupdf(path: str, password: Optional[str] = None) -> str:
         return ""
 
 
-def extract_text_ocr(path: str, password: Optional[str] = None) -> str:
-    """OCR fallback using Tesseract via pdf2image + pytesseract."""
-    try:
-        from pdf2image import convert_from_path
-        import pytesseract
-        from PIL import Image
-
-        images = convert_from_path(path, dpi=200)
-        texts = []
-        for img in images:
-            text = pytesseract.image_to_string(img, lang="eng", config="--psm 6")
-            texts.append(text)
-        return "\n".join(texts)
-    except Exception as e:
-        logger.warning(f"OCR failed: {e}")
-        return ""
-
-
 def decrypt_pdf(path: str, password: str) -> str:
     """Decrypt with pikepdf to a temp file, return temp path."""
     import pikepdf
@@ -86,11 +68,6 @@ def extract_text(path: str, password: Optional[str] = None) -> Tuple[str, str]:
     text = extract_text_pymupdf(decrypted_path, password)
     if text and len(text.strip()) > 100:
         return text, "pymupdf"
-
-    # OCR fallback
-    text = extract_text_ocr(decrypted_path)
-    if text and len(text.strip()) > 50:
-        return text, "ocr"
 
     return "", "failed"
 

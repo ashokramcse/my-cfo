@@ -34,11 +34,7 @@ def parse_statement_task(self, statement_id: str, file_path: str, password: Opti
         stmt.status = StatementStatus.PROCESSING
         db.commit()
 
-        from app.services.image_parser import is_image_file, parse_statement_image
-        if is_image_file(file_path):
-            parsed = parse_statement_image(file_path)
-        else:
-            parsed = parse_statement_pdf(file_path, password)
+        parsed = parse_statement_pdf(file_path, password)
 
         # Update statement financials
         stmt.bank_detected = parsed.bank_name
