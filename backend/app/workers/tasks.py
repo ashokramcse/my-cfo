@@ -58,24 +58,59 @@ def parse_statement_task(self, statement_id: str, file_path: str, password: Opti
         }
 
         # Persist transactions
+        from sqlalchemy import and_, func
+        from decimal import Decimal as _D
+
+        _AMOUNT_TOLERANCE = _D("1.00")  # ±₹1 for rounding differences between sources
+
         tx_count = 0
         for ptx in parsed.transactions:
             merchant = extract_merchant_name(ptx.description)
             category = categorize(ptx.description, merchant)
 
-            # Check for duplicate: same card, date, amount
-            from sqlalchemy import and_
-            existing = db.query(Transaction).filter(
-                and_(
-                    Transaction.card_id == stmt.card_id,
-                    Transaction.transaction_date == ptx.date,
-                    Transaction.amount == ptx.amount,
-                )
-            ).first()
-            if existing:
-                existing.is_duplicate = True
-                db.add(existing)
-                continue  # skip inserting duplicate
+            # ── Duplicate detection ──────────────────────────────────────────
+            # Match key: same card + same date + amount within ±₹1 + same
+            # transaction_type (catches Cred vs bank rounding differences).
+            # card_id may be None for bank-account-linked uploads — in that
+            # case skip dedup (no shared key to match on).
+            is_dup = False
+            if stmt.card_id is not None:
+                existing = db.query(Transaction).filter(
+                    and_(
+                        Transaction.card_id == stmt.card_id,
+                        Transaction.transaction_date == ptx.date,
+                        Transaction.transaction_type == ptx.transaction_type,
+                        Transaction.amount >= ptx.amount - _AMOUNT_TOLERANCE,
+                        Transaction.amount <= ptx.amount + _AMOUNT_TOLERANCE,
+                        Transaction.is_duplicate == False,  # don't match against already-duped rows
+                    )
+                ).first()
+
+                if existing:
+                    # The INCOMING tx is the duplicate — keep the existing
+                    # (first-uploaded) record as authoritative. Insert the
+                    # incoming tx as a suppressed duplicate so it's auditable.
+                    tx = Transaction(
+                        user_id=uuid.UUID(user_id),
+                        card_id=stmt.card_id,
+                        statement_id=stmt.id,
+                        transaction_date=ptx.date,
+                        description=ptx.description,
+                        merchant_name=merchant,
+                        amount=ptx.amount,
+                        currency=ptx.currency,
+                        transaction_type=ptx.transaction_type,
+                        category=category,
+                        is_emi=ptx.is_emi,
+                        gst_amount=ptx.gst_amount,
+                        cashback_amount=ptx.cashback_amount,
+                        reward_points=ptx.reward_points,
+                        raw_description=ptx.raw_text,
+                        is_duplicate=True,
+                        is_excluded=True,   # fully invisible in all spend totals
+                    )
+                    db.add(tx)
+                    continue  # do NOT count as a new transaction
 
             tx = Transaction(
                 user_id=uuid.UUID(user_id),
