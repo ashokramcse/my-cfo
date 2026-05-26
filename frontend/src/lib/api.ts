@@ -227,3 +227,35 @@ export const netWorthApi = {
   snapshot: () => api.post('/net-worth/snapshot'),
   history: (months?: number) => api.get('/net-worth/history', { params: { months } }),
 }
+
+export const financialLinkingApi = {
+  // Loan disbursement (borrowed money)
+  markLoanDisbursement: (bankTxId: string, loanId: string) =>
+    api.post('/financial-linking/loan-disbursement', { bank_tx_id: bankTxId, loan_id: loanId }),
+  unmarkLoanDisbursement: (bankTxId: string) =>
+    api.delete(`/financial-linking/loan-disbursement/${bankTxId}`),
+
+  // Loan repayment with interest split
+  markLoanRepayment: (bankTxId: string, loanId: string, interestAmount?: number) =>
+    api.post('/financial-linking/loan-repayment', {
+      bank_tx_id: bankTxId,
+      loan_id: loanId,
+      interest_amount: interestAmount ?? null,
+    }),
+
+  // CC payment linking
+  markCCPayment: (bankTxId: string, cardId: string) =>
+    api.post('/financial-linking/cc-payment', { bank_tx_id: bankTxId, card_id: cardId }),
+  unmarkCCPayment: (bankTxId: string) =>
+    api.delete(`/financial-linking/cc-payment/${bankTxId}`),
+  getCCPaymentSuggestions: (lookbackDays = 60) =>
+    api.get('/financial-linking/cc-payment/suggestions', { params: { lookback_days: lookbackDays } }),
+
+  // Cash accounts
+  listCashAccounts: () => api.get('/financial-linking/cash-accounts'),
+  createCashAccount: (data: { nickname?: string; initial_balance?: number; account_color?: string; notes?: string }) =>
+    api.post('/financial-linking/cash-accounts', data),
+
+  // Pending actions dashboard
+  getPendingActions: () => api.get('/financial-linking/pending-actions'),
+}

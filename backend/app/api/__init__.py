@@ -3,6 +3,7 @@ from app.api import auth, cards, transactions, emis, friends, statements, report
 from app.api import bank_accounts, investments, loans, assets, net_worth
 from app.api import income, insurance, goals, notifications, sharing, recurring
 from app.api import investment_transactions
+from app.api import financial_linking
 
 router = APIRouter()
 router.include_router(auth.router,          prefix="/auth",          tags=["Auth"])
@@ -25,3 +26,4 @@ router.include_router(recurring.router,     prefix="/recurring",     tags=["Recu
 router.include_router(notifications.router, prefix="/notifications",  tags=["Notifications"])
 router.include_router(sharing.router,            prefix="/sharing",       tags=["Sharing"])
 router.include_router(investment_transactions.router, prefix="/investments", tags=["Investment Ledger"])
+router.include_router(financial_linking.router, tags=["Financial Linking"])

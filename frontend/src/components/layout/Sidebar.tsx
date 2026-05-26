@@ -5,7 +5,7 @@ import {
   LayoutDashboard, CreditCard, ArrowLeftRight, Calendar, Users, FileText,
   BarChart3, Settings, ChevronLeft, Zap, X, TrendingUp, Landmark,
   Building2, Wallet, DollarSign, Shield, Target, Share2, LogOut,
-  RefreshCw, PieChart, Telescope,
+  RefreshCw, PieChart, Telescope, Link2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore, ViewId } from '@/store/ui'
@@ -61,9 +61,10 @@ const NAV_GROUPS: NavGroup[] = [
   {
     group: 'Reports & Data',
     items: [
-      { view: 'visualize',  icon: Telescope, label: 'Visualize', emoji: '🔭' },
-      { view: 'statements', icon: FileText,   label: 'Statements', emoji: '📄' },
-      { view: 'reports',    icon: BarChart3,  label: 'Reports',    emoji: '📊' },
+      { view: 'visualize',     icon: Telescope, label: 'Visualize',     emoji: '🔭' },
+      { view: 'statements',    icon: FileText,  label: 'Statements',    emoji: '📄' },
+      { view: 'reports',       icon: BarChart3, label: 'Reports',       emoji: '📊' },
+      { view: 'smart-linking', icon: Link2,     label: 'Smart Linking', emoji: '🔗' },
     ],
   },
   {
@@ -121,7 +122,8 @@ const VIEW_PREFETCH: Record<ViewId, (qc: ReturnType<typeof useQueryClient>) => v
     qc.prefetchQuery({ queryKey: ['dashboard'], queryFn: () => reportsApi.dashboard().then(r => r.data) })
   },
   settings:     () => {},
-  sharing:      () => {},
+  sharing:       () => {},
+  'smart-linking': () => {},
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────

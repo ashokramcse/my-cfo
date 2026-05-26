@@ -19,6 +19,7 @@ import { InsuranceView }   from './InsuranceView'
 import { GoalsView }       from './GoalsView'
 import { SharingView }        from './SharingView'
 import { VisualizationView }  from './VisualizationView'
+import SmartLinkingView       from './SmartLinkingView'
 
 export function ViewRouter() {
   const { currentView } = useUIStore()
@@ -42,7 +43,8 @@ export function ViewRouter() {
     case 'reports':      return <ReportsView />
     case 'visualize':    return <VisualizationView />
     case 'settings':     return <SettingsView />
-    case 'sharing':      return <SharingView />
-    default:             return <DashboardView />
+    case 'sharing':       return <SharingView />
+    case 'smart-linking': return <SmartLinkingView />
+    default:              return <DashboardView />
   }
 }

@@ -5,12 +5,14 @@ export type ViewId =
   | 'income' | 'insurance' | 'goals'
   | 'cards' | 'transactions' | 'emis' | 'recurring'
   | 'friends' | 'statements' | 'reports' | 'visualize' | 'settings' | 'sharing'
+  | 'smart-linking'
 
 const VALID_VIEWS = new Set<string>([
   'dashboard', 'net-worth', 'banking', 'investments', 'loans', 'assets',
   'income', 'insurance', 'goals',
   'cards', 'transactions', 'emis', 'recurring',
   'friends', 'statements', 'reports', 'visualize', 'settings', 'sharing',
+  'smart-linking',
 ])
 
 function getInitialView(): ViewId {

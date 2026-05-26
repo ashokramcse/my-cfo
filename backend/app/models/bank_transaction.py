@@ -50,6 +50,11 @@ class BankTxCategory(str, enum.Enum):
     ENTERTAINMENT   = "ENTERTAINMENT"
     HEALTHCARE      = "HEALTHCARE"
     EDUCATION       = "EDUCATION"
+    CC_PAYMENT      = "CC_PAYMENT"       # Bank debit used to pay credit card bill
+    LOAN_DISBURSEMENT = "LOAN_DISBURSEMENT"  # Bank credit that is borrowed money (not income)
+    LOAN_REPAYMENT  = "LOAN_REPAYMENT"   # Bank debit as loan repayment
+    CASH_WITHDRAWAL = "CASH_WITHDRAWAL"  # ATM/cash out (to cash account)
+    CASH_DEPOSIT    = "CASH_DEPOSIT"     # Cash deposited into bank
     OTHER           = "OTHER"
 
 
@@ -100,6 +105,10 @@ class BankTransaction(Base):
     linked_investment_tx_id   = Column(UUID(as_uuid=True), nullable=True)   # → investment_transactions.id
     linked_loan_id            = Column(UUID(as_uuid=True), ForeignKey("loans.id", ondelete="SET NULL"), nullable=True)
     linked_card_id            = Column(UUID(as_uuid=True), ForeignKey("credit_cards.id", ondelete="SET NULL"), nullable=True)
+
+    # Loan intelligence
+    is_loan_disbursement      = Column(Boolean, default=False)  # CREDIT = borrowed money (not income)
+    interest_amount           = Column(Numeric(12, 2), default=0)  # Interest portion of a loan repayment DEBIT
 
     # Quality flags
     is_duplicate      = Column(Boolean, default=False)

@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { SpendingChart } from '@/components/charts/SpendingChart'
 import { EMIForecastChart } from '@/components/charts/EMIForecastChart'
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
-import { reportsApi, emisApi, insightsApi, netWorthApi, incomeApi, goalsApi, loansApi, transactionsApi } from '@/lib/api'
+import { reportsApi, emisApi, insightsApi, netWorthApi, incomeApi, goalsApi, loansApi, transactionsApi, financialLinkingApi } from '@/lib/api'
 import { formatCurrencyCompact, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import {
@@ -137,6 +137,15 @@ export function DashboardView() {
     },
   })
 
+  const { data: pendingActionsData } = useQuery({
+    queryKey: ['pending-actions'],
+    queryFn: async () => (await financialLinkingApi.getPendingActions()).data,
+    staleTime: 5 * 60 * 1000,
+  })
+  const pendingCount =
+    (pendingActionsData?.cc_payment_count ?? 0) +
+    (pendingActionsData?.untagged_large_credits_count ?? 0)
+
   const completeness = (netWorth as any)?.profile_completeness
   const showSkeletons = isLoading || !stats
 
@@ -215,6 +224,27 @@ export function DashboardView() {
             <button onClick={() => setCompletenessHidden(true)} className="text-amber-400 hover:text-amber-600">
               <X size={14} />
             </button>
+          </motion.div>
+        )}
+
+        {/* ── Smart Linking nudge ── */}
+        {pendingCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:opacity-90"
+            style={{ background: '#0F172A', border: '1.5px solid #3B82F6' }}
+            onClick={() => setView('smart-linking' as any)}
+          >
+            <span className="text-lg">🔗</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-white">
+                {pendingCount} item{pendingCount > 1 ? 's' : ''} need smart linking
+              </p>
+              <p className="text-xs text-slate-400">
+                Unlinked CC payments or untagged large credits affecting your net worth
+              </p>
+            </div>
+            <ChevronRight size={16} className="text-blue-400" />
           </motion.div>
         )}
 
