@@ -24,14 +24,42 @@ from app.config import settings
 
 router = APIRouter()
 
-# ── In-memory login rate limiter: max 10 attempts per IP per 15 minutes ───────
-_login_attempts: dict[str, list[float]] = defaultdict(list)
+# ── Redis-backed login rate limiter: max 10 attempts per IP per 15 minutes ────
+# BUG-013: In-memory dict resets on every worker restart; use Redis INCR+EXPIRE
+# for atomic, persistent, multi-worker-safe rate limiting.
 _RATE_LIMIT_WINDOW = 900   # 15 minutes in seconds
-_RATE_LIMIT_MAX    = 10    # max attempts per window
+_RATE_LIMIT_MAX    = 10    # max failed attempts per window
+
+# In-memory fallback (used only when Redis is unavailable)
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+
+
+def _get_redis_client():
+    try:
+        import redis as _redis
+        from app.config import settings
+        return _redis.from_url(settings.redis_url, socket_connect_timeout=1, socket_timeout=1)
+    except Exception:
+        return None
 
 
 def _check_login_rate_limit(ip: str) -> None:
     """Check rate limit BEFORE credential verification (prevents timing oracle)."""
+    rc = _get_redis_client()
+    if rc:
+        try:
+            count = rc.get(f"login_fail:{ip}")
+            if count and int(count) >= _RATE_LIMIT_MAX:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Too many login attempts. Please try again in 15 minutes.",
+                )
+            return
+        except HTTPException:
+            raise
+        except Exception:
+            pass  # Redis unavailable — fall through
+    # In-memory fallback for single-worker dev
     now = time.time()
     cutoff = now - _RATE_LIMIT_WINDOW
     attempts = [t for t in _login_attempts[ip] if t > cutoff]
@@ -45,6 +73,17 @@ def _check_login_rate_limit(ip: str) -> None:
 
 def _record_failed_login(ip: str) -> None:
     """Record a FAILED attempt — only failed attempts count toward the rate limit."""
+    rc = _get_redis_client()
+    if rc:
+        try:
+            key = f"login_fail:{ip}"
+            pipe = rc.pipeline()
+            pipe.incr(key)
+            pipe.expire(key, _RATE_LIMIT_WINDOW)
+            pipe.execute()
+            return
+        except Exception:
+            pass
     _login_attempts[ip].append(time.time())
 
 
@@ -249,6 +288,12 @@ async def update_me(
     allowed = {"full_name", "phone", "country", "currency", "timezone", "profile_bio", "avatar_url"}
     for key, val in payload.items():
         if key in allowed:
+            # BUG-010: Reject non-http(s) avatar URLs to prevent SSRF
+            if key == "avatar_url" and val:
+                from urllib.parse import urlparse
+                parsed = urlparse(str(val))
+                if parsed.scheme not in ("http", "https", ""):
+                    raise HTTPException(status_code=422, detail="avatar_url must be an http or https URL")
             setattr(current_user, key, val)
     await db.commit()
     await db.refresh(current_user)
@@ -263,9 +308,25 @@ async def update_profile(
 ):
     """Update mutable profile fields: full_name, email."""
     allowed = {"full_name", "email"}
+
+    # BUG-009: Enforce email uniqueness before applying changes
+    new_email = payload.get("email")
+    if new_email and new_email.strip().lower() != (current_user.email or "").lower():
+        conflict = await db.execute(
+            select(User).where(
+                User.email == new_email.strip().lower(),
+                User.id != current_user.id,
+            )
+        )
+        if conflict.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="This email is already in use by another account")
+
     for field, value in payload.items():
         if field in allowed and value is not None:
-            setattr(current_user, field, value.strip())
+            val = value.strip()
+            if field == "email":
+                val = val.lower()
+            setattr(current_user, field, val)
     await db.commit()
     await db.refresh(current_user)
     return current_user
@@ -343,17 +404,23 @@ async def search_users(
     if len(q_clean) < 2:
         return []
 
+    # SEC-005: minimum 3 chars to prevent full enumeration
+    if len(q_clean) < 3:
+        return []
+
     result = await db.execute(
         select(User).where(
             and_(
                 User.id != current_user.id,
                 User.is_active.is_(True),
-                (User.username.ilike(f"%{q_clean}%")) | (User.email.ilike(f"%{q_clean}%")),
+                # Search username only (not email — avoid PII leakage)
+                User.username.ilike(f"{q_clean}%"),
             )
         ).limit(10)
     )
     users = result.scalars().all()
+    # Return only non-sensitive fields needed for sharing invitation
     return [
-        {"id": str(u.id), "username": u.username, "full_name": u.full_name, "avatar_url": u.avatar_url}
+        {"id": str(u.id), "username": u.username, "full_name": u.full_name or u.username}
         for u in users
     ]

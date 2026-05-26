@@ -55,21 +55,31 @@ def decrypt_pdf(path: str, password: str) -> str:
 def extract_text(path: str, password: Optional[str] = None) -> Tuple[str, str]:
     """Extract text from PDF, returning (text, method_used)."""
     decrypted_path = path
+    _temp_created = False
 
     if password:
         decrypted_path = decrypt_pdf(path, password)
+        _temp_created = (decrypted_path != path)
 
-    # Try pdfplumber first
-    text = extract_text_pdfplumber(decrypted_path, password)
-    if text and len(text.strip()) > 100:
-        return text, "pdfplumber"
+    try:
+        # Try pdfplumber first
+        text = extract_text_pdfplumber(decrypted_path, password)
+        if text and len(text.strip()) > 100:
+            return text, "pdfplumber"
 
-    # Try PyMuPDF
-    text = extract_text_pymupdf(decrypted_path, password)
-    if text and len(text.strip()) > 100:
-        return text, "pymupdf"
+        # Try PyMuPDF
+        text = extract_text_pymupdf(decrypted_path, password)
+        if text and len(text.strip()) > 100:
+            return text, "pymupdf"
 
-    return "", "failed"
+        return "", "failed"
+    finally:
+        # Always clean up the plaintext decrypted temp file (BUG-007)
+        if _temp_created and decrypted_path != path:
+            try:
+                os.unlink(decrypted_path)
+            except OSError:
+                pass
 
 
 def detect_and_parse(text: str) -> ParsedStatement:
@@ -85,11 +95,21 @@ def detect_and_parse(text: str) -> ParsedStatement:
 
 
 def deduplicate_transactions(transactions: list) -> list:
-    """Remove duplicate transactions based on date + amount + description similarity."""
-    seen = set()
+    """Remove intra-PDF duplicate transactions.
+
+    Uses full description (not truncated) so two same-amount same-day
+    transactions from different merchants are not incorrectly collapsed.
+    This dedup only fires within a single PDF parse — cross-source dedup
+    is handled by the authority-based worker logic in tasks.py.
+    """
+    import hashlib as _hl
+    seen: set = set()
     unique = []
     for tx in transactions:
-        key = (tx.date.date() if tx.date else None, str(tx.amount), tx.description[:30])
+        date_key = tx.date.date() if tx.date else None
+        # Use SHA1 of full description to avoid truncation collisions (BUG-008)
+        desc_hash = _hl.sha1(tx.description.encode("utf-8", errors="replace")).hexdigest()
+        key = (date_key, str(tx.amount), tx.transaction_type, desc_hash)
         if key not in seen:
             seen.add(key)
             unique.append(tx)

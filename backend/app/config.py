@@ -21,7 +21,9 @@ class Settings(BaseSettings):
     secret_key: str = "CHANGE_ME_generate_with_openssl_rand_hex_32"
     encryption_key: str = "CHANGE_ME_must_be_32bytes_exactly"
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 1440
+    # BUG-012: 24-hour access token is too long for a financial app.
+    # Reduced to 30 minutes. Refresh token rotation handles seamless UX.
+    access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 30
 
     # File Storage

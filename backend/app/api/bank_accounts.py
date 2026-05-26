@@ -206,12 +206,12 @@ async def list_transactions(
     if category: filters.append(BankTransaction.category == category)
     if tx_type:  filters.append(BankTransaction.tx_type  == tx_type)
 
-    total_res = await db.execute(select(func.count()).where(*filters))
+    total_res = await db.execute(select(func.count()).select_from(BankTransaction).where(and_(*filters)))
     total = total_res.scalar() or 0
 
     txs_res = await db.execute(
         select(BankTransaction)
-        .where(*filters)
+        .where(and_(*filters))
         .order_by(BankTransaction.transaction_date.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
@@ -330,13 +330,21 @@ async def import_transactions(
     created = 0
     duplicates = 0
     for row in transactions:
-        # Duplicate check by date + amount + description
+        # Duplicate check by date + amount + description (all three required)
+        row_date = datetime.fromisoformat(row["transaction_date"]) if "transaction_date" in row else None
+        dup_filters = [
+            BankTransaction.account_id == account_id,
+            BankTransaction.amount == Decimal(str(row.get("amount", 0))),
+            BankTransaction.description == row.get("description", ""),
+        ]
+        if row_date:
+            # Cast to date for comparison to ignore time component
+            from sqlalchemy import cast, Date as SADate
+            dup_filters.append(
+                func.date(BankTransaction.transaction_date) == row_date.date()
+            )
         dup_check = await db.execute(
-            select(BankTransaction).where(
-                BankTransaction.account_id == account_id,
-                BankTransaction.amount == Decimal(str(row.get("amount", 0))),
-                BankTransaction.description == row.get("description", ""),
-            ).limit(1)
+            select(BankTransaction).where(and_(*dup_filters)).limit(1)
         )
         if dup_check.scalar_one_or_none():
             duplicates += 1

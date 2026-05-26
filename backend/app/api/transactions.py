@@ -153,8 +153,52 @@ async def update_transaction(
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
-    for field, value in payload.model_dump(exclude_none=True).items():
+    _SPEND_TYPES  = {TransactionType.PURCHASE, TransactionType.EMI,
+                     TransactionType.CASH_ADVANCE, TransactionType.FEE,
+                     TransactionType.INTEREST}
+    _CREDIT_TYPES = {TransactionType.PAYMENT, TransactionType.REFUND,
+                     TransactionType.REWARD_REDEMPTION}
+
+    # ── Reverse old card balance impact before applying changes ──────────────
+    old_card_id = tx.card_id
+    old_amount  = tx.amount
+    old_type    = tx.transaction_type
+    if old_card_id and not tx.is_excluded:
+        card_res = await db.execute(
+            select(CreditCard).where(CreditCard.id == old_card_id, CreditCard.user_id == current_user.id)
+        )
+        old_card = card_res.scalar_one_or_none()
+        if old_card:
+            # Undo original impact
+            if old_type in _SPEND_TYPES:
+                old_card.current_outstanding = max(Decimal(0), (old_card.current_outstanding or Decimal(0)) - old_amount)
+                old_card.available_limit     = min(old_card.credit_limit, (old_card.available_limit or Decimal(0)) + old_amount)
+            elif old_type in _CREDIT_TYPES:
+                old_card.current_outstanding = (old_card.current_outstanding or Decimal(0)) + old_amount
+                old_card.available_limit     = max(Decimal(0), (old_card.available_limit or Decimal(0)) - old_amount)
+
+    # Apply field updates
+    updates = payload.model_dump(exclude_none=True)
+    for field, value in updates.items():
         setattr(tx, field, value)
+
+    # ── Apply new card balance impact ─────────────────────────────────────────
+    new_card_id = tx.card_id
+    new_amount  = tx.amount
+    new_type    = tx.transaction_type
+    if new_card_id and not tx.is_excluded:
+        card_res = await db.execute(
+            select(CreditCard).where(CreditCard.id == new_card_id, CreditCard.user_id == current_user.id)
+        )
+        new_card = card_res.scalar_one_or_none()
+        if new_card:
+            if new_type in _SPEND_TYPES:
+                new_card.current_outstanding = (new_card.current_outstanding or Decimal(0)) + new_amount
+                new_card.available_limit     = max(Decimal(0), (new_card.available_limit or Decimal(0)) - new_amount)
+            elif new_type in _CREDIT_TYPES:
+                new_card.current_outstanding = max(Decimal(0), (new_card.current_outstanding or Decimal(0)) - new_amount)
+                new_card.available_limit     = min(new_card.credit_limit, (new_card.available_limit or Decimal(0)) + new_amount)
+
     return tx
 
 
@@ -170,6 +214,26 @@ async def delete_transaction(
     tx = result.scalar_one_or_none()
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
+
+    # ── Reverse card balance impact before deleting ───────────────────────────
+    _SPEND_TYPES  = {TransactionType.PURCHASE, TransactionType.EMI,
+                     TransactionType.CASH_ADVANCE, TransactionType.FEE,
+                     TransactionType.INTEREST}
+    _CREDIT_TYPES = {TransactionType.PAYMENT, TransactionType.REFUND,
+                     TransactionType.REWARD_REDEMPTION}
+    if tx.card_id and not tx.is_excluded:
+        card_res = await db.execute(
+            select(CreditCard).where(CreditCard.id == tx.card_id, CreditCard.user_id == current_user.id)
+        )
+        card = card_res.scalar_one_or_none()
+        if card:
+            if tx.transaction_type in _SPEND_TYPES:
+                card.current_outstanding = max(Decimal(0), (card.current_outstanding or Decimal(0)) - tx.amount)
+                card.available_limit     = min(card.credit_limit, (card.available_limit or Decimal(0)) + tx.amount)
+            elif tx.transaction_type in _CREDIT_TYPES:
+                card.current_outstanding = (card.current_outstanding or Decimal(0)) + tx.amount
+                card.available_limit     = max(Decimal(0), (card.available_limit or Decimal(0)) - tx.amount)
+
     await db.delete(tx)
 
 
@@ -231,7 +295,7 @@ async def monthly_trend(
         FROM transactions
         WHERE user_id = :user_id
           AND is_excluded = false
-          AND transaction_date >= NOW() - INTERVAL ':months months'
+          AND transaction_date >= NOW() - (INTERVAL '1 month' * :months)
         GROUP BY month
         ORDER BY month DESC
         LIMIT :months
@@ -278,7 +342,7 @@ async def spend_by_card(
             func.sum(Transaction.amount).label("total"),
             func.count().label("count"),
         )
-        .join(CreditCard, CreditCard.id == Transaction.card_id)
+        .outerjoin(CreditCard, CreditCard.id == Transaction.card_id)
         .where(and_(*filters))
         .group_by(Transaction.card_id, CreditCard.nickname, CreditCard.bank_name)
         .order_by(func.sum(Transaction.amount).desc())
@@ -288,8 +352,8 @@ async def spend_by_card(
     grand_total = sum(r.total for r in rows) or Decimal(1)
     return [
         {
-            "card_id": str(r.card_id),
-            "card_name": r.nickname or r.bank_name or "Card",
+            "card_id": str(r.card_id) if r.card_id else None,
+            "card_name": r.nickname or r.bank_name or ("No Card" if not r.card_id else "Unknown"),
             "bank_name": r.bank_name,
             "total": float(r.total),
             "count": r.count,

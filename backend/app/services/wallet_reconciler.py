@@ -123,12 +123,20 @@ async def reconcile_for_user(db: AsyncSession, user_id: uuid.UUID) -> dict:
     accounts = acc_res.scalars().all()
     acc_map = _account_map(accounts)
 
-    # Load all unreconciled transactions (not already linked/excluded)
+    # BUG-017: Load only recent unreconciled transactions to prevent OOM on large datasets.
+    # Reconciliation window: last 90 days is sufficient — older transactions are already
+    # either linked or genuinely orphaned (no match exists).
+    from datetime import timedelta
+    reconcile_window = BankTransaction.transaction_date >= (
+        __import__("datetime").datetime.now(__import__("datetime").timezone.utc) - timedelta(days=90)
+    )
     tx_res = await db.execute(
         select(BankTransaction).where(
             BankTransaction.user_id == user_id,
             BankTransaction.linked_tx_id == None,  # not yet reconciled
+            reconcile_window,
         ).order_by(BankTransaction.transaction_date)
+        .limit(5000)  # hard cap: prevents OOM; 5k txs in 90 days = ~55/day
     )
     txs = tx_res.scalars().all()
 
@@ -170,7 +178,11 @@ async def reconcile_for_user(db: AsyncSession, user_id: uuid.UUID) -> dict:
                 secondary.is_duplicate = True
                 secondary.is_excluded = True
                 secondary.linked_tx_id = primary.id
-                primary.linked_tx_id = secondary.id
+                # BUG-022: Only set primary.linked_tx_id once (first secondary).
+                # For groups with 3+ entries, subsequent secondaries link to primary
+                # but we don't overwrite primary.linked_tx_id — the first link is canonical.
+                if not primary.linked_tx_id:
+                    primary.linked_tx_id = secondary.id
                 primary.linked_account_id = secondary.account_id
                 stats["upi_dedup_pairs"] += 1
 

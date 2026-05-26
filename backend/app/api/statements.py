@@ -53,6 +53,15 @@ async def upload_statement(
         if not card_result.scalar_one_or_none():
             raise HTTPException(status_code=404, detail="Card not found")
 
+    # BUG-016: Validate bank_account_id ownership (IDOR fix)
+    if bank_account_id:
+        from app.models.bank_account import BankAccount
+        acc_result = await db.execute(
+            select(BankAccount).where(BankAccount.id == bank_account_id, BankAccount.user_id == current_user.id)
+        )
+        if not acc_result.scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Bank account not found")
+
     fname_lower = (file.filename or "").lower()
     if not fname_lower.endswith(".pdf"):
         raise HTTPException(
@@ -64,7 +73,8 @@ async def upload_statement(
     upload_dir = os.path.join(settings.upload_dir, str(current_user.id))
     os.makedirs(upload_dir, exist_ok=True)
 
-    safe_name = f"{uuid.uuid4()}_{file.filename.replace(' ', '_')}"
+    # SEC-006: Use only UUID as filename — never include original name (path traversal prevention)
+    safe_name = f"{uuid.uuid4()}.pdf"
     file_path = os.path.join(upload_dir, safe_name)
 
     async with aiofiles.open(file_path, "wb") as f:
@@ -94,12 +104,21 @@ async def upload_statement(
     db.add(statement)
     await db.flush()
 
-    # Queue background parsing
+    # SEC-007: Store password encrypted in DB rather than passing in Celery args
+    # (Celery args are visible in Redis, Flower, and log files)
+    if password:
+        from app.utils.encryption import encrypt
+        extra = statement.extra_data or {}
+        extra["pdf_password_enc"] = encrypt(password)
+        statement.extra_data = extra
+        await db.flush()
+
+    # Queue background parsing — password retrieved from encrypted DB field in worker
     from app.workers.tasks import parse_statement_task
     task = parse_statement_task.delay(
         str(statement.id),
         file_path,
-        password,  # password used only in worker, never stored
+        None,  # password NOT in task args — worker reads it from statement.extra_data
         str(current_user.id),
     )
 

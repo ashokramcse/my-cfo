@@ -40,9 +40,10 @@ async def dashboard_stats(
     )
     cards = cards_result.scalars().all()
 
-    total_outstanding = sum(c.current_outstanding for c in cards)
-    total_limit = sum(c.credit_limit for c in cards)
-    total_available = sum(c.available_limit for c in cards)
+    # BUG-021: Guard against None values — any card with null fields would throw TypeError
+    total_outstanding = sum(c.current_outstanding or Decimal(0) for c in cards)
+    total_limit       = sum(c.credit_limit        or Decimal(0) for c in cards)
+    total_available   = sum(c.available_limit     or Decimal(0) for c in cards)
     utilization = float(total_outstanding / total_limit * 100) if total_limit else 0
 
     # Monthly spend

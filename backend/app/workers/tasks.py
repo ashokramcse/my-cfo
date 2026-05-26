@@ -34,7 +34,19 @@ def parse_statement_task(self, statement_id: str, file_path: str, password: Opti
         stmt.status = StatementStatus.PROCESSING
         db.commit()
 
-        parsed = parse_statement_pdf(file_path, password)
+        # SEC-007: Retrieve password from encrypted DB field instead of task args
+        # (task args are visible in Redis/Flower/logs)
+        resolved_password = password  # legacy path if caller passed it directly
+        if not resolved_password and stmt.extra_data:
+            enc_pw = stmt.extra_data.get("pdf_password_enc")
+            if enc_pw:
+                from app.utils.encryption import decrypt
+                try:
+                    resolved_password = decrypt(enc_pw)
+                except Exception:
+                    logger.warning(f"Could not decrypt PDF password for statement {statement_id}")
+
+        parsed = parse_statement_pdf(file_path, resolved_password)
 
         # Update statement financials
         stmt.bank_detected = parsed.bank_name
@@ -359,13 +371,24 @@ def advance_emi_progress():
             emis = result.scalars().all()
             today = date.today()
             for emi in emis:
-                if emi.start_date and emi.total_months:
+                # S-004: column is tenure_months in model (not total_months)
+                tenure = emi.tenure_months
+                if emi.start_date and tenure:
                     from dateutil.relativedelta import relativedelta
-                    months_elapsed = (today.year - emi.start_date.year) * 12 + (today.month - emi.start_date.month)
-                    expected_paid = min(months_elapsed, emi.total_months)
+                    start = emi.start_date.date() if hasattr(emi.start_date, "date") else emi.start_date
+                    # BUG-015: Only count a month as elapsed if the due date has actually passed.
+                    # An EMI starting on the 25th is NOT due on the 10th of the same month.
+                    months_elapsed = 0
+                    for m in range(1, tenure + 1):
+                        due = start + relativedelta(months=m)
+                        if due <= today:
+                            months_elapsed = m
+                        else:
+                            break
+                    expected_paid = min(months_elapsed, tenure)
                     if expected_paid > (emi.paid_months or 0):
                         emi.paid_months = expected_paid
-                        if emi.paid_months >= emi.total_months:
+                        if emi.paid_months >= tenure:
                             emi.status = EMIStatus.COMPLETED
             await db.commit()
     asyncio.run(_run())
